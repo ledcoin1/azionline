@@ -1,79 +1,28 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>🃏 Онлайн Дурак</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 40px;
-      background: #f2f2f2;
-    }
-    h2 {
-      margin-bottom: 30px;
-    }
-    button {
-      font-size: 18px;
-      padding: 15px 30px;
-      margin: 5px;
-      cursor: pointer;
-    }
-    #info {
-      margin-bottom: 20px;
-      font-size: 18px;
-    }
-    #hand button {
-      width: 80px;
-    }
-  </style>
+  <title>Қарапайым Онлайн Мысал</title>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-
-<h2>🃏 Онлайн Дурак</h2>
-<div id="info">Ойынға кіру үшін төмендегі батырманы басыңыз</div>
-<button id="joinBtn">Ойынға кіру</button>
-
-<div id="hand"></div>
+<h2>Онлайн қарапайым мысал</h2>
+<div id="info">Ойынға қосылу үшін батырманы басыңыз</div>
+<button id="joinBtn">Ойынға қосылу</button>
 
 <script>
-  // Telegram WebApp тексеру
-  if (!window.Telegram || !Telegram.WebApp.initData) {
-    document.body.innerHTML = "❌ Тек Telegram арқылы ашылады";
-    throw new Error("Not Telegram");
-  }
+const socket = io();
+const info = document.getElementById("info");
+const joinBtn = document.getElementById("joinBtn");
 
-  const user = Telegram.WebApp.initDataUnsafe.user;
-  const userId = user.id;
+joinBtn.onclick = () => {
+  const userId = Math.floor(Math.random()*1000); // Тек мысалға
+  socket.emit("joinGame", { userId });
+};
 
-  const info = document.getElementById("info");
-  const joinBtn = document.getElementById("joinBtn");
-  const handDiv = document.getElementById("hand");
-
-  // Frontend тек визуалды интерфейс – кейін серверге қосамыз
-  joinBtn.onclick = () => {
-    info.innerText = `Қош келдіңіз, ${user.first_name}!\nҚарсылас күтілуде...`;
-    joinBtn.disabled = true;
-
-    // Бұл жерде кейін Socket.IO арқылы серверге қосылу болады
-    // Қазіргі уақытта тек фронтенд визуалы
-    showDummyCards();
-  };
-
-  function showDummyCards() {
-    // Қолдағы 3 картаны көрсетеміз
-    const cards = ["6♠","7♥","10♦"];
-    handDiv.innerHTML = "";
-    cards.forEach(card => {
-      const btn = document.createElement("button");
-      btn.innerText = card;
-      handDiv.appendChild(btn);
-    });
-
-    info.innerText += "\nСенің карталарың дайын!";
-  }
+socket.on("message", msg => {
+  info.innerText = msg;
+});
 </script>
-
 </body>
 </html>
