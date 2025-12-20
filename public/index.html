@@ -1,82 +1,59 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>🃏 АЗИ Онлайн</title>
-
+  <title>АЗИ 3 КАРТА</title>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      padding-top: 40px;
-    }
-    button {
-      font-size: 18px;
-      padding: 15px 30px;
-    }
-  </style>
 </head>
 <body>
 
 <h2>🃏 АЗИ (3 карта)</h2>
-
-<div id="info">Ойынға кіріңіз</div>
-<br>
-<button id="join">Ойынға кіру</button>
+<div id="info"></div>
+<div id="hand"></div>
 
 <script>
-  // Тек Telegram
-  if (!window.Telegram || !Telegram.WebApp.initData) {
-    document.body.innerHTML = "❌ Тек Telegram арқылы ашылады";
-    throw new Error("Not Telegram");
-  }
+if (!window.Telegram) {
+  document.body.innerHTML = "Тек Telegram!";
+  throw "";
+}
 
-  const user = Telegram.WebApp.initDataUnsafe.user;
-  const userId = user.id;
+const userId = Telegram.WebApp.initDataUnsafe.user.id;
+const socket = io();
+let roomId = null;
 
-  const socket = io();
+socket.emit("joinGame", { userId });
 
-  const info = document.getElementById("info");
-  const btn = document.getElementById("join");
+socket.on("waiting", () => {
+  info.innerText = "Қарсылас күтілуде...";
+});
 
-  btn.onclick = () => {
-    btn.disabled = true;
-    socket.emit("joinGame", { userId });
-  };
+socket.on("start", room => {
+  roomId = Object.keys(room.hands)[0] ? roomId : roomId;
+  render(room);
+});
 
-  socket.on("waiting", data => {
-    info.innerHTML = `
-      ⏳ Қарсылас күтілуде...<br>
-      💰 Баланс: ${data.balance}
-    `;
+socket.on("update", render);
+
+socket.on("gameEnd", tricks => {
+  info.innerText = tricks[userId] > tricks[Object.keys(tricks).find(i=>i!=userId)]
+    ? "🏆 ЖЕҢДІҢ"
+    : "❌ ҰТЫЛДЫҢ";
+});
+
+function render(room) {
+  info.innerText = `Көзір: ${room.trump} | Кезек: ${room.turn}`;
+  hand.innerHTML = "";
+
+  room.hands[userId].forEach((c, i) => {
+    const btn = document.createElement("button");
+    btn.innerText = c.suit + c.value;
+    btn.onclick = () => {
+      socket.emit("playCard", { roomId, userId, cardIndex: i });
+    };
+    hand.appendChild(btn);
   });
-
-  socket.on("gameStarted", data => {
-    const myCards = data.cards[userId];
-    const myScore = data.scores[userId];
-
-    const enemyId = data.players.find(id => id != userId);
-    const enemyScore = data.scores[enemyId];
-
-    let result = "🤝 ТЕҢ";
-    if (myScore > enemyScore) result = "🏆 СЕН ЖЕҢДІҢ";
-    if (myScore < enemyScore) result = "❌ СЕН ҰТЫЛДЫҢ";
-
-    info.innerHTML = `
-      🃏 АЗИ ОЙЫНЫ<br><br>
-
-      👤 Сенің карталарың:<br>
-      <b>${myCards.join(" , ")}</b><br><br>
-
-      🔢 Сенің ұпайың: <b>${myScore}</b><br>
-      🧑 Қарсылас ұпайы: <b>${enemyScore}</b><br><br>
-
-      <h3>${result}</h3>
-    `;
-  });
+}
 </script>
 
 </body>
