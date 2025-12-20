@@ -2,27 +2,28 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>🃏 Онлайн Ойын</title>
+<title>🃏 Онлайн АЗИ</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  body { font-family: Arial; text-align:center; background:#2e7d32; color:white; }
-  #lobby, #game { margin-top:50px; }
-  #table { width: 500px; height: 300px; background:#388e3c; margin:20px auto; border-radius:15px; position:relative; }
-  .card { width: 60px; height: 90px; background:white; color:black; border-radius:8px; line-height:90px; text-align:center; font-weight:bold; position:absolute; }
-  #myCards { margin-top:20px; }
-  button { padding:10px 20px; font-size:16px; margin:5px; }
+body { font-family: Arial; text-align:center; background:#2e7d32; color:white; }
+#lobby, #game { margin-top:50px; }
+#table { width: 500px; height: 300px; background:#388e3c; margin:20px auto; border-radius:15px; position:relative; }
+.card { width:60px; height:90px; background:white; color:black; border-radius:8px; line-height:90px; text-align:center; font-weight:bold; position:absolute; }
+#myCards { margin-top:20px; }
+button { padding:10px 15px; margin:3px; }
 </style>
 </head>
 <body>
 
-<h1>🃏 Онлайн Дурак / АЗИ</h1>
+<h1>🃏 Онлайн АЗИ (3 карта)</h1>
 
 <div id="lobby">
-  <div id="info">Ойынға қосылу үшін батырманы басыңыз</div>
+  <div id="info">Ойынға қосылу үшін басыңыз</div>
   <button id="joinBtn">Ойынға қосылу</button>
 </div>
 
 <div id="game" style="display:none;">
+  <div id="infoGame"></div>
   <div id="table"></div>
   <div id="myCards"></div>
 </div>
@@ -35,62 +36,57 @@ const lobby = document.getElementById("lobby");
 const gameDiv = document.getElementById("game");
 const tableDiv = document.getElementById("table");
 const myCardsDiv = document.getElementById("myCards");
+const infoGame = document.getElementById("infoGame");
 
-// Тест үшін кездейсоқ userId
 const userId = Math.floor(Math.random()*1000);
+let roomId = null;
 
-joinBtn.onclick = () => {
-  socket.emit("joinGame", { userId });
+joinBtn.onclick = ()=>{
+  socket.emit("joinGame",{userId});
   joinBtn.disabled = true;
   info.innerText = "⏳ Қарсылас күтілуде...";
 };
 
-// Сервер хабарларын алу
-socket.on("message", msg => {
-  info.innerText = msg;
+socket.on("message", msg => info.innerText = msg);
+
+socket.on("startGame", ({opponentId, roomId: rId, trump})=>{
+  lobby.style.display="none";
+  gameDiv.style.display="block";
+  roomId = rId;
+  infoGame.innerText=`Қарсылас: ${opponentId} | Көзір: ${trump}`;
 });
 
-// Қарсылас табылса → ойын терезесін көрсету
-socket.on("startGame", ({ opponentId }) => {
-  lobby.style.display = "none";
-  gameDiv.style.display = "block";
-
-  info.innerText = `Сіз ойынға қосылдыңыз! Қарсылас: ${opponentId}`;
-
-  // Dummy карталар
-  const myCards = ["6♠","7♥","10♦"];
-  myCardsDiv.innerHTML = "";
-  myCards.forEach((c,i) => {
-    const cardBtn = document.createElement("button");
-    cardBtn.innerText = c;
-    cardBtn.onclick = () => playCard(c, i);
-    myCardsDiv.appendChild(cardBtn);
+socket.on("update", data=>{
+  tableDiv.innerHTML="";
+  data.table.forEach((c,i)=>{
+    const div=document.createElement("div");
+    div.className="card";
+    div.style.left = `${100 + i*70}px`;
+    div.style.bottom = i===0?"10px":"120px";
+    div.innerText = c.card.suit+c.card.value;
+    tableDiv.appendChild(div);
   });
 
-  // Үстелге қарсылас картасы (қазір жасырын)
-  const opponentCard = document.createElement("div");
-  opponentCard.classList.add("card");
-  opponentCard.style.top = "20px";
-  opponentCard.style.left = "220px";
-  opponentCard.innerText = "?";
-  tableDiv.appendChild(opponentCard);
+  myCardsDiv.innerHTML="";
+  data.hand.forEach((c,i)=>{
+    const btn=document.createElement("button");
+    btn.innerText=c.suit+c.value;
+    btn.disabled = data.turn!==userId;
+    btn.onclick = ()=>socket.emit("playCard",{roomId,userId,cardIndex:i});
+    myCardsDiv.appendChild(btn);
+  });
+
+  infoGame.innerText=`Көзір: ${data.trump} | Кезек: ${data.turn===userId?"Сенің кезегің":"Қарсылас кезек"}`;
 });
 
-function playCard(card, index){
-  // Картаны үстелге қою
-  const cardDiv = document.createElement("div");
-  cardDiv.classList.add("card");
-  cardDiv.style.bottom = "10px";
-  cardDiv.style.left = `${100 + index*70}px`;
-  cardDiv.innerText = card;
-  tableDiv.appendChild(cardDiv);
-
-  // Карта қолдан жойылады
-  myCardsDiv.children[index].disabled = true;
-
-  // Серверге хабар жіберуге болады (кейін толық логика)
-  console.log("Карта ойналды:", card);
-}
+socket.on("gameEnd", tricks=>{
+  let opponent = Object.keys(tricks).find(x=>x!=userId);
+  let result = tricks[userId]>tricks[opponent]?"🏆 ЖЕҢДІҢ":
+               tricks[userId]<tricks[opponent]?"❌ ҰТЫЛДЫҢ":"🤝 ТЕҢ";
+  infoGame.innerHTML=`Ойын аяқталды!<br>Сен: ${tricks[userId]}, Қарсылас: ${tricks[opponent]}<br><h2>${result}</h2>`;
+  myCardsDiv.innerHTML="";
+  tableDiv.innerHTML="";
+});
 </script>
 
 </body>
