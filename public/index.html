@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Socket.IO минимал мысал</title>
+<title>Socket.IO Минимал</title>
 <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -15,19 +15,15 @@
 const joinBtn = document.getElementById("joinBtn");
 const info = document.getElementById("info");
 
-// Сервермен байланыс арнасын ашу
+// сервермен байланыс арнасын ашамыз
 const socket = io();
 
+// батырма басылғанда хабар жібереміз
 joinBtn.onclick = () => {
-  const userId = Math.floor(Math.random() * 1000); // кездейсоқ userId
+  const userId = Math.floor(Math.random() * 1000);
   socket.emit("joinGame", { userId }); // серверге хабар жіберу
   info.innerText = "⏳ Серверге қосылуда...";
 };
-
-// Серверден хабар алу
-socket.on("message", (msg) => {
-  info.innerText = msg;
-});
 </script>
 </body>
 </html>
