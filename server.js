@@ -13,10 +13,19 @@ const io = new Server(server);
 // статикалық файлдар (index.html) үшін
 app.use(express.static("public"));
 
-// Клиент қосылғанда орындалатын код
 io.on("connection", (socket) => {
-  console.log("Клиент қосылды"); // сервер логына шығарылады
+  console.log("Клиент қосылды");
+
+  // Клиент хабар жібергенде орындалады
+  socket.on("joinGame", ({ userId }) => {
+    console.log("Ойынға қосылды:", userId);
+
+    // Сервер хабарын клиентке қайта жіберу
+    socket.emit("message", `Сәлем, ойыншы ${userId}! Сіз серверге қосылдыңыз.`);
+  });
 });
+
 
 // серверді порт 3000-де іске қосамыз
 server.listen(3000, () => console.log("Server running on http://localhost:3000"));
+
