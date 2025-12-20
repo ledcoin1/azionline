@@ -1,13 +1,31 @@
-<script src="/socket.io/socket.io.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Socket.IO қарапайым мысал</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+<h2>Онлайн қарапайым мысал</h2>
+<div id="info">Ойынға қосылу үшін батырманы басыңыз</div>
+<button id="joinBtn">Ойынға қосылу</button>
+
 <script>
-  // 1. Сервермен байланыс арнасын ашамыз
-  const socket = io();
+  const socket = io(); // Сервермен байланыс
 
-  // 2. Серверге хабар жібереміз (мысалы, ойынға қосылдым)
-  socket.emit("joinGame", { userId: 123 });
+  const info = document.getElementById("info");
+  const joinBtn = document.getElementById("joinBtn");
 
-  // 3. Серверден келген хабарларды қабылдаймыз
+  joinBtn.onclick = () => {
+    const userId = Math.floor(Math.random() * 1000);
+    socket.emit("joinGame", { userId }); // Серверге хабар жіберу
+    joinBtn.disabled = true;
+  };
+
+  // Серверден хабарды алу
   socket.on("message", msg => {
-    console.log("Серверден хабар:", msg);
+    info.innerText = msg;
   });
 </script>
+</body>
+</html>
