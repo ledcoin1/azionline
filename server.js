@@ -8,14 +8,12 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-let waiting = null; // Бірінші ойыншыны күту
+let waiting = null;
 
 io.on("connection", socket => {
   console.log("Клиент қосылды");
 
   socket.on("joinGame", ({ userId }) => {
-    console.log("Ойынға қосылды:", userId);
-
     if (!waiting) {
       waiting = { socket, userId };
       socket.emit("message", "Сіз бірінші ойыншы, қарсылас күтілуде...");
@@ -23,9 +21,9 @@ io.on("connection", socket => {
       const other = waiting;
       waiting = null;
 
-      // Екі жаққа хабар
-      socket.emit("message", "Қарсылас табылды! Ойын басталды.");
-      other.socket.emit("message", "Қарсылас қосылды! Ойын басталды.");
+      // Қарсылас табылды → екі жаққа хабар жіберу
+      socket.emit("startGame", { opponentId: other.userId });
+      other.socket.emit("startGame", { opponentId: userId });
     }
   });
 });
