@@ -5,6 +5,10 @@
   <title>АЗИ 3 КАРТА</title>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { font-family: Arial; text-align:center; padding:20px;}
+    button { padding:10px 20px; font-size:18px; margin:3px; }
+  </style>
 </head>
 <body>
 
@@ -13,47 +17,47 @@
 <div id="hand"></div>
 
 <script>
-if (!window.Telegram) {
-  document.body.innerHTML = "Тек Telegram!";
-  throw "";
-}
+if (!window.Telegram) { document.body.innerHTML = "Тек Telegram!"; throw ""; }
 
 const userId = Telegram.WebApp.initDataUnsafe.user.id;
 const socket = io();
 let roomId = null;
 
+const info = document.getElementById("info");
+const handDiv = document.getElementById("hand");
+
 socket.emit("joinGame", { userId });
 
 socket.on("waiting", () => {
-  info.innerText = "Қарсылас күтілуде...";
-});
-
-socket.on("start", room => {
-  roomId = Object.keys(room.hands)[0] ? roomId : roomId;
-  render(room);
-});
-
-socket.on("update", render);
-
-socket.on("gameEnd", tricks => {
-  info.innerText = tricks[userId] > tricks[Object.keys(tricks).find(i=>i!=userId)]
-    ? "🏆 ЖЕҢДІҢ"
-    : "❌ ҰТЫЛДЫҢ";
+  info.innerText = "⏳ Қарсылас күтілуде...";
 });
 
 function render(room) {
-  info.innerText = `Көзір: ${room.trump} | Кезек: ${room.turn}`;
-  hand.innerHTML = "";
+  roomId = roomId || Object.keys(room.hands)[0];
+  info.innerHTML = `Көзір: ${room.trump} | Кезек: ${room.turn===userId?"Сенің кезегің":"Қарсылас кезек"}`;
 
-  room.hands[userId].forEach((c, i) => {
+  handDiv.innerHTML = "";
+
+  if (room.turn !== userId) return;
+
+  room.hands[userId].forEach((c,i) => {
     const btn = document.createElement("button");
-    btn.innerText = c.suit + c.value;
-    btn.onclick = () => {
-      socket.emit("playCard", { roomId, userId, cardIndex: i });
-    };
-    hand.appendChild(btn);
+    btn.innerText = `${c.suit}${c.value}`;
+    btn.onclick = () => socket.emit("playCard", { roomId, userId, cardIndex: i });
+    handDiv.appendChild(btn);
   });
 }
+
+socket.on("start", render);
+socket.on("update", render);
+
+socket.on("gameEnd", tricks => {
+  const other = Object.keys(tricks).find(p=>p!=userId);
+  let result = tricks[userId] > tricks[other] ? "🏆 ЖЕҢДІҢ" :
+               tricks[userId] < tricks[other] ? "❌ ҰТЫЛДЫҢ" : "🤝 ТЕҢ";
+  info.innerHTML = `Ойын аяқталды!<br>Сен: ${tricks[userId]}, Қарсылас: ${tricks[other]}<br><h2>${result}</h2>`;
+  handDiv.innerHTML = "";
+});
 </script>
 
 </body>
