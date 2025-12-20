@@ -24,6 +24,14 @@ joinBtn.onclick = () => {
   socket.emit("joinGame", { userId }); // серверге хабар жіберу
   info.innerText = "⏳ Серверге қосылуда...";
 };
+
+  // серверден хабар келгенде орындалады
+socket.on("message", (msg) => {
+  info.innerText = msg; // экранға шығару
+});
+
+  
 </script>
 </body>
 </html>
+
