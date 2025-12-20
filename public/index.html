@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Онлайн Дурак</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<h2>🃏 Онлайн Дурак</h2>
+<div id="status"></div>
+
+<script>
+  if (!window.Telegram || !Telegram.WebApp.initData) {
+    document.body.innerHTML = "❌ Бұл ойын тек Telegram арқылы ашылады";
+    throw new Error("Not Telegram");
+  }
+
+  const user = Telegram.WebApp.initDataUnsafe.user;
+  const userId = user.id;
+
+  const socket = io();
+  const roomId = "room1";
+
+  socket.emit("joinRoom", { roomId, userId });
+
+  socket.on("roomUpdate", players => {
+    document.getElementById("status").innerText =
+      "Комнатадағы ойыншылар: " + players.join(", ");
+  });
+</script>
+</body>
+</html>
