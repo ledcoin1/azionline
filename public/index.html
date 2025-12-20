@@ -2,7 +2,7 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>Онлайн Дурак</title>
+  <title>🃏 АЗИ Онлайн</title>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -14,21 +14,21 @@
       padding-top: 40px;
     }
     button {
-      padding: 15px 30px;
       font-size: 18px;
+      padding: 15px 30px;
     }
   </style>
 </head>
 <body>
 
-<h2>🃏 Онлайн Дурак</h2>
+<h2>🃏 АЗИ (3 карта)</h2>
 
 <div id="info">Ойынға кіріңіз</div>
 <br>
-<button id="joinBtn">Ойынға кіру</button>
+<button id="join">Ойынға кіру</button>
 
 <script>
-  // ❗ Telegram тексеру
+  // Тек Telegram
   if (!window.Telegram || !Telegram.WebApp.initData) {
     document.body.innerHTML = "❌ Тек Telegram арқылы ашылады";
     throw new Error("Not Telegram");
@@ -40,7 +40,7 @@
   const socket = io();
 
   const info = document.getElementById("info");
-  const btn = document.getElementById("joinBtn");
+  const btn = document.getElementById("join");
 
   btn.onclick = () => {
     btn.disabled = true;
@@ -55,12 +55,26 @@
   });
 
   socket.on("gameStarted", data => {
+    const myCards = data.cards[userId];
+    const myScore = data.scores[userId];
+
+    const enemyId = data.players.find(id => id != userId);
+    const enemyScore = data.scores[enemyId];
+
+    let result = "🤝 ТЕҢ";
+    if (myScore > enemyScore) result = "🏆 СЕН ЖЕҢДІҢ";
+    if (myScore < enemyScore) result = "❌ СЕН ҰТЫЛДЫҢ";
+
     info.innerHTML = `
-      ✅ Комната: ${data.roomId}<br><br>
-      👥 Ойыншылар:<br>
-      ${data.players.map(id =>
-        `ID: ${id} — 💰 ${data.balances[id]}`
-      ).join("<br>")}
+      🃏 АЗИ ОЙЫНЫ<br><br>
+
+      👤 Сенің карталарың:<br>
+      <b>${myCards.join(" , ")}</b><br><br>
+
+      🔢 Сенің ұпайың: <b>${myScore}</b><br>
+      🧑 Қарсылас ұпайы: <b>${enemyScore}</b><br><br>
+
+      <h3>${result}</h3>
     `;
   });
 </script>
