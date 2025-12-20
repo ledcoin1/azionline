@@ -1,63 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>АЗИ 3 КАРТА</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>🃏 Онлайн Дурак</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { font-family: Arial; text-align:center; padding:20px;}
-    button { padding:10px 20px; font-size:18px; margin:3px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 40px;
+      background: #f2f2f2;
+    }
+    h2 {
+      margin-bottom: 30px;
+    }
+    button {
+      font-size: 18px;
+      padding: 15px 30px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #info {
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+    #hand button {
+      width: 80px;
+    }
   </style>
 </head>
 <body>
 
-<h2>🃏 АЗИ (3 карта)</h2>
-<div id="info"></div>
+<h2>🃏 Онлайн Дурак</h2>
+<div id="info">Ойынға кіру үшін төмендегі батырманы басыңыз</div>
+<button id="joinBtn">Ойынға кіру</button>
+
 <div id="hand"></div>
 
 <script>
-if (!window.Telegram) { document.body.innerHTML = "Тек Telegram!"; throw ""; }
+  // Telegram WebApp тексеру
+  if (!window.Telegram || !Telegram.WebApp.initData) {
+    document.body.innerHTML = "❌ Тек Telegram арқылы ашылады";
+    throw new Error("Not Telegram");
+  }
 
-const userId = Telegram.WebApp.initDataUnsafe.user.id;
-const socket = io();
-let roomId = null;
+  const user = Telegram.WebApp.initDataUnsafe.user;
+  const userId = user.id;
 
-const info = document.getElementById("info");
-const handDiv = document.getElementById("hand");
+  const info = document.getElementById("info");
+  const joinBtn = document.getElementById("joinBtn");
+  const handDiv = document.getElementById("hand");
 
-socket.emit("joinGame", { userId });
+  // Frontend тек визуалды интерфейс – кейін серверге қосамыз
+  joinBtn.onclick = () => {
+    info.innerText = `Қош келдіңіз, ${user.first_name}!\nҚарсылас күтілуде...`;
+    joinBtn.disabled = true;
 
-socket.on("waiting", () => {
-  info.innerText = "⏳ Қарсылас күтілуде...";
-});
+    // Бұл жерде кейін Socket.IO арқылы серверге қосылу болады
+    // Қазіргі уақытта тек фронтенд визуалы
+    showDummyCards();
+  };
 
-function render(room) {
-  roomId = roomId || Object.keys(room.hands)[0];
-  info.innerHTML = `Көзір: ${room.trump} | Кезек: ${room.turn===userId?"Сенің кезегің":"Қарсылас кезек"}`;
+  function showDummyCards() {
+    // Қолдағы 3 картаны көрсетеміз
+    const cards = ["6♠","7♥","10♦"];
+    handDiv.innerHTML = "";
+    cards.forEach(card => {
+      const btn = document.createElement("button");
+      btn.innerText = card;
+      handDiv.appendChild(btn);
+    });
 
-  handDiv.innerHTML = "";
-
-  if (room.turn !== userId) return;
-
-  room.hands[userId].forEach((c,i) => {
-    const btn = document.createElement("button");
-    btn.innerText = `${c.suit}${c.value}`;
-    btn.onclick = () => socket.emit("playCard", { roomId, userId, cardIndex: i });
-    handDiv.appendChild(btn);
-  });
-}
-
-socket.on("start", render);
-socket.on("update", render);
-
-socket.on("gameEnd", tricks => {
-  const other = Object.keys(tricks).find(p=>p!=userId);
-  let result = tricks[userId] > tricks[other] ? "🏆 ЖЕҢДІҢ" :
-               tricks[userId] < tricks[other] ? "❌ ҰТЫЛДЫҢ" : "🤝 ТЕҢ";
-  info.innerHTML = `Ойын аяқталды!<br>Сен: ${tricks[userId]}, Қарсылас: ${tricks[other]}<br><h2>${result}</h2>`;
-  handDiv.innerHTML = "";
-});
+    info.innerText += "\nСенің карталарың дайын!";
+  }
 </script>
 
 </body>
