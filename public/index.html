@@ -1,24 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>🃏 Онлайн АЗИ</title>
-<script src="/socket.io/socket.io.js"></script>
+<title>🃏 Онлайн Дурак / АЗИ</title>
 <style>
-body { font-family: Arial; text-align:center; background:#2e7d32; color:white; }
-#lobby, #game { margin-top:50px; }
-#table { width: 500px; height: 300px; background:#388e3c; margin:20px auto; border-radius:15px; position:relative; }
-.card { width:60px; height:90px; background:white; color:black; border-radius:8px; line-height:90px; text-align:center; font-weight:bold; position:absolute; }
-#myCards { margin-top:20px; }
-button { padding:10px 15px; margin:3px; }
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #2e7d32;
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+h1 { margin-top: 30px; }
+#lobby, #game { margin-top: 50px; }
+#table {
+  width: 500px;
+  height: 300px;
+  background: #388e3c;
+  margin: 20px auto;
+  border-radius: 15px;
+  position: relative;
+}
+.card {
+  width: 60px;
+  height: 90px;
+  background: white;
+  color: black;
+  border-radius: 8px;
+  line-height: 90px;
+  text-align: center;
+  font-weight: bold;
+  position: absolute;
+}
+#myCards { margin-top: 20px; }
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  font-size: 16px;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
 
-<h1>🃏 Онлайн АЗИ (3 карта)</h1>
+<h1>🃏 Онлайн Дурак / АЗИ</h1>
 
 <div id="lobby">
-  <div id="info">Ойынға қосылу үшін басыңыз</div>
+  <div id="info">Ойынға қосылу үшін батырманы басыңыз</div>
   <button id="joinBtn">Ойынға қосылу</button>
 </div>
 
@@ -29,8 +58,6 @@ button { padding:10px 15px; margin:3px; }
 </div>
 
 <script>
-const socket = io();
-const info = document.getElementById("info");
 const joinBtn = document.getElementById("joinBtn");
 const lobby = document.getElementById("lobby");
 const gameDiv = document.getElementById("game");
@@ -38,55 +65,44 @@ const tableDiv = document.getElementById("table");
 const myCardsDiv = document.getElementById("myCards");
 const infoGame = document.getElementById("infoGame");
 
-const userId = Math.floor(Math.random()*1000);
-let roomId = null;
+// Батырма басқанда – ойын көрінісі ашылады
+joinBtn.onclick = () => {
+  lobby.style.display = "none";
+  gameDiv.style.display = "block";
 
-joinBtn.onclick = ()=>{
-  socket.emit("joinGame",{userId});
-  joinBtn.disabled = true;
-  info.innerText = "⏳ Қарсылас күтілуде...";
-};
+  infoGame.innerText = "Қарсылас табылды! Ойын басталды.";
 
-socket.on("message", msg => info.innerText = msg);
-
-socket.on("startGame", ({opponentId, roomId: rId, trump})=>{
-  lobby.style.display="none";
-  gameDiv.style.display="block";
-  roomId = rId;
-  infoGame.innerText=`Қарсылас: ${opponentId} | Көзір: ${trump}`;
-});
-
-socket.on("update", data=>{
-  tableDiv.innerHTML="";
-  data.table.forEach((c,i)=>{
-    const div=document.createElement("div");
-    div.className="card";
-    div.style.left = `${100 + i*70}px`;
-    div.style.bottom = i===0?"10px":"120px";
-    div.innerText = c.card.suit+c.card.value;
-    tableDiv.appendChild(div);
-  });
-
-  myCardsDiv.innerHTML="";
-  data.hand.forEach((c,i)=>{
-    const btn=document.createElement("button");
-    btn.innerText=c.suit+c.value;
-    btn.disabled = data.turn!==userId;
-    btn.onclick = ()=>socket.emit("playCard",{roomId,userId,cardIndex:i});
+  // Менің қолымдағы 3 карта
+  const myCards = ["6♠","7♥","10♦"];
+  myCardsDiv.innerHTML = "";
+  myCards.forEach((c,i) => {
+    const btn = document.createElement("button");
+    btn.innerText = c;
+    btn.onclick = () => playCard(c, i);
     myCardsDiv.appendChild(btn);
   });
 
-  infoGame.innerText=`Көзір: ${data.trump} | Кезек: ${data.turn===userId?"Сенің кезегің":"Қарсылас кезек"}`;
-});
+  // Қарсылас картасы үстелде (қазір жасырын)
+  const opponentCard = document.createElement("div");
+  opponentCard.classList.add("card");
+  opponentCard.style.top = "20px";
+  opponentCard.style.left = "220px";
+  opponentCard.innerText = "?";
+  tableDiv.appendChild(opponentCard);
+};
 
-socket.on("gameEnd", tricks=>{
-  let opponent = Object.keys(tricks).find(x=>x!=userId);
-  let result = tricks[userId]>tricks[opponent]?"🏆 ЖЕҢДІҢ":
-               tricks[userId]<tricks[opponent]?"❌ ҰТЫЛДЫҢ":"🤝 ТЕҢ";
-  infoGame.innerHTML=`Ойын аяқталды!<br>Сен: ${tricks[userId]}, Қарсылас: ${tricks[opponent]}<br><h2>${result}</h2>`;
-  myCardsDiv.innerHTML="";
-  tableDiv.innerHTML="";
-});
+function playCard(card, index) {
+  // Карта үстелге шығады
+  const cardDiv = document.createElement("div");
+  cardDiv.classList.add("card");
+  cardDiv.style.bottom = "10px";
+  cardDiv.style.left = `${100 + index*70}px`;
+  cardDiv.innerText = card;
+  tableDiv.appendChild(cardDiv);
+
+  // Кнопканы өшіреміз
+  myCardsDiv.children[index].disabled = true;
+}
 </script>
 
 </body>
