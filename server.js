@@ -8,68 +8,87 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-/* ---------------- DATA ---------------- */
+/* ================= DATA ================= */
 
 let users = {}; 
-// users[userId] = { balance: number }
+// users[userId] = { balance }
 
-let waitingRoom = null;
+let waitingPlayer = null;
 
 let rooms = {};
-// rooms[roomId] = { players: [id1, id2] }
+// rooms[roomId] = { players }
 
-/* ---------------- SOCKET ---------------- */
+/* ================= AZI LOGIC ================= */
+
+function randomCard() {
+  return Math.floor(Math.random() * 10) + 1; // 1–10
+}
+
+function dealCards() {
+  return [randomCard(), randomCard(), randomCard()];
+}
+
+function score(cards) {
+  return cards.reduce((a, b) => a + b, 0) % 10;
+}
+
+/* ================= SOCKET ================= */
 
 io.on("connection", socket => {
 
   socket.on("joinGame", ({ userId }) => {
 
-    // 1️⃣ Егер жаңа ойыншы болса – баланс береміз
+    // Баланс жоқ болса → береміз
     if (!users[userId]) {
       users[userId] = { balance: 1000 };
     }
 
-    // 2️⃣ Егер күтіп тұрған адам жоқ болса
-    if (!waitingRoom) {
-      waitingRoom = {
+    // Егер ешкім күтпесе
+    if (!waitingPlayer) {
+      waitingPlayer = {
         roomId: "room_" + Date.now(),
-        player: userId
+        userId
       };
 
-      socket.join(waitingRoom.roomId);
+      socket.join(waitingPlayer.roomId);
 
       socket.emit("waiting", {
         balance: users[userId].balance
       });
-
       return;
     }
 
-    // 3️⃣ Екінші ойыншы келді → комната жасалады
-    const roomId = waitingRoom.roomId;
-    const player1 = waitingRoom.player;
-    const player2 = userId;
+    /* ===== ЕКІНШІ ОЙЫНШЫ КЕЛДІ ===== */
 
-    rooms[roomId] = {
-      players: [player1, player2]
-    };
+    const roomId = waitingPlayer.roomId;
+    const p1 = waitingPlayer.userId;
+    const p2 = userId;
 
+    waitingPlayer = null;
+
+    rooms[roomId] = { players: [p1, p2] };
     socket.join(roomId);
 
-    // Комната бос емес
-    waitingRoom = null;
+    // Карта тарату
+    const cards1 = dealCards();
+    const cards2 = dealCards();
 
-    // 4️⃣ Екеуіне де хабар жіберу
+    const score1 = score(cards1);
+    const score2 = score(cards2);
+
     io.to(roomId).emit("gameStarted", {
       roomId,
-      players: rooms[roomId].players,
-      balances: {
-        [player1]: users[player1].balance,
-        [player2]: users[player2].balance
+      players: [p1, p2],
+      cards: {
+        [p1]: cards1,
+        [p2]: cards2
+      },
+      scores: {
+        [p1]: score1,
+        [p2]: score2
       }
     });
   });
-
 });
 
 server.listen(process.env.PORT || 3000, () => {
