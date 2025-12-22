@@ -39,57 +39,45 @@ io.on("connection", (socket) => {
         `Қарсылас табылды! Бірінші ойыншы: ${first.userId}`
       );
 
-      // Game экран ашу
-      first.socket.emit("opponentFound", { opponentId: userId });
-      socket.emit("opponentFound", { opponentId: first.userId });
+     // Қарсылас табылды
+first.socket.emit("opponentFound", { opponentId: userId });
+socket.emit("opponentFound", { opponentId: first.userId });
 
-      // Ойын логикасын сақтау
-      currentGame = {
-        [first.socket.id]: { userId: first.userId, bet: null },
-        [socket.id]: { userId, bet: null }
-      };
+// Ойын логикасын сақтау (рольдермен)
+currentGame = {
+  [first.socket.id]: {
+    userId: first.userId,
+    bet: null,
+    role: "starter"     // 1-ойыншы
+  },
+  [socket.id]: {
+    userId,
+    bet: null,
+    role: "responder"   // 2-ойыншы
+  }
+};
+// ТЕК 1-ОЙЫНШЫ ставка жібере алады
+socket.on("playerBet", ({ bet }) => {
+  const player = currentGame[socket.id];
+  if (!player || player.role !== "starter") return;
+
+  player.bet = bet;
+
+  // 2-ойыншыға *2 есе жіберу
+  for (let id in currentGame) {
+    if (id !== socket.id) {
+      io.to(id).emit("opponentBet", { bet: bet * 2 });
     }
-  });
-
-  // Бірінші ойыншы ставка жіберсе
-  socket.on("playerBet", ({ bet }) => {
-    console.log("Ставка:", bet);
-
-    if (!currentGame[socket.id]) return;
-
-    currentGame[socket.id].bet = bet;
-
-    // Қарсыласқа жіберу
-    for (let id in currentGame) {
-      if (id !== socket.id) {
-        io.to(id).emit("opponentBet", { bet: bet * 2 });
-      }
-    }
-  });
-
-  // Екінші ойыншы готов / отбой
-  socket.on("playerReady", ({ ready }) => {
-    console.log("Ready:", ready);
-
-    for (let id in currentGame) {
-      if (id !== socket.id) {
-        io.to(id).emit("opponentReady", { ready });
-      }
-    }
-  });
-
-  // Disconnect
-  socket.on("disconnect", () => {
-    console.log("Клиент шықты:", socket.id);
-
-    delete currentGame[socket.id];
-
-    if (waitingPlayer && waitingPlayer.socket.id === socket.id) {
-      waitingPlayer = null;
-    }
-  });
+  }
 });
+// ТЕК 2-ОЙЫНШЫ готов / отбой жібереді
+socket.on("playerReady", ({ ready }) => {
+  const player = currentGame[socket.id];
+  if (!player || player.role !== "responder") return;
 
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+  for (let id in currentGame) {
+    if (id !== socket.id) {
+      io.to(id).emit("opponentReady", { ready });
+    }
+  }
 });
