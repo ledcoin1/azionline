@@ -85,20 +85,18 @@ joinBtn.onclick = () => {
 };
 
 // Серверден хабар қабылдау
-socket.on("message", (msg) => {
-  info.innerText = msg;
-});
-
-// Қарсылас табылғанда жаңа көріністі көрсету
 socket.on("opponentFound", ({ opponentId }) => {
-  lobby.style.display = "none";      // lobby жасыру
-  gameDiv.style.display = "block";    // ойын көрінісін көрсету
+  // 1️⃣ Lobby жасыру
+  lobby.style.display = "none";
 
-  // Қарсылас пен сенің ID-ң
+  // 2️⃣ Game экран көрсету
+  gameDiv.style.display = "block";
+
+  // 3️⃣ Қарсылас және сенің ID көрсету
   infoGame.innerText = `Ойын басталды! Қарсылас: ${opponentId}`;
   opponentDiv.innerText = `Қарсылас: ${opponentId}`;
 
-  // Қарсыласқа 3 карта (беті теріске)
+  // 4️⃣ Қарсыласқа 3 карта (бет теріске)
   opponentDiv.innerHTML = '';
   for (let i = 0; i < 3; i++) {
     const card = document.createElement("div");
@@ -107,19 +105,22 @@ socket.on("opponentFound", ({ opponentId }) => {
     opponentDiv.appendChild(card);
   }
 
-  // Сенің 3 картаң
-  const playerCardsDiv = document.createElement("div");
-  playerCardsDiv.id = "player-cards";
-  playerCardsDiv.style.position = "absolute";
-  playerCardsDiv.style.bottom = "10px";
-  playerCardsDiv.style.width = "100%";
-  playerCardsDiv.style.textAlign = "center";
-  gameDiv.appendChild(playerCardsDiv);
-
+  // 5️⃣ Сенің карталарың
+  let playerCardsDiv = document.getElementById("player-cards");
+  if (!playerCardsDiv) {
+    playerCardsDiv = document.createElement("div");
+    playerCardsDiv.id = "player-cards";
+    playerCardsDiv.style.position = "absolute";
+    playerCardsDiv.style.bottom = "10px";
+    playerCardsDiv.style.width = "100%";
+    playerCardsDiv.style.textAlign = "center";
+    gameDiv.appendChild(playerCardsDiv);
+  }
+  playerCardsDiv.innerHTML = '';
   for (let i = 0; i < 3; i++) {
     const card = document.createElement("div");
     card.className = "player-card";
-    card.innerText = "🂠"; // бастапқыда бетті көрсетпейміз
+    card.innerText = "🂠"; // бастапқыда беті көрсетілмейді
     playerCardsDiv.appendChild(card);
   }
 });
@@ -128,4 +129,5 @@ socket.on("opponentFound", ({ opponentId }) => {
 
 </body>
 </html>
+
 
