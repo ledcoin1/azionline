@@ -5,13 +5,29 @@
 <title>Онлайн екі ойыншы мысалы</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-  /* Game үстелі */
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #2e7d32;
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+h1 { margin-top: 30px; }
+
+/* Lobby экран */
+#lobby {
+  margin-top: 50px;
+}
+
+/* Game экран */
 #game {
   display: none;
   position: relative;
   width: 800px;
   height: 500px;
-  margin: 20px auto;
+  margin: 30px auto;
   background: #1b5e20;
   border-radius: 20px;
   box-shadow: 0 0 25px #000;
@@ -49,23 +65,38 @@
   font-weight: bold;
   color: white;
 }
+
+button {
+  padding: 12px 20px;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 8px;
+  border: none;
+  background: #4caf50;
+  color: white;
+  transition: 0.3s;
+}
+button:hover { background: #66bb6a; }
 </style>
 </head>
 <body>
 
 <h1>Онлайн екі ойыншы мысалы</h1>
 
+<!-- Lobby -->
 <div id="lobby">
   <div id="info">Ойынға қосылу үшін батырманы басыңыз</div>
   <button id="joinBtn">Ойынға қосылу</button>
 </div>
 
+<!-- Game экран -->
 <div id="game">
   <div id="infoGame"></div>
   <div id="opponent">Қарсылас күтілуде...</div>
 </div>
 
 <script>
+// DOM элементтері
 const joinBtn = document.getElementById("joinBtn");
 const info = document.getElementById("info");
 const lobby = document.getElementById("lobby");
@@ -76,6 +107,7 @@ const opponentDiv = document.getElementById("opponent");
 // Сервермен байланыс
 const socket = io();
 
+// Ойынға қосылу батырмасы
 joinBtn.onclick = () => {
   const userId = Math.floor(Math.random() * 1000);
   socket.emit("joinGame", { userId });
@@ -84,18 +116,23 @@ joinBtn.onclick = () => {
 };
 
 // Серверден хабар қабылдау
+socket.on("message", (msg) => {
+  info.innerText = msg;
+});
+
+// Қарсылас табылғанда game экран көрсету және карталар жасау
 socket.on("opponentFound", ({ opponentId }) => {
-  // 1️⃣ Lobby жасыру
+  // Lobby жасыру
   lobby.style.display = "none";
 
-  // 2️⃣ Game экран көрсету
+  // Game экран көрсету
   gameDiv.style.display = "block";
 
-  // 3️⃣ Қарсылас және сенің ID көрсету
+  // Қарсылас ID
   infoGame.innerText = `Ойын басталды! Қарсылас: ${opponentId}`;
   opponentDiv.innerText = `Қарсылас: ${opponentId}`;
 
-  // 4️⃣ Қарсыласқа 3 карта (бет теріске)
+  // Қарсыласқа 3 карта (бет теріске)
   opponentDiv.innerHTML = '';
   for (let i = 0; i < 3; i++) {
     const card = document.createElement("div");
@@ -104,7 +141,7 @@ socket.on("opponentFound", ({ opponentId }) => {
     opponentDiv.appendChild(card);
   }
 
-  // 5️⃣ Сенің карталарың
+  // Сенің карталарың
   let playerCardsDiv = document.getElementById("player-cards");
   if (!playerCardsDiv) {
     playerCardsDiv = document.createElement("div");
@@ -123,11 +160,7 @@ socket.on("opponentFound", ({ opponentId }) => {
     playerCardsDiv.appendChild(card);
   }
 });
-
 </script>
 
 </body>
 </html>
-
-
-
