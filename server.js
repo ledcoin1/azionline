@@ -34,10 +34,47 @@ io.on("connection", (socket) => {
   socket.emit("opponentFound", { opponentId: first.userId });
 }
 
+     // Ойын логикасын сақтау (әр ойыншының socket id және ставка)
+      currentGame[first.socket.id] = { userId: first.userId, bet: null };
+      currentGame[socket.id] = { userId, bet: null };
+    }
+  });
+
+  // Бірінші ойыншы ставка жібергенде
+  socket.on("playerBet", ({ bet }) => {
+    console.log(`Ставка жіберілді: ${bet}`);
+    if (!currentGame[socket.id]) return;
+
+    currentGame[socket.id].bet = bet;
+
+    // Қарсыласқа хабар жіберу
+    for (let id in currentGame) {
+      if (id !== socket.id) {
+        io.to(id).emit("opponentBet", { bet });
+      }
+    }
+  });
+
+  // Екінші ойыншы готов/отбой деп жауап берсе
+  socket.on("playerReady", ({ ready }) => {
+    // қарсыласқа хабар беру
+    for (let id in currentGame) {
+      if (id !== socket.id) {
+        io.to(id).emit("opponentReady", { ready });
+      }
+    }
+  });
+
+  // Клиент disconnect болса ойыннан шығару
+  socket.on("disconnect", () => {
+    console.log("Клиент шықты:", socket.id);
+    delete currentGame[socket.id];
+    if (waitingPlayer && waitingPlayer.socket.id === socket.id) {
+      waitingPlayer = null;
+    }
   });
 });
 
 server.listen(3000, () => console.log("Server running on http://localhost:3000"));
-
 
 
