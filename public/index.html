@@ -59,15 +59,29 @@ h1 { margin-top: 30px; }
   box-shadow: 0 0 8px #000;
 }
 
-/* Мәтіндер */
-#infoGame, #opponent, #player-cards, #betContainer {
+/* Ортадағы көзір */
+#trump-card {
+  width: 80px;
+  height: 120px;
+  background: gold;
+  color: black;
+  border-radius: 8px;
+  display: inline-block;
+  font-size: 24px;
+  line-height: 120px;
+  font-weight: bold;
+  box-shadow: 0 0 8px #000;
+  margin-top: 20px;
+}
+
+/* Қарсылас және сенің info мәтіні */
+#infoGame, #opponent, #player-cards, #betDiv, #responderDiv {
   font-size: 20px;
   font-weight: bold;
   color: white;
   margin-top: 10px;
 }
 
-/* Батырмалар */
 button {
   padding: 12px 20px;
   font-size: 18px;
@@ -80,11 +94,10 @@ button {
 }
 button:hover { background: #66bb6a; }
 
-input[type="number"] {
-  width: 80px;
-  font-size: 18px;
+input[type=number] {
+  width: 60px;
   padding: 5px;
-  margin-left: 10px;
+  font-size: 18px;
   border-radius: 5px;
   border: none;
   text-align: center;
@@ -105,13 +118,27 @@ input[type="number"] {
 <div id="game">
   <div id="infoGame"></div>
 
+  <!-- 1-ойыншы ставка -->
+  <div id="betDiv" style="display:none;">
+    <span>Ставка: </span>
+    <input type="number" id="betInput" min="25" max="150" value="25">
+    <button id="betBtn">Жіберу</button>
+  </div>
+
+  <!-- 2-ойыншы готов/отбой -->
+  <div id="responderDiv" style="display:none;">
+    <span id="opponentBetText"></span><br>
+    <button id="readyBtn">Готов</button>
+    <button id="foldBtn">Отбой</button>
+  </div>
+
   <!-- Қарсылас карталары -->
   <div id="opponent">Қарсылас күтілуде...</div>
 
-  <!-- Ставка контейнері -->
-  <div id="betContainer" style="margin-top:20px;"></div>
+  <!-- Ортадағы көзір -->
+  <div id="trumpDiv"></div>
 
-  <!-- Сенің карталары -->
+  <!-- Сенің карталарың -->
   <div id="player-cards"></div>
 </div>
 
@@ -123,88 +150,107 @@ const gameDiv = document.getElementById("game");
 const infoGame = document.getElementById("infoGame");
 const opponentDiv = document.getElementById("opponent");
 const playerCardsDiv = document.getElementById("player-cards");
-const betContainer = document.getElementById("betContainer");
+const trumpDiv = document.getElementById("trumpDiv");
 
+const betDiv = document.getElementById("betDiv");
+const betInput = document.getElementById("betInput");
+const betBtn = document.getElementById("betBtn");
+
+const responderDiv = document.getElementById("responderDiv");
+const opponentBetText = document.getElementById("opponentBetText");
+const readyBtn = document.getElementById("readyBtn");
+const foldBtn = document.getElementById("foldBtn");
+
+// Сервермен байланыс
 const socket = io();
-let role = null;
 
-// ===== JOIN =====
+let userId = Math.floor(Math.random() * 1000);
+let isStarter = false;
+
 joinBtn.onclick = () => {
-  const userId = Math.floor(Math.random() * 1000);
   socket.emit("joinGame", { userId });
   info.innerText = "⏳ Серверге қосылуда...";
   joinBtn.disabled = true;
 };
 
-// ===== Game басталуы =====
-socket.on("opponentFound", ({ role: r }) => {
+// Сервер хабарлары
+socket.on("message", (msg) => {
+  info.innerText = msg;
+});
+
+// Қарсылас табылғанда gameDiv көрсету
+socket.on("opponentFound", ({ opponentId }) => {
   lobby.style.display = "none";
   gameDiv.style.display = "block";
-  role = r;
 
+  infoGame.innerText = `Ойын басталды! Қарсылас: ${opponentId}`;
+
+  // Егер бұл 1-ойыншы
+  if (userId < opponentId) {
+    isStarter = true;
+    betDiv.style.display = "block";
+  } else {
+    responderDiv.style.display = "block";
+  }
+});
+
+// 1-ойыншы ставка жіберу
+betBtn.onclick = () => {
+  const bet = parseInt(betInput.value);
+  socket.emit("playerBet", { bet });
+  betDiv.style.display = "none";
+  infoGame.innerText = `Ставка жіберілді: ${bet}. Қарсылас күтіп тұр...`;
+});
+
+// 2-ойыншыға ставка х2 хабарлау
+socket.on("opponentBet", ({ bet }) => {
+  opponentBetText.innerText = `Қарсылас ставкасын таңдады: ${bet}`;
+  responderDiv.style.display = "block";
+});
+
+// 2-ойыншы готов/отбой
+readyBtn.onclick = () => {
+  socket.emit("responderDecision", { decision: "готов" });
+  responderDiv.style.display = "none";
+};
+
+foldBtn.onclick = () => {
+  socket.emit("responderDecision", { decision: "отбой" });
+  responderDiv.style.display = "none";
+};
+
+// Карталарды тарату
+socket.on("dealCards", ({ playerCards, opponentCardsCount, trump }) => {
   // Қарсылас карталары
   opponentDiv.innerHTML = '';
-  for (let i=0;i<3;i++){
-    const c = document.createElement("div");
-    c.className="opponent-card";
-    c.innerText = "🂠";
-    opponentDiv.appendChild(c);
+  for (let i = 0; i < opponentCardsCount; i++) {
+    const card = document.createElement("div");
+    card.className = "opponent-card";
+    card.innerText = "🂠";
+    opponentDiv.appendChild(card);
   }
 
-  // Сенің карталары
+  // Сенің карталарың
   playerCardsDiv.innerHTML = '';
-  for (let i=0;i<3;i++){
-    const c = document.createElement("div");
-    c.className="player-card";
-    c.innerText = "🂠";
-    playerCardsDiv.appendChild(c);
+  for (const c of playerCards) {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    card.innerText = `${c.value}${c.suit}`;
+    playerCardsDiv.appendChild(card);
   }
 
-  // ===== Ставка интерфейс =====
-  if(role === "starter"){
-    betContainer.innerHTML = `
-      <label>Ставка (25-150): <input type="number" id="betInput" min="25" max="150" value="25"></label>
-      <button id="betBtn">Жіберу</button>
-    `;
-    const betBtn = document.getElementById("betBtn");
-    const betInput = document.getElementById("betInput");
-    betBtn.onclick = () => {
-      let bet = parseInt(betInput.value);
-      if(bet<25) bet=25;
-      if(bet>150) bet=150;
-      socket.emit("starterBet",{bet});
-      betContainer.innerHTML = "Ставка жіберілді. Қарсыласқа өтуде...";
-    };
-  } else if(role === "responder"){
-    betContainer.innerHTML = "Қарсылас ставка жасап жатыр...";
-  }
+  // Ортаға көзір
+  trumpDiv.innerHTML = '';
+  const trumpCard = document.createElement("div");
+  trumpCard.id = "trump-card";
+  trumpCard.innerText = `${trump.value}${trump.suit}`;
+  trumpDiv.appendChild(trumpCard);
 });
 
-// ===== 2-ОЙЫНШЫ КӨРІНІС =====
-socket.on("responderBet", ({ bet })=>{
-  betContainer.innerHTML = `
-    Қарсылас ставка жасады: ${bet} <br>
-    <button id="readyBtn">Готов</button>
-    <button id="foldBtn">Отбой</button>
-  `;
-  document.getElementById("readyBtn").onclick = ()=>{
-    socket.emit("responderDecision",{decision:"готов"});
-    betContainer.innerHTML = "Сіз готов жасадыңыз, күтуде...";
-  };
-  document.getElementById("foldBtn").onclick = ()=>{
-    socket.emit("responderDecision",{decision:"отбой"});
-    betContainer.innerHTML = "Сіз отбой жасадыңыз.";
-  };
-});
-
-// ===== Хабарлар =====
-socket.on("message", msg => {
-  infoGame.innerText = msg;
-});
-
-// 2-ойыншы шешімін көру (1-ойыншы)
-socket.on("responderDecision", ({ decision })=>{
-  betContainer.innerHTML = `Қарсылас шешімі: ${decision}`;
+// Ойын тоқтатылса
+socket.on("gameCanceled", ({ message }) => {
+  alert(message);
+  location.reload();
 });
 </script>
 
