@@ -2,75 +2,78 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Онлайн екі ойыншы</title>
+<title>Azi Online</title>
 <script src="/socket.io/socket.io.js"></script>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
-  background: #2e7d32;
-  color: white;
   margin: 0;
-  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #14532d;
+  color: white;
   text-align: center;
 }
 
-h1 { margin-top: 20px; }
-
-/* Lobby */
-#lobby { margin-top: 50px; }
-
-/* Game table */
-#game {
-  display: none;
-  position: relative;
-  width: 900px;
-  height: 520px;
-  margin: 20px auto;
-  background: radial-gradient(circle, #2e7d32 0%, #1b5e20 70%);
-  border-radius: 25px;
-  box-shadow: 0 0 30px #000;
+#lobby {
+  margin-top: 60px;
 }
 
-/* Opponent area */
+#game {
+  display: none;
+  width: 900px;
+  height: 550px;
+  margin: 20px auto;
+  background: radial-gradient(circle, #166534, #052e16);
+  border-radius: 25px;
+  box-shadow: 0 0 30px black;
+  position: relative;
+  padding-top: 20px;
+}
+
+/* Қарсылас карталары */
 #opponent {
   margin-top: 20px;
 }
 
-/* Cards */
-.opponent-card, .player-card {
+.opponent-card {
   width: 90px;
   height: 140px;
+  background: #eee;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 10px;
-  font-size: 30px;
-  box-shadow: 0 0 10px #000;
-}
-
-.opponent-card {
-  background: #fff;
-  color: black;
+  font-size: 32px;
+  margin: 5px;
   transform: rotateX(180deg);
 }
 
-.player-card {
-  background: #ccc;
-  color: black;
-}
-
-/* Player cards */
+/* Менің карталарым */
 #player-cards {
   position: absolute;
   bottom: 20px;
   width: 100%;
 }
 
-/* Bet UI */
-#bet-area {
-  margin-top: 15px;
+.player-card {
+  width: 90px;
+  height: 140px;
+  background: #ccc;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 5px;
+}
+
+/* Ставка блок */
+#betBox {
+  margin-top: 20px;
+}
+
+input[type=range] {
+  width: 300px;
 }
 
 button {
@@ -79,78 +82,71 @@ button {
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  background: #4caf50;
-  color: white;
+  background: #22c55e;
+  color: black;
 }
-button:hover { background: #66bb6a; }
 
-input {
-  width: 70px;
-  padding: 6px;
-  font-size: 16px;
-  border-radius: 6px;
-  border: none;
+button.red {
+  background: #ef4444;
+  color: white;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🃏 Онлайн ойын</h1>
+<h1>🃏 Azi Online</h1>
 
-<!-- LOBBY -->
 <div id="lobby">
-  <div id="info">Ойынға қосылу үшін батырманы басыңыз</div>
-  <button id="joinBtn">Ойынға қосылу</button>
+  <div id="info">Ойынға қосылу</div>
+  <button id="joinBtn">Қосу</button>
 </div>
 
-<!-- GAME -->
 <div id="game">
   <div id="infoGame"></div>
 
   <div id="opponent"></div>
 
-  <div id="player-cards"></div>
+  <!-- СТАВКА UI -->
+  <div id="betBox"></div>
 
-  <div id="bet-area"></div>
+  <!-- МЕНІҢ КАРТАЛАР -->
+  <div id="player-cards"></div>
 </div>
 
 <script>
-// ===== DOM =====
+const socket = io();
+
 const joinBtn = document.getElementById("joinBtn");
-const info = document.getElementById("info");
 const lobby = document.getElementById("lobby");
 const game = document.getElementById("game");
+const info = document.getElementById("info");
 const infoGame = document.getElementById("infoGame");
 const opponentDiv = document.getElementById("opponent");
-const playerCardsDiv = document.getElementById("player-cards");
-const betArea = document.getElementById("bet-area");
+const betBox = document.getElementById("betBox");
+const playerCards = document.getElementById("player-cards");
 
-// ===== SOCKET =====
-const socket = io();
-let myId;
+let myRole = null;
 
-// ===== JOIN GAME =====
+// JOIN
 joinBtn.onclick = () => {
-  myId = Math.floor(Math.random() * 1000);
-  socket.emit("joinGame", { userId: myId });
-  info.innerText = "⏳ Серверге қосылуда...";
+  socket.emit("joinGame", { userId: Math.floor(Math.random() * 1000) });
+  info.innerText = "Күтіңіз...";
   joinBtn.disabled = true;
 };
 
-// ===== SERVER MESSAGE =====
+// MESSAGE
 socket.on("message", msg => {
   info.innerText = msg;
 });
 
-// ===== OPPONENT FOUND =====
+// GAME START
 socket.on("opponentFound", ({ opponentId }) => {
   lobby.style.display = "none";
   game.style.display = "block";
+  infoGame.innerText = "Қарсылас: " + opponentId;
 
-  infoGame.innerText = `Қарсылас табылды: ${opponentId}`;
-
-  // Opponent cards
+  // қарсылас карталары
   opponentDiv.innerHTML = "";
   for (let i = 0; i < 3; i++) {
     const c = document.createElement("div");
@@ -159,56 +155,58 @@ socket.on("opponentFound", ({ opponentId }) => {
     opponentDiv.appendChild(c);
   }
 
-  // Player cards
-  playerCardsDiv.innerHTML = "";
+  // менің карталарым
+  playerCards.innerHTML = "";
   for (let i = 0; i < 3; i++) {
     const c = document.createElement("div");
     c.className = "player-card";
     c.innerText = "🂠";
-    playerCardsDiv.appendChild(c);
+    playerCards.appendChild(c);
   }
 
-  // Bet UI (бірінші ойыншы үшін)
-  betArea.innerHTML = `
-    <div>
-      Ставка:
-      <input type="number" id="betInput" min="25" max="150" value="25">
-      <button id="betBtn">Жіберу</button>
-    </div>
-  `;
-
-  document.getElementById("betBtn").onclick = () => {
-    const bet = Number(document.getElementById("betInput").value);
-    socket.emit("playerBet", { bet });
-    betArea.innerHTML = "⏳ Ставка жіберілді, қарсылас шешім қабылдауда...";
-  };
+  // 1-ойыншыға ставка UI
+  myRole = "starter";
+  showBetSelector();
 });
 
-// ===== RECEIVE OPPONENT BET =====
+// ===== СТАВКА ТАҢДАУ (1-ОЙЫНШЫ) =====
+function showBetSelector() {
+  betBox.innerHTML = `
+    <h3>Ставка таңда</h3>
+    <input type="range" min="25" max="150" value="25" id="betRange">
+    <div id="betValue">25</div>
+    <button id="betBtn">ГОТОВ</button>
+  `;
+
+  const range = document.getElementById("betRange");
+  const value = document.getElementById("betValue");
+
+  range.oninput = () => value.innerText = range.value;
+
+  document.getElementById("betBtn").onclick = () => {
+    socket.emit("playerBet", { bet: Number(range.value) });
+    betBox.innerHTML = "Ставка жіберілді...";
+  };
+}
+
+// ===== 2-ОЙЫНШЫҒА СТАВКА КЕЛЕДІ =====
 socket.on("opponentBet", ({ bet }) => {
-  betArea.innerHTML = `
-    <div>
-      Қарсылас ставка қойды: <b>${bet * 2}</b>
-      <br><br>
-      <button id="readyBtn">Готов</button>
-      <button id="foldBtn">Отбой</button>
-    </div>
+  myRole = "responder";
+  betBox.innerHTML = `
+    <h3>Саған ставка: ${bet}</h3>
+    <button id="readyBtn">ГОТОВ</button>
+    <button id="cancelBtn" class="red">ОТБОЙ</button>
   `;
 
   document.getElementById("readyBtn").onclick = () => {
     socket.emit("playerReady", { ready: true });
-    betArea.innerHTML = "✅ Сіз готов бастың";
+    betBox.innerHTML = "Күтуде...";
   };
 
-  document.getElementById("foldBtn").onclick = () => {
+  document.getElementById("cancelBtn").onclick = () => {
     socket.emit("playerReady", { ready: false });
-    betArea.innerHTML = "❌ Сіз отбой бастың";
+    betBox.innerHTML = "Отбой";
   };
-});
-
-// ===== RECEIVE READY / FOLD =====
-socket.on("opponentReady", ({ ready }) => {
-  alert(`Қарсылас ${ready ? "ГОТОВ" : "ОТБОЙ"} басты`);
 });
 </script>
 
