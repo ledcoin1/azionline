@@ -8,28 +8,25 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// Бірінші ойыншы
+// Күтіп тұрған ойыншы
 let waitingPlayer = null;
 
-// Қазіргі ойын (2 ойыншы)
+// Ағымдағы ойын
 let currentGame = {};
 
 io.on("connection", (socket) => {
   console.log("Клиент қосылды:", socket.id);
 
+  // ===== ОЙЫНҒА ҚОСЫЛУ =====
   socket.on("joinGame", ({ userId }) => {
-    console.log("Ойынға қосылды:", userId);
-
     if (!waitingPlayer) {
-      // 1-ойыншы
       waitingPlayer = { socket, userId };
       socket.emit("message", "Сіз бірінші ойыншысыз, қарсылас күтілуде...");
     } else {
-      // 2-ойыншы
       const first = waitingPlayer;
       waitingPlayer = null;
 
-      // Хабарлар
+      // Хабар
       first.socket.emit(
         "message",
         `Қарсылас табылды! Екінші ойыншы: ${userId}`
@@ -39,45 +36,65 @@ io.on("connection", (socket) => {
         `Қарсылас табылды! Бірінші ойыншы: ${first.userId}`
       );
 
-     // Қарсылас табылды
-first.socket.emit("opponentFound", { opponentId: userId });
-socket.emit("opponentFound", { opponentId: first.userId });
+      // Game экран ашу
+      first.socket.emit("opponentFound", { opponentId: userId });
+      socket.emit("opponentFound", { opponentId: first.userId });
 
-// Ойын логикасын сақтау (рольдермен)
-currentGame = {
-  [first.socket.id]: {
-    userId: first.userId,
-    bet: null,
-    role: "starter"     // 1-ойыншы
-  },
-  [socket.id]: {
-    userId,
-    bet: null,
-    role: "responder"   // 2-ойыншы
-  }
-};
-// ТЕК 1-ОЙЫНШЫ ставка жібере алады
-socket.on("playerBet", ({ bet }) => {
-  const player = currentGame[socket.id];
-  if (!player || player.role !== "starter") return;
-
-  player.bet = bet;
-
-  // 2-ойыншыға *2 есе жіберу
-  for (let id in currentGame) {
-    if (id !== socket.id) {
-      io.to(id).emit("opponentBet", { bet: bet * 2 });
+      // ОЙЫНДЫ САҚТАУ (рольдермен)
+      currentGame = {
+        [first.socket.id]: {
+          userId: first.userId,
+          bet: null,
+          role: "starter"
+        },
+        [socket.id]: {
+          userId,
+          bet: null,
+          role: "responder"
+        }
+      };
     }
-  }
+  });
+
+  // ===== 1-ОЙЫНШЫ СТАВКА =====
+  socket.on("playerBet", ({ bet }) => {
+    const player = currentGame[socket.id];
+    if (!player || player.role !== "starter") return;
+
+    player.bet = bet;
+
+    // 2-ойыншыға *2 жіберу
+    for (let id in currentGame) {
+      if (id !== socket.id) {
+        io.to(id).emit("opponentBet", { bet: bet * 2 });
+      }
+    }
+  });
+
+  // ===== 2-ОЙЫНШЫ ГОТОВ / ОТБОЙ =====
+  socket.on("playerReady", ({ ready }) => {
+    const player = currentGame[socket.id];
+    if (!player || player.role !== "responder") return;
+
+    for (let id in currentGame) {
+      if (id !== socket.id) {
+        io.to(id).emit("opponentReady", { ready });
+      }
+    }
+  });
+
+  // ===== DISCONNECT =====
+  socket.on("disconnect", () => {
+    console.log("Клиент шықты:", socket.id);
+
+    delete currentGame[socket.id];
+
+    if (waitingPlayer && waitingPlayer.socket.id === socket.id) {
+      waitingPlayer = null;
+    }
+  });
 });
-// ТЕК 2-ОЙЫНШЫ готов / отбой жібереді
-socket.on("playerReady", ({ ready }) => {
-  const player = currentGame[socket.id];
-  if (!player || player.role !== "responder") return;
 
-  for (let id in currentGame) {
-    if (id !== socket.id) {
-      io.to(id).emit("opponentReady", { ready });
-    }
-  }
+server.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
 });
