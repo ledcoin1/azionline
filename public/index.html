@@ -93,10 +93,39 @@ socket.on("message", (msg) => {
 socket.on("opponentFound", ({ opponentId }) => {
   lobby.style.display = "none";      // lobby жасыру
   gameDiv.style.display = "block";    // ойын көрінісін көрсету
+
+  // Қарсылас пен сенің ID-ң
   infoGame.innerText = `Ойын басталды! Қарсылас: ${opponentId}`;
   opponentDiv.innerText = `Қарсылас: ${opponentId}`;
+
+  // Қарсыласқа 3 карта (беті теріске)
+  opponentDiv.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const card = document.createElement("div");
+    card.className = "opponent-card";
+    card.innerText = "🂠"; // беті теріске
+    opponentDiv.appendChild(card);
+  }
+
+  // Сенің 3 картаң
+  const playerCardsDiv = document.createElement("div");
+  playerCardsDiv.id = "player-cards";
+  playerCardsDiv.style.position = "absolute";
+  playerCardsDiv.style.bottom = "10px";
+  playerCardsDiv.style.width = "100%";
+  playerCardsDiv.style.textAlign = "center";
+  gameDiv.appendChild(playerCardsDiv);
+
+  for (let i = 0; i < 3; i++) {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    card.innerText = "🂠"; // бастапқыда бетті көрсетпейміз
+    playerCardsDiv.appendChild(card);
+  }
 });
+
 </script>
 
 </body>
 </html>
+
