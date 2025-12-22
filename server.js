@@ -22,16 +22,22 @@ io.on("connection", (socket) => {
       waitingPlayer = { socket, userId };
       socket.emit("message", "Сіз бірінші ойыншы, қарсылас күтілуде...");
     } else {
-      // Екінші ойыншы қосылды → екі жаққа хабар беру
-      const first = waitingPlayer;
-      waitingPlayer = null;
+  const first = waitingPlayer;
+  waitingPlayer = null;
 
-      first.socket.emit("message", `Қарсылас табылды! Екінші ойыншы: ${userId}`);
-      socket.emit("message", `Қарсылас табылды! Бірінші ойыншы: ${first.userId}`);
-    }
+  // Тек хабар
+  first.socket.emit("message", `Қарсылас табылды! Екінші ойыншы: ${userId}`);
+  socket.emit("message", `Қарсылас табылды! Бірінші ойыншы: ${first.userId}`);
+
+  // 🔴 Жаңа терезе ашу үшін сигнал
+  first.socket.emit("opponentFound", { opponentId: userId });
+  socket.emit("opponentFound", { opponentId: first.userId });
+}
+
   });
 });
 
 server.listen(3000, () => console.log("Server running on http://localhost:3000"));
+
 
 
