@@ -1,39 +1,48 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+const express = require("express");  // бұл сайт ашу типа рұқсат 
+const http = require("http");            //сервер 
+const { Server } = require("socket.io");    //ойнайн байланыс
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
 
-app.use(express.static("public"));
+// сервер жасау үшін //
+const app = express();                 // сайт логикасы бұл
+const server = http.createServer(app); // порт тыңдайды
+const io = new Server(server);         //socket.io орталығы
 
-let waitingPlayer = null;
-let currentGame = {}; // екі ойыншының деректерін сақтау
+app.use(express.static("public"));      // public/index.html браузерге ашылады
 
-io.on("connection", (socket) => {
-  console.log("Клиент қосылды:", socket.id);
+// Бірінші ойыншыны сақтау
+let waitingPlayer = null;               // келген ойыншы сақтаймыз 2 ші ойыншы келгенше
 
-  socket.on("joinGame", ({ userId }) => {
+io.on("connection", (socket) => {         // типа клиент миниапп ашқанда кнопка басқанда const socket = io() орындалды 
+  console.log("Клиент қосылды");           // жаңа клиент келді деп айтат
+
+  socket.on("joinGame", ({ userId }) => {   // «Егер клиент joinGame десе — осы код»
     console.log("Ойынға қосылды:", userId);
 
     if (!waitingPlayer) {
       // Бірінші ойыншы күтілуде
       waitingPlayer = { socket, userId };
-      socket.emit("message", "Сіз бірінші ойыншы, қарсылас күтілуде...");
-    } else {
-      // Екінші ойыншы қосылды
+      socket.emit("message", "Сіз бірінші ойыншы, қарсылас күтілуде...");   // жоғарыда кнопка басқанда 1ші ойыншыны сақтап осылай айтады
+   } else {
+      // 2-ойыншы
       const first = waitingPlayer;
       waitingPlayer = null;
 
-      first.socket.emit("message", `Қарсылас табылды! Екінші ойыншы: ${userId}`);
-      socket.emit("message", `Қарсылас табылды! Бірінші ойыншы: ${first.userId}`);
+      // Хабарлар
+      first.socket.emit(
+        "message",
+        `Қарсылас табылды! Екінші ойыншы: ${userId}`
+      );
+      socket.emit(
+        "message",
+        `Қарсылас табылды! Бірінші ойыншы: ${first.userId}`
+      );
 
-      // Game экран сигнал
+      // Game экран ашу
       first.socket.emit("opponentFound", { opponentId: userId });
       socket.emit("opponentFound", { opponentId: first.userId });
 
-      // Логика сақтау
+      // Ойын логикасын сақтау
       currentGame = {
         [first.socket.id]: { userId: first.userId, bet: null },
         [socket.id]: { userId, bet: null }
@@ -41,12 +50,15 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 1-ойыншы ставка жіберсе
+  // Бірінші ойыншы ставка жіберсе
   socket.on("playerBet", ({ bet }) => {
+    console.log("Ставка:", bet);
+
     if (!currentGame[socket.id]) return;
+
     currentGame[socket.id].bet = bet;
 
-    // Қарсыласқа ставка ×2 хабарлау
+    // Қарсыласқа жіберу
     for (let id in currentGame) {
       if (id !== socket.id) {
         io.to(id).emit("opponentBet", { bet: bet * 2 });
@@ -54,41 +66,29 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 2-ойыншы готов/отбой
-  socket.on("responderDecision", ({ decision }) => {
-    const opponentId = Object.keys(currentGame).find(id => id !== socket.id);
-    if (!opponentId) return;
+  // Екінші ойыншы готов / отбой
+  socket.on("playerReady", ({ ready }) => {
+    console.log("Ready:", ready);
 
-    if (decision === "готов") {
-      // 3 карта тарату
-      const suits = ["♠", "♥", "♣", "♦"];
-      const values = ["6","7","8","9","10","J","Q","K","A"];
-      const getRandomCard = () => ({ suit: suits[Math.floor(Math.random()*4)], value: values[Math.floor(Math.random()*9)] });
-
-      // 1-ойыншы карталары
-      const player1Cards = [getRandomCard(), getRandomCard(), getRandomCard()];
-      // 2-ойыншы карталары
-      const player2Cards = [getRandomCard(), getRandomCard(), getRandomCard()];
-      // Көзір
-      const trump = getRandomCard();
-
-      // Екі ойыншыға жіберу
-      io.to(socket.id).emit("dealCards", { playerCards: player2Cards, opponentCardsCount: 3, trump });
-      io.to(opponentId).emit("dealCards", { playerCards: player1Cards, opponentCardsCount: 3, trump });
-    } else {
-      // Отбой болса ойын тоқтайды
-      io.to(socket.id).emit("gameCanceled", { message: "Ойын тоқтатылды" });
-      io.to(opponentId).emit("gameCanceled", { message: "Ойын тоқтатылды" });
-      delete currentGame[socket.id];
-      delete currentGame[opponentId];
+    for (let id in currentGame) {
+      if (id !== socket.id) {
+        io.to(id).emit("opponentReady", { ready });
+      }
     }
   });
 
+  // Disconnect
   socket.on("disconnect", () => {
     console.log("Клиент шықты:", socket.id);
+
     delete currentGame[socket.id];
-    if (waitingPlayer && waitingPlayer.socket.id === socket.id) waitingPlayer = null;
+
+    if (waitingPlayer && waitingPlayer.socket.id === socket.id) {
+      waitingPlayer = null;
+    }
   });
 });
 
-server.listen(3000, () => console.log("Server running on http://localhost:3000"));
+server.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
+});
