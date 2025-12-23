@@ -1,133 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="kk">
 <head>
-<meta charset="UTF-8">
-<title>Онлайн екі ойыншы мысалы</title>
-<script src="/socket.io/socket.io.js"></script>
-<style>
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  background: #2e7d32;
-  color: white;
-  margin: 0;
-  padding: 0;
-}
+  <meta charset="UTF-8">
+  <title>Card Game</title>
 
-h1 { margin-top: 30px; }
+  <!-- Socket.IO клиент кітапханасы -->
+  <script src="/socket.io/socket.io.js"></script>
 
-#lobby, #game {
-  margin-top: 50px;
-}
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding-top: 40px;
+    }
 
-#game {
-  display: none;
-}
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
 
-#opponent {
-  width: 200px;
-  height: 300px;
-  background: #1b5e20;
-  margin: 50px auto;
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
-  box-shadow: 0 0 15px #000;
-}
-button {
-  padding: 12px 20px;
-  font-size: 18px;
-  cursor: pointer;
-  border-radius: 8px;
-  border: none;
-  background: #4caf50;
-  color: white;
-  transition: 0.3s;
-}
-button:hover {
-  background: #66bb6a;
-}
-</style>
+    #game {
+      display: none;
+    }
+
+    #log {
+      margin-top: 20px;
+      min-height: 100px;
+      background: #222;
+      padding: 10px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Онлайн екі ойыншы мысалы</h1>
+  <!-- JOIN ЭКРАН -->
+  <div id="join">
+    <h2>Онлайн карта ойыны</h2>
+    <input id="userId" placeholder="User ID енгіз" />
+    <br><br>
+    <button onclick="joinGame()">Ойынға кіру</button>
+  </div>
 
-<div id="lobby">
-  <div id="info">Ойынға қосылу үшін батырманы басыңыз</div>
-  <button id="joinBtn">Ойынға қосылу</button>
-</div>
+  <!-- GAME ЭКРАН -->
+  <div id="game">
+    <h2 id="status">Ойын басталды</h2>
 
-<div id="game">
-  <div id="infoGame"></div>
-  <div id="opponent">Қарсылас күтілуде...</div>
-</div>
+    <button onclick="sendBet(100)">Ставка 100</button>
+    <button onclick="sendBet(500)">Ставка 500</button>
 
-<script>
-const joinBtn = document.getElementById("joinBtn");
-const info = document.getElementById("info");
-const lobby = document.getElementById("lobby");
-const gameDiv = document.getElementById("game");
-const infoGame = document.getElementById("infoGame");
-const opponentDiv = document.getElementById("opponent");
+    <br><br>
 
-// Сервермен байланыс
-const socket = io();
+    <button onclick="sendReady(true)">ГОТОВ</button>
+    <button onclick="sendReady(false)">ОТБОЙ</button>
+  </div>
 
-//осынын басқанда осы кнопка істейді
-joinBtn.onclick = () => {  //осы кнопка
-  const userId = Math.floor(Math.random() * 1000); //өтірік рандом алады id соны серверге жібереді тк мысал үшін
-  socket.emit("joinGame", { userId });         // бұл ойынға кіргім келеді деп тұр
-  info.innerText = "⏳ Серверге қосылуда...";    // серверге қатысы жоқ, күте тұр деп айтат типа
-  joinBtn.disabled = true;
-};
+  <div id="log"></div>
 
-// Серверден хабар қабылдау
-socket.on("opponentFound", ({ opponentId }) => {
-  // 1️⃣ Lobby жасыру
-  lobby.style.display = "none";
+  <script>
+    // ===== SOCKET ҚОСЫЛУ =====
+    const socket = io();
 
-  // 2️⃣ Game экран көрсету
-  gameDiv.style.display = "block";
+    // ===== ОЙЫНҒА КІРУ =====
+    function joinGame() {
+      const userId = document.getElementById("userId").value;
+      if (!userId) return alert("User ID енгіз!");
 
-  // 3️⃣ Қарсылас және сенің ID көрсету
-  infoGame.innerText = `Ойын басталды! Қарсылас: ${opponentId}`;
-  opponentDiv.innerText = `Қарсылас: ${opponentId}`;
+      socket.emit("joinGame", { userId });
+    }
 
-  // 4️⃣ Қарсыласқа 3 карта (бет теріске)
-  opponentDiv.innerHTML = '';
-  for (let i = 0; i < 3; i++) {
-    const card = document.createElement("div");
-    card.className = "opponent-card";
-    card.innerText = "🂠"; // беті теріске
-    opponentDiv.appendChild(card);
-  }
+    // ===== СТАВКА ЖІБЕРУ =====
+    function sendBet(bet) {
+      socket.emit("playerBet", { bet });
+      log("Сен ставка қойдың: " + bet);
+    }
 
-  // 5️⃣ Сенің карталарың
-  let playerCardsDiv = document.getElementById("player-cards");
-  if (!playerCardsDiv) {
-    playerCardsDiv = document.createElement("div");
-    playerCardsDiv.id = "player-cards";
-    playerCardsDiv.style.position = "absolute";
-    playerCardsDiv.style.bottom = "10px";
-    playerCardsDiv.style.width = "100%";
-    playerCardsDiv.style.textAlign = "center";
-    gameDiv.appendChild(playerCardsDiv);
-  }
-  playerCardsDiv.innerHTML = '';
-  for (let i = 0; i < 3; i++) {
-    const card = document.createElement("div");
-    card.className = "player-card";
-    card.innerText = "🂠"; // бастапқыда беті көрсетілмейді
-    playerCardsDiv.appendChild(card);
-  }
-});
+    // ===== ГОТОВ / ОТБОЙ =====
+    function sendReady(ready) {
+      socket.emit("playerReady", { ready });
+      log("Сен таңдау жасадың: " + (ready ? "ГОТОВ" : "ОТБОЙ"));
+    }
 
+    // ===== СЕРВЕРДЕН КЕЛЕТІН ХАБАРЛАР =====
 
-</script>
+    socket.on("message", (text) => {
+      log(text);
+    });
+
+    socket.on("opponentFound", ({ opponentId }) => {
+      document.getElementById("join").style.display = "none";
+      document.getElementById("game").style.display = "block";
+      document.getElementById("status").innerText =
+        "Қарсылас табылды: " + opponentId;
+    });
+
+    socket.on("opponentBet", ({ bet }) => {
+      log("Қарсылас ставка қойды: " + bet);
+    });
+
+    socket.on("opponentReady", ({ ready }) => {
+      log("Қарсылас таңдады: " + (ready ? "ГОТОВ" : "ОТБОЙ"));
+    });
+
+    // ===== LOG =====
+    function log(text) {
+      const logDiv = document.getElementById("log");
+      logDiv.innerHTML += `<div>${text}</div>`;
+    }
+  </script>
 
 </body>
 </html>
