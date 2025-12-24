@@ -1,182 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>Дурак Онлайн</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>My Mini App</title>
+
+  <!-- Telegram Mini App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #2c3e50;
-      color: #ecf0f1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 40px;
     }
-    #login, #game, #bet {
-      margin-top: 20px;
-      padding: 20px;
-      border-radius: 10px;
-      background: #34495e;
-      display: none;
-    }
+
     button {
-      padding: 10px 20px;
-      margin: 5px;
-      border: none;
-      border-radius: 5px;
-      background: #1abc9c;
-      color: #fff;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover { background: #16a085; }
-    #messages {
-      margin-top: 20px;
-      width: 400px;
-      height: 150px;
-      overflow-y: auto;
-      background: #1a252f;
-      padding: 10px;
-      border-radius: 10px;
-    }
-    .hand {
-      display: flex;
-      margin-top: 10px;
-    }
-    .card {
-      width: 60px;
-      height: 90px;
-      border-radius: 5px;
-      background: #fff;
-      color: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 5px;
-      font-weight: bold;
+      padding: 15px 25px;
       font-size: 18px;
-    }
-    #trump {
-      margin-top: 10px;
-      font-size: 20px;
-      font-weight: bold;
-      color: #e74c3c;
+      border: none;
+      border-radius: 10px;
+      background: #22c55e;
+      color: black;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Дурак Онлайн</h1>
 
-  <!-- Пайдаланушы аты енгізу -->
-  <div id="login">
-    <input type="text" id="username" placeholder="Атыңыз">
-    <button id="joinBtn">Ойынға қосылу</button>
-  </div>
+  <h1>Telegram Mini App</h1>
+  <p id="user">Жүктелуде...</p>
 
-  <!-- Ойын экраны -->
-  <div id="game">
-    <div>
-      <button id="readyBtn">Ready</button>
-    </div>
-
-    <div id="bet" style="display:none;">
-      <p id="betText"></p>
-      <button id="acceptBet">Келісемін</button>
-      <button id="foldBet">Отбой</button>
-    </div>
-
-    <div class="hand" id="hand"></div>
-    <div id="trump"></div>
-    <div id="messages"></div>
-  </div>
+  <button onclick="hello()">Бас</button>
 
   <script>
-    const socket = io();
+    const tg = window.Telegram.WebApp;
 
-    const loginDiv = document.getElementById('login');
-    const gameDiv = document.getElementById('game');
-    const joinBtn = document.getElementById('joinBtn');
-    const usernameInput = document.getElementById('username');
-    const readyBtn = document.getElementById('readyBtn');
-    const handDiv = document.getElementById('hand');
-    const trumpDiv = document.getElementById('trump');
-    const messagesDiv = document.getElementById('messages');
+    // Telegram-ға айт: app дайын
+    tg.ready();
 
-    const betDiv = document.getElementById('bet');
-    const betText = document.getElementById('betText');
-    const acceptBetBtn = document.getElementById('acceptBet');
-    const foldBetBtn = document.getElementById('foldBet');
+    // Пайдаланушы деректері
+    const user = tg.initDataUnsafe.user;
 
-    let roomId = null;
-
-    loginDiv.style.display = 'block';
-
-    function addMessage(msg) {
-      const p = document.createElement('p');
-      p.textContent = msg;
-      messagesDiv.appendChild(p);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    if (user) {
+      document.getElementById("user").innerText =
+        "Сәлем, " + user.first_name;
+    } else {
+      document.getElementById("user").innerText =
+        "Пайдаланушы табылмады";
     }
 
-    joinBtn.onclick = () => {
-      const userId = usernameInput.value.trim();
-      if (!userId) return alert("Атыңызды енгізіңіз");
-      socket.emit('joinGame', { userId });
-      loginDiv.style.display = 'none';
-      gameDiv.style.display = 'block';
-    }
-
-    readyBtn.onclick = () => {
-      if (!roomId) return;
-      socket.emit('ready', { roomId });
-      readyBtn.disabled = true;
-    }
-
-    socket.on('message', msg => {
-      addMessage(msg);
-    });
-
-    socket.on('opponentFound', ({ opponentId }) => {
-      addMessage(`Қарсылас қосылды: ${opponentId}`);
-    });
-
-    socket.on('roomJoined', ({ roomId: id }) => {
-      roomId = id;
-    });
-
-    socket.on('startGame', ({ hand, trump }) => {
-      handDiv.innerHTML = '';
-      hand.forEach(c => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.textContent = c.rank + c.suit;
-        handDiv.appendChild(card);
-      });
-      trumpDiv.textContent = 'Trump: ' + trump.rank + trump.suit;
-    });
-
-    // ---------- Ставка логикасы ----------
-    socket.on('askBet', ({ min, max, amount }) => {
-      betDiv.style.display = 'block';
-      if (amount) {
-        betText.textContent = `Қарсылас сізге ${amount} сұрайды. Қабылдайсыз ба?`;
-      } else {
-        betText.textContent = `Сіз ставка қоюыңыз керек (${min}-${max}): ${min} бастап`;
-        // Автоматты бірінші ставка ретінде min көрсету, кейін кодқа қосудың қажеті бар
-      }
-    });
-
-    acceptBetBtn.onclick = () => {
-      betDiv.style.display = 'none';
-      socket.emit('betResponse', { accept: true, amount: null }); // бірінші ойыншы автоматты ставка қолдану
-    }
-
-    foldBetBtn.onclick = () => {
-      betDiv.style.display = 'none';
-      socket.emit('betResponse', { accept: false });
+    function hello() {
+      tg.showAlert("Сәлем! Mini App жұмыс істеп тұр 🚀");
     }
   </script>
+
 </body>
 </html>
