@@ -53,13 +53,23 @@ io.on("connection", (socket) => {
 
 
   // Ойыншы disconnect болғанда
-  socket.on("disconnect", () => {
-    players = players.filter(p => p.id !== socket.id);
-    io.emit("update players", players);
-  });
+socket.on("disconnect", () => {
+  // Әр комнатада ойыншыны өшіру
+  for (const roomId in rooms) {
+    rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
 
-}); // <- Мұнда io.on жабылуы керек
+    // Егер кім қалған жоқ болса → комната өшіру
+    if (rooms[roomId].length === 0) {
+      delete rooms[roomId];
+    } else {
+      // Қалғандарға жаңартылған тізімді жіберу
+      io.to(roomId).emit("update players", rooms[roomId]);
+    }
+  }
+});
+
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
+
 
