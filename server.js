@@ -8,8 +8,13 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
+/**
+ * Барлық комнаталар осында сақталады
+ * roomId: roomObject
+ */
 const rooms = {};
 
+/**
  * 🟢 Комната жасау функциясы
  */
 function createRoom() {
@@ -23,54 +28,83 @@ function createRoom() {
 
   console.log("🟢 Жаңа комната ашылды:", roomId);
   return roomId;
+}
 
-let waitingPlayers = []; // күтіп тұрғандар
-let roomCounter = 1;
-
+/**
+ * 🔌 Клиент қосылды
+ */
 io.on("connection", (socket) => {
-  console.log("🔌 Клиент қосылды:", socket.id);
+  console.log("🔵 Клиент қосылды:", socket.id);
 
+  /**
+   * ▶️ JOIN сигналы
+   */
   socket.on("join", (playerName) => {
-    console.log("👉 JOIN:", playerName);
+    console.log("➡️ JOIN келді:", playerName);
 
-    // Кезекте жоқ болса қосу
-    if (!waitingPlayers.find(p => p.id === socket.id)) {
-      waitingPlayers.push({
-        id: socket.id,
-        name: playerName
-      });
+    // 1️⃣ Ашық комната іздеу
+    let room = Object.values(rooms).find(
+      r => r.status === "waiting" && r.players.length < 3
+    );
+
+    // 2️⃣ Егер жоқ болса — жаңасын жасау
+    if (!room) {
+      const roomId = createRoom();
+      room = rooms[roomId];
     }
 
-    // 3 адам жиналса → комната ашу
-    if (waitingPlayers.length === 3) {
-      const roomId = "room-" + roomCounter++;
-      const players = [...waitingPlayers];
-      waitingPlayers = [];
+    // 3️⃣ Ойыншыны комнатаға қосу
+    room.players.push({
+      id: socket.id,
+      name: playerName
+    });
 
-      players.forEach(p => {
-        const s = io.sockets.sockets.get(p.id);
-        if (s) s.join(roomId);
+    socket.join(room.id);
+
+    console.log(
+      `👤 ${playerName} → ${room.id} (${room.players.length}/3)`
+    );
+
+    // 4️⃣ Барлығына жаңарту жіберу
+    io.to(room.id).emit("room_update", {
+      roomId: room.id,
+      players: room.players,
+      status: room.status
+    });
+
+    // 5️⃣ 3 адам болса → ойын басталды
+    if (room.players.length === 3) {
+      room.status = "started";
+
+      console.log("🔥 ОЙЫН БАСТАЛДЫ:", room.id);
+
+      io.to(room.id).emit("game_started", {
+        roomId: room.id,
+        players: room.players
       });
-
-      console.log("🎮 Комната ашылды:", roomId);
-
-      io.to(roomId).emit("room started", {
-        roomId,
-        players
-      });
-    } else {
-      socket.emit("waiting", waitingPlayers.length);
     }
   });
 
+  /**
+   * ❌ Disconnect
+   */
   socket.on("disconnect", () => {
-    waitingPlayers = waitingPlayers.filter(p => p.id !== socket.id);
-    console.log("❌ Клиент кетті:", socket.id);
+    console.log("❌ Клиент шықты:", socket.id);
+
+    for (const roomId in rooms) {
+      const room = rooms[roomId];
+
+      room.players = room.players.filter(p => p.id !== socket.id);
+
+      if (room.players.length === 0) {
+        delete rooms[roomId];
+        console.log("🗑 Комната өшірілді:", roomId);
+      }
+    }
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log("🚀 Server ONLINE:", PORT);
-});
-
+server.listen(PORT, () =>
+  console.log("🚀 Server ONLINE on port", PORT)
+);
