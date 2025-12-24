@@ -1,145 +1,55 @@
 <!DOCTYPE html>
 <html lang="kk">
 <head>
-  <meta charset="UTF-8">
-  <title>Mini App Online</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>Mini App Test</title>
+
+  <!-- Telegram Mini App -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: #fff;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
       text-align: center;
-      margin: 0;
-      padding: 40px 20px;
+      padding-top: 80px;
     }
-    h1 { font-size: 32px; color: #22c55e; }
-    button { padding: 15px 30px; border-radius: 12px; background: #22c55e; border: none; cursor: pointer; font-size: 18px; margin-top: 20px; transition: 0.2s; }
-    button:hover { background: #16a34a; transform: scale(1.05); }
-    #main-screen, #game-screen { display: none; }
-    #main-screen.active, #game-screen.active { display: block; }
-    #players { margin-top: 20px; display: inline-block; text-align: left; padding: 10px; border: 2px solid #22c55e; border-radius: 12px; background: rgba(0,0,0,0.3); }
-    #hand { margin-top: 30px; display: flex; justify-content: center; gap: 15px; perspective: 1000px; }
-    .card { width: 80px; height: 120px; border-radius: 12px; background: #fefefe; color: #111; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; box-shadow: 0 8px 15px rgba(0,0,0,0.3); transform: rotateY(0deg); transition: 0.3s; cursor: pointer; }
-    .card:hover { transform: rotateY(15deg) translateY(-10px); box-shadow: 0 15px 25px rgba(0,0,0,0.5); }
-    #trump { margin-top: 20px; font-size: 20px; color: #facc15; }
-    #game-messages { margin-top: 20px; font-size: 18px; color: #38bdf8; }
+    button {
+      font-size: 20px;
+      padding: 15px 30px;
+      border-radius: 12px;
+      border: none;
+      background: #22c55e;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-<h1>Mini App Online</h1>
 
-<div id="main-screen" class="active">
-  <p id="user">Жүктелуде...</p>
-  <button id="playBtn">Играть</button>
-  <div id="messages"></div>
-</div>
-
-<div id="game-screen">
-  <h2>Комната ашылды! 🎮</h2>
-  <ul id="players"></ul>
-  <div id="hand-title"><h3>Сіздің қолыңыз:</h3></div>
-  <div id="hand"></div>
-  <div id="trump"></div>
-  <div id="game-messages"></div>
-</div>
+<h1>Telegram Mini App</h1>
+<p id="status">Дайын...</p>
+<button id="joinBtn">JOIN</button>
 
 <script>
-const tg = window.Telegram.WebApp;
-tg.ready();
+  // Telegram Mini App дайын
+  const tg = window.Telegram.WebApp;
+  tg.ready();
 
-const socket = io();
+  // Серверге қосылу (сол домен)
+  const socket = io();
 
-const user = tg.initDataUnsafe.user;
-const playerName = user ? user.first_name : "Аты жоқ ойыншы";
-document.getElementById("user").innerText = user ? `Сәлем, ${user.first_name}` : "Telegram user жоқ";
+  const status = document.getElementById("status");
+  const btn = document.getElementById("joinBtn");
 
-const mainScreen = document.getElementById("main-screen");
-const gameScreen = document.getElementById("game-screen");
-const messagesDiv = document.getElementById("messages");
-const gameMessagesDiv = document.getElementById("game-messages");
-const playersList = document.getElementById("players");
-const handDiv = document.getElementById("hand");
-const trumpDiv = document.getElementById("trump");
-
-document.getElementById("playBtn").onclick = () => {
-  socket.emit("join game", playerName);
-  messagesDiv.innerText = "Серверге қосылуда...";
-};
-
-// Ойыншылар тізімі жаңарту
-socket.on("update players", (players) => {
-  playersList.innerHTML = "";
-  players.forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = p.name;
-    playersList.appendChild(li);
-  });
-});
-
-// Комната ашылды
-socket.on("room started", (players) => {
-  mainScreen.classList.remove("active");
-  gameScreen.classList.add("active");
-  gameMessagesDiv.innerText = "Ойын басталды! 🎮";
-
-  playersList.innerHTML = "";
-  players.forEach(p => {
-    const li = document.createElement("li");
-    li.innerText = p.name;
-    playersList.appendChild(li);
-  });
-
-  renderHand(players);
-});
-
-// Көзір көрсету
-socket.on("trump", (trump) => {
-  trumpDiv.innerText = `Көзір: ${trump.value}${trump.suit[0].toUpperCase()}`;
-});
-
-// Кезек бойынша хабар
-socket.on("turn", (playerId) => {
-  if (socket.id === playerId) {
-    gameMessagesDiv.innerText = "Сіздің кезегіңіз! Картаны басыңыз";
-    handDiv.querySelectorAll(".card").forEach(cardDiv => {
-      cardDiv.style.cursor = "pointer";
-      cardDiv.onclick = () => {
-        const card = {
-          value: cardDiv.dataset.value,
-          suit: cardDiv.dataset.suit
-        };
-        socket.emit("play card", { roomId: null, card }); // roomId серверден қайтару керек
-        cardDiv.remove(); // карта қолдан шығады
-      };
-    });
-  } else {
-    gameMessagesDiv.innerText = "Кезек басқа ойыншыда...";
-  }
-});
-
-// Ойыншының қолын көрсету
-function renderHand(players) {
-  const me = players.find(p => p.name === playerName);
-  if (me && me.hand) {
-    handDiv.innerHTML = "";
-    me.hand.forEach(card => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerText = `${card.value}${card.suit[0].toUpperCase()}`;
-      div.dataset.value = card.value;
-      div.dataset.suit = card.suit;
-      handDiv.appendChild(div);
-    });
-  }
-}
-
-// Ойын аяқталу
-socket.on("game over", (msg) => {
-  gameMessagesDiv.innerText = msg;
-  handDiv.innerHTML = "";
-});
+  btn.onclick = () => {
+    socket.emit("join");
+    status.innerText = "JOIN жіберілді";
+  };
 </script>
+
 </body>
 </html>
