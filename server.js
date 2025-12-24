@@ -11,6 +11,18 @@ app.use(express.static("public"));
 let players = [];
 let rooms = {};
 
+function createRoom() {
+  const roomId = `room-${Date.now()}`; // уникалды ID
+  rooms[roomId] = {
+    players: [],   // кім кімде
+    deck: [],      // бастапқы колода
+    status: "waiting", // waiting / started
+    turn: null     // кімнің кезегі
+  };
+  console.log("Жаңа комната ашылды:", roomId);
+  return roomId;
+}
+
 // Клиент қосылды
 io.on("connection", (socket) => {
   console.log("Клиент қосылды:", socket.id);
@@ -71,6 +83,7 @@ socket.on("disconnect", () => {
 });
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
+
 
 
 
