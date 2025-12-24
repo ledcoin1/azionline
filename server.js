@@ -8,6 +8,22 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
+const rooms = {};
+
+ * 🟢 Комната жасау функциясы
+ */
+function createRoom() {
+  const roomId = "room-" + Date.now();
+
+  rooms[roomId] = {
+    id: roomId,
+    players: [],        // { id, name }
+    status: "waiting"   // waiting | started
+  };
+
+  console.log("🟢 Жаңа комната ашылды:", roomId);
+  return roomId;
+
 let waitingPlayers = []; // күтіп тұрғандар
 let roomCounter = 1;
 
@@ -57,3 +73,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("🚀 Server ONLINE:", PORT);
 });
+
