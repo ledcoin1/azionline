@@ -11,7 +11,7 @@ app.use(express.static("public"));
 // Комнаталар
 let rooms = {};
 
-// 🔹 36 карталық колода жасау
+// 36 карталық колода жасау
 function createDeck() {
   const suits = ["hearts", "diamonds", "clubs", "spades"];
   const values = ["6","7","8","9","10","J","Q","K","A"];
@@ -24,41 +24,51 @@ function createDeck() {
   return deck;
 }
 
-// 🔹 Жаңа комната жасау
+// Жаңа комната жасау
 function createRoom() {
   const roomId = `room-${Date.now()}`;
   rooms[roomId] = {
     players: [],
     deck: [],
-    status: "waiting",
-    turn: null,
-    trump: null // көзір
+    status: "waiting", // waiting / started / finished
+    trump: null
   };
   console.log("Жаңа комната ашылды:", roomId);
   return roomId;
 }
 
-// 🔹 Карталарды тарату функциясы
+// Карталарды тарату функциясы
 function distributeCards(roomId) {
+  const room = rooms[roomId];
   const deck = createDeck();
   deck.sort(() => Math.random() - 0.5); // shuffle
-  rooms[roomId].deck = deck;
+  room.deck = deck;
 
   // Әр ойыншыға 3 карта беру
-  rooms[roomId].players.forEach(player => {
+  room.players.forEach(player => {
     player.hand = deck.splice(0, 3);
   });
 
   // Көзір – соңғы карта
-  rooms[roomId].trump = deck.pop();
-  console.log(`Комната ${roomId} карталар таралды, көзір:`, rooms[roomId].trump);
+  room.trump = deck.pop();
+  console.log(`Комната ${roomId} карталар таралды, көзір:`, room.trump);
 }
 
-// 🔹 Клиент қосылды
+// Ойын аяқталуын тексеру
+function checkGameOver(roomId) {
+  const room = rooms[roomId];
+  const allHandsEmpty = room.players.every(p => !p.hand || p.hand.length === 0);
+  if (allHandsEmpty) {
+    room.status = "finished";
+    io.to(roomId).emit("game over", "Ойын аяқталды! 🎉");
+    console.log(`Комната ${roomId} ойын аяқталды`);
+  }
+}
+
+// Клиент қосылды
 io.on("connection", (socket) => {
   console.log("Клиент қосылды:", socket.id);
 
-  // Играть батырмасы басылғанда
   socket.on("join game", (playerName) => {
     let roomId = null;
 
@@ -75,25 +85,23 @@ io.on("connection", (socket) => {
       roomId = createRoom();
     }
 
+    const room = rooms[roomId];
+
     // Бір телеграм аккаунт тек бір рет қосылады
-    if (!rooms[roomId].players.some(p => p.id === socket.id)) {
-      rooms[roomId].players.push({ id: socket.id, name: playerName });
+    if (!room.players.some(p => p.id === socket.id)) {
+      room.players.push({ id: socket.id, name: playerName });
       socket.join(roomId);
       console.log(`${playerName} қосылды комнатаға ${roomId}`);
 
       // Егер 2+ адам қосылса → ойын бастау
-      if (rooms[roomId].players.length >= 2 && rooms[roomId].status === "waiting") {
-        rooms[roomId].status = "started";
-
-        // ✅ Карталарды тарату және көзір орнату
+      if (room.players.length >= 2 && room.status === "waiting") {
+        room.status = "started";
         distributeCards(roomId);
-
-        io.to(roomId).emit("room started", rooms[roomId].players);
-        console.log(`Комната ${roomId} ашылды!`);
+        io.to(roomId).emit("room started", room.players);
       }
 
       // Барлық ойыншыларға кім кімде екенін жіберу
-      io.to(roomId).emit("update players", rooms[roomId].players);
+      io.to(roomId).emit("update players", room.players);
     } else {
       socket.emit("error", "Сіз осы комнатада барсыз");
     }
