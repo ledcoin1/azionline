@@ -1,94 +1,188 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Mini App</title>
+  <title>Card Game Mini App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
 
   <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
     body {
       margin: 0;
-      font-family: Arial;
-      background: #0f172a;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
       color: white;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    button {
+      padding: 14px 28px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #00c6ff;
+      color: #000;
+      font-weight: bold;
+    }
+
+    /* ===== JOIN SCREEN ===== */
+    #joinScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 20px;
+    }
+
+    input {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      width: 220px;
       text-align: center;
     }
-    .screen {
+
+    /* ===== WAIT SCREEN ===== */
+    #waitScreen {
       display: none;
-      padding-top: 80px;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 15px;
     }
-    .active {
-      display: block;
+
+    /* ===== GAME SCREEN ===== */
+    #gameScreen {
+      display: none;
+      position: relative;
+      width: 100%;
+      height: 100vh;
     }
-    button {
-      font-size: 20px;
-      padding: 15px 30px;
+
+    .player {
+      position: absolute;
+      padding: 12px 18px;
       border-radius: 12px;
-      border: none;
-      background: #22c55e;
-      cursor: pointer;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 16px;
+    }
+
+    .player.self {
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,198,255,0.3);
+    }
+
+    .player.left {
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .player.right {
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .table {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      opacity: 0.8;
     }
   </style>
 </head>
 <body>
 
-<!-- LOBBY -->
-<div id="lobby" class="screen active">
-  <h1>Mini App</h1>
-  <p id="user"></p>
-  <button id="playBtn">Играть</button>
-  <p id="status"></p>
+<!-- JOIN -->
+<div id="joinScreen">
+  <h1>🃏 Card Game</h1>
+  <input id="nameInput" placeholder="Your name">
+  <button onclick="joinGame()">Играть</button>
 </div>
 
-<!-- ROOM -->
-<div id="room" class="screen">
-  <h2>Комната ашылды 🎮</h2>
-  <p id="roomId"></p>
-  <ul id="players"></ul>
+<!-- WAIT -->
+<div id="waitScreen">
+  <h2>⏳ Күту...</h2>
+  <div id="playersCount">0 / 3</div>
+</div>
+
+<!-- GAME -->
+<div id="gameScreen">
+  <div class="table">TABLE</div>
+
+  <div id="playerLeft" class="player left"></div>
+  <div id="playerRight" class="player right"></div>
+  <div id="playerSelf" class="player self"></div>
 </div>
 
 <script>
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-
   const socket = io();
 
-  const lobby = document.getElementById("lobby");
-  const room = document.getElementById("room");
+  const joinScreen = document.getElementById("joinScreen");
+  const waitScreen = document.getElementById("waitScreen");
+  const gameScreen = document.getElementById("gameScreen");
 
-  const status = document.getElementById("status");
-  const roomIdText = document.getElementById("roomId");
-  const playersList = document.getElementById("players");
+  const playerLeft = document.getElementById("playerLeft");
+  const playerRight = document.getElementById("playerRight");
+  const playerSelf = document.getElementById("playerSelf");
+  const playersCount = document.getElementById("playersCount");
 
-  const user = tg.initDataUnsafe.user;
-  const playerName = user ? user.first_name : "Player";
+  let myId = null;
 
-  document.getElementById("user").innerText =
-    "Сәлем, " + playerName;
-
-  document.getElementById("playBtn").onclick = () => {
-    socket.emit("join", playerName);
-    status.innerText = "Күтіп тұрмыз...";
-  };
-
-  socket.on("waiting", (count) => {
-    status.innerText = `Күтіп тұрмыз: ${count}/3`;
+  socket.on("connect", () => {
+    myId = socket.id;
   });
 
-  socket.on("room started", (data) => {
-    lobby.classList.remove("active");
-    room.classList.add("active");
+  function joinGame() {
+    const name = document.getElementById("nameInput").value.trim();
+    if (!name) return alert("Атыңды жаз");
 
-    roomIdText.innerText = "Комната: " + data.roomId;
+    socket.emit("join", name);
 
-    playersList.innerHTML = "";
-    data.players.forEach(p => {
-      const li = document.createElement("li");
-      li.innerText = p.name;
-      playersList.appendChild(li);
-    });
+    joinScreen.style.display = "none";
+    waitScreen.style.display = "flex";
+  }
+
+  socket.on("room_update", (data) => {
+    playersCount.innerText = `${data.players.length} / 3`;
+  });
+
+  socket.on("game_started", (data) => {
+    waitScreen.style.display = "none";
+    gameScreen.style.display = "block";
+
+    const others = data.players.filter(p => p.id !== myId);
+    const me = data.players.find(p => p.id === myId);
+
+    playerSelf.innerText = me ? me.name + " (You)" : "";
+
+    if (others[0]) playerLeft.innerText = others[0].name;
+    if (others[1]) playerRight.innerText = others[1].name;
   });
 </script>
 
