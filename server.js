@@ -31,7 +31,8 @@ function createRoom() {
     players: [],
     deck: [],
     status: "waiting", // waiting / started / finished
-    trump: null
+    trump: null,
+    turnIndex: 0 // кімнің кезегі
   };
   console.log("Жаңа комната ашылды:", roomId);
   return roomId;
@@ -52,6 +53,17 @@ function distributeCards(roomId) {
   // Көзір – соңғы карта
   room.trump = deck.pop();
   console.log(`Комната ${roomId} карталар таралды, көзір:`, room.trump);
+}
+
+// Кезек бойынша ойыншыны таңдау
+function getCurrentPlayer(room) {
+  return room.players[room.turnIndex];
+}
+
+// Келесі ойыншыға кезек беру
+function nextTurn(room) {
+  room.turnIndex = (room.turnIndex + 1) % room.players.length;
+  io.to(room.id).emit("turn", room.players[room.turnIndex].id);
 }
 
 // Ойын аяқталуын тексеру
@@ -86,6 +98,7 @@ io.on("connection", (socket) => {
     }
 
     const room = rooms[roomId];
+    room.id = roomId; // room объектінде id сақтау
 
     // Бір телеграм аккаунт тек бір рет қосылады
     if (!room.players.some(p => p.id === socket.id)) {
@@ -97,14 +110,50 @@ io.on("connection", (socket) => {
       if (room.players.length >= 2 && room.status === "waiting") {
         room.status = "started";
         distributeCards(roomId);
-        io.to(roomId).emit("room started", room.players);
+        io.to(roomId).emit("room started", room.players.map(p => ({
+          ...p,
+          hand: p.hand
+        })));
+        io.to(roomId).emit("trump", room.trump);
+        io.to(roomId).emit("turn", room.players[room.turnIndex].id);
       }
 
-      // Барлық ойыншыларға кім кімде екенін жіберу
       io.to(roomId).emit("update players", room.players);
     } else {
       socket.emit("error", "Сіз осы комнатада барсыз");
     }
+  });
+
+  // Ойыншы карта ойнады
+  socket.on("play card", ({ roomId, card }) => {
+    const room = rooms[roomId];
+    if (!room || room.status !== "started") return;
+
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+
+    // Кезектегі ойыншы тек өз кезегінде ойнай алады
+    if (room.players[room.turnIndex].id !== socket.id) {
+      socket.emit("error", "Сіз кезек емес!");
+      return;
+    }
+
+    // Карта қолдан жойылады
+    const cardIndex = player.hand.findIndex(c => c.value === card.value && c.suit === card.suit);
+    if (cardIndex === -1) {
+      socket.emit("error", "Сіздің қолыңызда бұл карта жоқ!");
+      return;
+    }
+    player.hand.splice(cardIndex, 1);
+
+    // Барлық ойыншыларға карта ойнағаны туралы хабарлау
+    io.to(roomId).emit("card played", { playerId: player.id, card });
+
+    // Кезекті басқа ойыншыға беру
+    nextTurn(room);
+
+    // Ойын аяқталуын тексеру
+    checkGameOver(roomId);
   });
 
   // Disconnect болғанда
