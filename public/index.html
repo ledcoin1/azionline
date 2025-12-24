@@ -1,124 +1,89 @@
 <!DOCTYPE html>
 <html lang="kk">
 <head>
-  <meta charset="UTF-8" />
-  <title>Дурак | Online</title>
-
-  <script src="/socket.io/socket.io.js"></script>
-
+  <meta charset="UTF-8">
+  <title>Дурак Online</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #1e1e1e;
-      color: white;
-      text-align: center;
-    }
-
-    button {
-      padding: 12px 25px;
-      font-size: 16px;
-      cursor: pointer;
-      border-radius: 8px;
-      border: none;
-    }
-
-    #joinBtn {
-      background: #00c853;
-      color: black;
-    }
-
-    #game {
-      display: none;
-      padding-top: 20px;
-    }
-
-    .card {
-      width: 60px;
-      height: 90px;
-      background: white;
-      color: black;
-      border-radius: 6px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin: 5px;
-      font-weight: bold;
-    }
-
-    #hand {
-      margin-top: 20px;
-    }
-
-    #status {
-      margin-top: 15px;
-      color: #aaa;
-    }
+    body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+    #messages { border: 1px solid #ccc; padding: 10px; height: 150px; overflow-y: auto; background: #fff; margin-bottom: 10px; }
+    #hand { margin-top: 20px; }
+    .card { display: inline-block; border: 1px solid #000; padding: 10px; margin: 5px; background: #fff; cursor: pointer; font-weight: bold; font-size: 18px; }
+    #trump { margin-top: 20px; font-size: 22px; font-weight: bold; }
+    #gameArea { display: none; }
   </style>
 </head>
-
 <body>
-
-  <!-- START SCREEN -->
-  <div id="start">
-    <h1>🃏 Дурак Online</h1>
-    <button id="joinBtn">Ойынға қосылу</button>
-    <p id="status"></p>
+  <h1>Дурак Online</h1>
+  <div>
+    <input type="text" id="username" placeholder="Атыңыз">
+    <button id="joinBtn">Join Game</button>
   </div>
 
-  <!-- GAME SCREEN -->
-  <div id="game">
-    <h2 id="opponentText">Қарсылас күтілуде...</h2>
+  <div id="messages"></div>
 
-    <h3>Сенің карталарың</h3>
+  <div id="gameArea">
+    <button id="readyBtn">Готов</button>
+    <div id="trump">Көзір: -</div>
     <div id="hand"></div>
   </div>
 
-<script>
-  const socket = io();
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
 
-  const joinBtn = document.getElementById("joinBtn");
-  const statusText = document.getElementById("status");
-  const startScreen = document.getElementById("start");
-  const gameScreen = document.getElementById("game");
-  const opponentText = document.getElementById("opponentText");
-  const handDiv = document.getElementById("hand");
+    const joinBtn = document.getElementById('joinBtn');
+    const readyBtn = document.getElementById('readyBtn');
+    const messages = document.getElementById('messages');
+    const handDiv = document.getElementById('hand');
+    const trumpDiv = document.getElementById('trump');
+    const usernameInput = document.getElementById('username');
+    const gameArea = document.getElementById('gameArea');
 
-  // Жай demo userId
-  const userId = "USER_" + Math.floor(Math.random() * 10000);
+    let roomId = null;
 
-  joinBtn.onclick = () => {
-    socket.emit("joinGame", { userId });
-    statusText.innerText = "Серверге қосылуда...";
-    joinBtn.disabled = true;
-  };
+    function logMessage(msg) {
+      const p = document.createElement('div');
+      p.textContent = msg;
+      messages.appendChild(p);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
-  // Серверден текст хабар
-  socket.on("message", (msg) => {
-    statusText.innerText = msg;
-  });
+    joinBtn.onclick = () => {
+      const userId = usernameInput.value.trim();
+      if (!userId) return alert("Атыңызды енгізіңіз");
+      socket.emit('joinGame', { userId });
+    };
 
-  // Қарсылас табылды
-  socket.on("opponentFound", ({ opponentId }) => {
-    startScreen.style.display = "none";
-    gameScreen.style.display = "block";
+    readyBtn.onclick = () => {
+      if (!roomId) return alert("Room дайын емес");
+      socket.emit('ready', { roomId });
+      readyBtn.disabled = true;
+    };
 
-    opponentText.innerText = "Қарсылас: " + opponentId;
-
-    // demo үшін 3 карта саламыз
-    showCards(["6♠", "10♦", "K♥"]);
-  });
-
-  function showCards(cards) {
-    handDiv.innerHTML = "";
-    cards.forEach(card => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerText = card;
-      handDiv.appendChild(div);
+    socket.on('message', msg => {
+      logMessage(msg);
     });
-  }
-</script>
 
+    socket.on('opponentFound', ({ opponentId }) => {
+      logMessage("Қарсылас табылды: " + opponentId);
+      gameArea.style.display = 'block';
+    });
+
+    socket.on('roomJoined', ({ roomId: id }) => {
+      roomId = id;
+      logMessage("Room ID: " + id);
+    });
+
+    socket.on('startGame', ({ hand, trump }) => {
+      handDiv.innerHTML = '';
+      hand.forEach(card => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.textContent = card.rank + card.suit;
+        handDiv.appendChild(div);
+      });
+      trumpDiv.textContent = 'Көзір: ' + trump.rank + trump.suit;
+    });
+  </script>
 </body>
 </html>
