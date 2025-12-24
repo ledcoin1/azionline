@@ -13,6 +13,7 @@
       background: #0f172a;
       color: white;
     }
+
     button {
       padding: 15px 30px;
       font-size: 18px;
@@ -22,11 +23,21 @@
       cursor: pointer;
       margin-top: 20px;
     }
+
+    #main-screen, #game-screen {
+      display: none;
+    }
+
+    #main-screen.active, #game-screen.active {
+      display: block;
+    }
+
     #players {
-      margin-top: 30px;
+      margin-top: 20px;
       text-align: left;
       display: inline-block;
     }
+
     #messages {
       margin-top: 20px;
       font-weight: bold;
@@ -36,11 +47,21 @@
 <body>
 
   <h1>Mini App Online</h1>
-  <p id="user">Жүктелуде...</p>
-  <button id="playBtn">Играть</button>
 
-  <div id="messages"></div>
-  <ul id="players"></ul>
+  <!-- Негізгі экран -->
+  <div id="main-screen" class="active">
+    <p id="user">Жүктелуде...</p>
+    <button id="playBtn">Играть</button>
+    <div id="messages"></div>
+  </div>
+
+  <!-- Ойын экраны -->
+  <div id="game-screen">
+    <h2>Комната ашылды! 🎮</h2>
+    <p>Ойыншылар тізімі:</p>
+    <ul id="players"></ul>
+    <div id="game-messages"></div>
+  </div>
 
   <script>
     const tg = window.Telegram.WebApp;
@@ -48,16 +69,18 @@
 
     const socket = io(); // серверге қосылу
 
-    // Telegram user
     const user = tg.initDataUnsafe.user;
     const playerName = user ? user.first_name : "Аты жоқ ойыншы";
     document.getElementById("user").innerText =
       user ? `Сәлем, ${user.first_name}` : "Telegram user жоқ";
 
+    const mainScreen = document.getElementById("main-screen");
+    const gameScreen = document.getElementById("game-screen");
     const messagesDiv = document.getElementById("messages");
+    const gameMessagesDiv = document.getElementById("game-messages");
     const playersList = document.getElementById("players");
 
-    // Играть батырмасы
+    // Играть батырмасы басылды
     document.getElementById("playBtn").onclick = () => {
       socket.emit("join game", playerName);
       messagesDiv.innerText = "Серверге қосылуда...";
@@ -71,12 +94,26 @@
         li.innerText = p.name;
         playersList.appendChild(li);
       });
-      messagesDiv.innerText = `Қосылған ойыншылар саны: ${players.length}`;
+
+      if (players.length < 2) {
+        gameMessagesDiv.innerText = `Қосылған ойыншылар саны: ${players.length}. Кемінде 2 адам керек.`;
+      } else {
+        gameMessagesDiv.innerText = `Ойынға дайын! Ойыншылар саны: ${players.length}`;
+      }
     });
 
-    // Комната ашылды хабарын алған кезде
+    // Комната ашылды сигналын алған кезде → жаңа экранға ауысу
     socket.on("room started", (players) => {
-      messagesDiv.innerText = "Комната ашылды! Ойын бастауға дайын 🎮";
+      mainScreen.classList.remove("active");
+      gameScreen.classList.add("active");
+
+      gameMessagesDiv.innerText = `Комната ашылды! Ойын бастауға дайын 🎮`;
+      playersList.innerHTML = "";
+      players.forEach(p => {
+        const li = document.createElement("li");
+        li.innerText = p.name;
+        playersList.appendChild(li);
+      });
     });
 
     // Сервер қате хабар жіберсе
