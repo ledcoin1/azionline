@@ -64,11 +64,13 @@
   </div>
 
   <script>
+    // Telegram WebApp дайын
     const tg = window.Telegram.WebApp;
     tg.ready();
 
     const socket = io(); // серверге қосылу
 
+    // Telegram user
     const user = tg.initDataUnsafe.user;
     const playerName = user ? user.first_name : "Аты жоқ ойыншы";
     document.getElementById("user").innerText =
@@ -80,7 +82,7 @@
     const gameMessagesDiv = document.getElementById("game-messages");
     const playersList = document.getElementById("players");
 
-    // Играть батырмасы басылды
+    // Играть батырмасы басылғанда
     document.getElementById("playBtn").onclick = () => {
       socket.emit("join game", playerName);
       messagesDiv.innerText = "Серверге қосылуда...";
