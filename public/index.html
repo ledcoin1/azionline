@@ -1,116 +1,124 @@
 <!DOCTYPE html>
 <html lang="kk">
 <head>
-  <meta charset="UTF-8">
-  <title>Card Game</title>
+  <meta charset="UTF-8" />
+  <title>Дурак | Online</title>
 
-  <!-- Socket.IO клиент кітапханасы -->
   <script src="/socket.io/socket.io.js"></script>
 
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
+      background: #1e1e1e;
+      color: white;
       text-align: center;
-      padding-top: 40px;
     }
 
     button {
-      padding: 10px 20px;
-      margin: 5px;
+      padding: 12px 25px;
       font-size: 16px;
       cursor: pointer;
+      border-radius: 8px;
+      border: none;
+    }
+
+    #joinBtn {
+      background: #00c853;
+      color: black;
     }
 
     #game {
       display: none;
+      padding-top: 20px;
     }
 
-    #log {
+    .card {
+      width: 60px;
+      height: 90px;
+      background: white;
+      color: black;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 5px;
+      font-weight: bold;
+    }
+
+    #hand {
       margin-top: 20px;
-      min-height: 100px;
-      background: #222;
-      padding: 10px;
+    }
+
+    #status {
+      margin-top: 15px;
+      color: #aaa;
     }
   </style>
 </head>
+
 <body>
 
-  <!-- JOIN ЭКРАН -->
-  <div id="join">
-    <h2>Онлайн карта ойыны</h2>
-    <input id="userId" placeholder="User ID енгіз" />
-    <br><br>
-    <button onclick="joinGame()">Ойынға кіру</button>
+  <!-- START SCREEN -->
+  <div id="start">
+    <h1>🃏 Дурак Online</h1>
+    <button id="joinBtn">Ойынға қосылу</button>
+    <p id="status"></p>
   </div>
 
-  <!-- GAME ЭКРАН -->
+  <!-- GAME SCREEN -->
   <div id="game">
-    <h2 id="status">Ойын басталды</h2>
+    <h2 id="opponentText">Қарсылас күтілуде...</h2>
 
-    <button onclick="sendBet(100)">Ставка 100</button>
-    <button onclick="sendBet(500)">Ставка 500</button>
-
-    <br><br>
-
-    <button onclick="sendReady(true)">ГОТОВ</button>
-    <button onclick="sendReady(false)">ОТБОЙ</button>
+    <h3>Сенің карталарың</h3>
+    <div id="hand"></div>
   </div>
 
-  <div id="log"></div>
+<script>
+  const socket = io();
 
-  <script>
-    // ===== SOCKET ҚОСЫЛУ =====
-    const socket = io();
+  const joinBtn = document.getElementById("joinBtn");
+  const statusText = document.getElementById("status");
+  const startScreen = document.getElementById("start");
+  const gameScreen = document.getElementById("game");
+  const opponentText = document.getElementById("opponentText");
+  const handDiv = document.getElementById("hand");
 
-    // ===== ОЙЫНҒА КІРУ =====
-    function joinGame() {
-      const userId = document.getElementById("userId").value;
-      if (!userId) return alert("User ID енгіз!");
+  // Жай demo userId
+  const userId = "USER_" + Math.floor(Math.random() * 10000);
 
-      socket.emit("joinGame", { userId });
-    }
+  joinBtn.onclick = () => {
+    socket.emit("joinGame", { userId });
+    statusText.innerText = "Серверге қосылуда...";
+    joinBtn.disabled = true;
+  };
 
-    // ===== СТАВКА ЖІБЕРУ =====
-    function sendBet(bet) {
-      socket.emit("playerBet", { bet });
-      log("Сен ставка қойдың: " + bet);
-    }
+  // Серверден текст хабар
+  socket.on("message", (msg) => {
+    statusText.innerText = msg;
+  });
 
-    // ===== ГОТОВ / ОТБОЙ =====
-    function sendReady(ready) {
-      socket.emit("playerReady", { ready });
-      log("Сен таңдау жасадың: " + (ready ? "ГОТОВ" : "ОТБОЙ"));
-    }
+  // Қарсылас табылды
+  socket.on("opponentFound", ({ opponentId }) => {
+    startScreen.style.display = "none";
+    gameScreen.style.display = "block";
 
-    // ===== СЕРВЕРДЕН КЕЛЕТІН ХАБАРЛАР =====
+    opponentText.innerText = "Қарсылас: " + opponentId;
 
-    socket.on("message", (text) => {
-      log(text);
+    // demo үшін 3 карта саламыз
+    showCards(["6♠", "10♦", "K♥"]);
+  });
+
+  function showCards(cards) {
+    handDiv.innerHTML = "";
+    cards.forEach(card => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerText = card;
+      handDiv.appendChild(div);
     });
-
-    socket.on("opponentFound", ({ opponentId }) => {
-      document.getElementById("join").style.display = "none";
-      document.getElementById("game").style.display = "block";
-      document.getElementById("status").innerText =
-        "Қарсылас табылды: " + opponentId;
-    });
-
-    socket.on("opponentBet", ({ bet }) => {
-      log("Қарсылас ставка қойды: " + bet);
-    });
-
-    socket.on("opponentReady", ({ ready }) => {
-      log("Қарсылас таңдады: " + (ready ? "ГОТОВ" : "ОТБОЙ"));
-    });
-
-    // ===== LOG =====
-    function log(text) {
-      const logDiv = document.getElementById("log");
-      logDiv.innerHTML += `<div>${text}</div>`;
-    }
-  </script>
+  }
+</script>
 
 </body>
 </html>
