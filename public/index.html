@@ -2,16 +2,16 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>My Mini App</title>
+  <title>Telegram Mini App</title>
 
-  <!-- Telegram Mini App SDK -->
+  <!-- Telegram SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
     body {
-      font-family: Arial, sans-serif;
       background: #0f172a;
       color: white;
+      font-family: Arial;
       text-align: center;
       padding: 40px;
     }
@@ -19,11 +19,15 @@
     button {
       padding: 15px 25px;
       font-size: 18px;
-      border: none;
       border-radius: 10px;
+      border: none;
       background: #22c55e;
-      color: black;
       cursor: pointer;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -32,27 +36,43 @@
   <h1>Telegram Mini App</h1>
   <p id="user">Жүктелуде...</p>
 
-  <button onclick="hello()">Бас</button>
+  <button onclick="send()">СЕРВЕРГЕ ЖІБЕР</button>
+
+  <div id="result"></div>
 
   <script>
     const tg = window.Telegram.WebApp;
-
-    // Telegram-ға айт: app дайын
     tg.ready();
 
-    // Пайдаланушы деректері
+    // Telegram user
     const user = tg.initDataUnsafe.user;
 
     if (user) {
       document.getElementById("user").innerText =
-        "Сәлем, " + user.first_name;
+        "Сәлем, " + user.first_name + " (id: " + user.id + ")";
     } else {
       document.getElementById("user").innerText =
-        "Пайдаланушы табылмады";
+        "Telegram user жоқ";
     }
 
-    function hello() {
-      tg.showAlert("Сәлем! Mini App жұмыс істеп тұр 🚀");
+    function send() {
+      fetch("/api/data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: user ? user.id : null,
+          username: user ? user.username : null,
+          text: "Mini App-тан сәлем!",
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("result").innerText =
+          "Сервер жауап берді ✅";
+        console.log("Сервер жауабы:", data);
+      });
     }
   </script>
 
