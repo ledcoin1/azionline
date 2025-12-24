@@ -9,30 +9,48 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 let players = [];
+let rooms = {};
 
 // Клиент қосылды
 io.on("connection", (socket) => {
   console.log("Клиент қосылды:", socket.id);
 
-  socket.on("join game", (playerName) => {
-    // 1️⃣ Максимум 5 адам тексеру
-    if (players.length < 5) {
-      // 2️⃣ Ойыншы тізімге қосу
-      players.push({ id: socket.id, name: playerName });
-
-      // 3️⃣ Егер 1 адамнан көп болса → комната ашу логикасы
-      if (players.length > 1) {
-        // Комната ашылды, бәріне хабар беру
-        io.emit("room started", players);
-      }
-
-      // 4️⃣ Ойыншылар тізімін барлыққа жаңарту
-      io.emit("update players", players);
-    } else {
-      // Ойын толы болса → клиентке хабар беру
-      socket.emit("error", "Ойын толы");
+ socket.on("join game", (playerName) => {
+  // 1️⃣ Максимум 5 ойыншы бір комнатаға
+  // Алдымен бос комната іздеу
+  let roomId = null;
+  for (const id in rooms) {
+    if (rooms[id].length < 5) {
+      roomId = id;
+      break;
     }
-  });
+  }
+
+  // Егер бос комната жоқ → жаңа комната жасау
+  if (!roomId) {
+    roomId = `room-${Date.now()}`; // уникалды ID
+    rooms[roomId] = [];
+  }
+
+  // 2️⃣ Ойыншыны кімнің кім екенін тексеріп қосу
+  // Бір телеграм аккаунт тек бір рет қосылады
+  if (!rooms[roomId].some(p => p.id === socket.id)) {
+    rooms[roomId].push({ id: socket.id, name: playerName });
+
+    socket.join(roomId); // Socket.IO room-ға қосу
+
+    // 3️⃣ Егер 2 адам қосылған болса → комната ашылды
+    if (rooms[roomId].length >= 2) {
+      io.to(roomId).emit("room started", rooms[roomId]);
+    }
+
+    // 4️⃣ Барлық ойыншыларға өз комнатадағы ойыншылар тізімін жіберу
+    io.to(roomId).emit("update players", rooms[roomId]);
+  } else {
+    socket.emit("error", "Сіз осы комнатада барсыз");
+  }
+});
+
 
   // Ойыншы disconnect болғанда
   socket.on("disconnect", () => {
@@ -44,3 +62,4 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
+
