@@ -2,79 +2,37 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>Telegram Mini App</title>
-
-  <!-- Telegram SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
+  <title>MiniApp Online</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
-    body {
-      background: #0f172a;
-      color: white;
-      font-family: Arial;
-      text-align: center;
-      padding: 40px;
-    }
-
-    button {
-      padding: 15px 25px;
-      font-size: 18px;
-      border-radius: 10px;
-      border: none;
-      background: #22c55e;
-      cursor: pointer;
-    }
-
-    #result {
-      margin-top: 20px;
-      font-size: 16px;
-    }
+    body { font-family: Arial; text-align:center; padding:20px; }
+    input { padding: 5px; }
+    button { padding: 5px 10px; }
+    #messages { margin-top:20px; }
   </style>
 </head>
 <body>
+  <h1>Mini App Online</h1>
+  <input id="input" placeholder="Хабар жаз..." />
+  <button onclick="send()">Жібер</button>
 
-  <h1>Telegram Mini App</h1>
-  <p id="user">Жүктелуде...</p>
-
-  <button onclick="send()">СЕРВЕРГЕ ЖІБЕР</button>
-
-  <div id="result"></div>
+  <ul id="messages"></ul>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
+    const socket = io();
 
-    // Telegram user
-    const user = tg.initDataUnsafe.user;
-
-    if (user) {
-      document.getElementById("user").innerText =
-        "Сәлем, " + user.first_name + " (id: " + user.id + ")";
-    } else {
-      document.getElementById("user").innerText =
-        "Telegram user жоқ";
-    }
+    // Серверден хабар келгенде
+    socket.on("chat message", (msg) => {
+      const li = document.createElement("li");
+      li.innerText = msg;
+      document.getElementById("messages").appendChild(li);
+    });
 
     function send() {
-      fetch("/api/data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          userId: user ? user.id : null,
-          username: user ? user.username : null,
-          text: "Mini App-тан сәлем!",
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("result").innerText =
-          "Сервер жауап берді ✅";
-        console.log("Сервер жауабы:", data);
-      });
+      const input = document.getElementById("input");
+      socket.emit("chat message", input.value);
+      input.value = "";
     }
   </script>
-
 </body>
 </html>
