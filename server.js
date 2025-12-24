@@ -78,6 +78,25 @@ io.on("connection", (socket) => {
 
       console.log("🔥 ОЙЫН БАСТАЛДЫ:", room.id);
 
+      if (room.players.length === 3) {
+  room.status = "started";
+
+  // Бірінші кірген ойыншыны анықтау
+  const firstPlayer = room.players[0];
+
+  // Сұрақты тек оған жіберу
+  io.to(firstPlayer.id).emit("first_player_question", {
+    question: "Сен бірінші ойыншысың, әрекет жаса!"
+  });
+
+  // Басқа сигналдар, мысалы game_started
+  io.to(room.id).emit("game_started", {
+    roomId: room.id,
+    players: room.players
+  });
+}
+
+
       io.to(room.id).emit("game_started", {
         roomId: room.id,
         players: room.players
