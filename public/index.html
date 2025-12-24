@@ -42,6 +42,32 @@
       margin-top: 20px;
       font-weight: bold;
     }
+
+    #hand {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .card {
+      width: 60px;
+      height: 90px;
+      border-radius: 8px;
+      background: white;
+      color: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    #trump {
+      margin-top: 20px;
+      font-weight: bold;
+      color: yellow;
+    }
   </style>
 </head>
 <body>
@@ -60,17 +86,21 @@
     <h2>Комната ашылды! 🎮</h2>
     <p>Ойыншылар тізімі:</p>
     <ul id="players"></ul>
+
+    <div id="hand-title"><h3>Сіздің қолыңыз:</h3></div>
+    <div id="hand"></div>
+
+    <div id="trump"></div>
+
     <div id="game-messages"></div>
   </div>
 
   <script>
-    // Telegram WebApp дайын
     const tg = window.Telegram.WebApp;
     tg.ready();
 
-    const socket = io(); // серверге қосылу
+    const socket = io();
 
-    // Telegram user
     const user = tg.initDataUnsafe.user;
     const playerName = user ? user.first_name : "Аты жоқ ойыншы";
     document.getElementById("user").innerText =
@@ -81,14 +111,16 @@
     const messagesDiv = document.getElementById("messages");
     const gameMessagesDiv = document.getElementById("game-messages");
     const playersList = document.getElementById("players");
+    const handDiv = document.getElementById("hand");
+    const trumpDiv = document.getElementById("trump");
 
-    // Играть батырмасы басылғанда
+    // Играть батырмасы
     document.getElementById("playBtn").onclick = () => {
       socket.emit("join game", playerName);
       messagesDiv.innerText = "Серверге қосылуда...";
     };
 
-    // Сервер ойыншылар тізімін жібергенде
+    // Кім кімде тізімі жаңарту
     socket.on("update players", (players) => {
       playersList.innerHTML = "";
       players.forEach(p => {
@@ -96,26 +128,39 @@
         li.innerText = p.name;
         playersList.appendChild(li);
       });
-
-      if (players.length < 2) {
-        gameMessagesDiv.innerText = `Қосылған ойыншылар саны: ${players.length}. Кемінде 2 адам керек.`;
-      } else {
-        gameMessagesDiv.innerText = `Ойынға дайын! Ойыншылар саны: ${players.length}`;
-      }
     });
 
-    // Комната ашылды сигналын алған кезде → жаңа экранға ауысу
+    // Комната ашылды
     socket.on("room started", (players) => {
       mainScreen.classList.remove("active");
       gameScreen.classList.add("active");
+      gameMessagesDiv.innerText = "Ойын басталды! 🎮";
 
-      gameMessagesDiv.innerText = `Комната ашылды! Ойын бастауға дайын 🎮`;
+      // Ойыншылар тізімін көрсету
       playersList.innerHTML = "";
       players.forEach(p => {
         const li = document.createElement("li");
         li.innerText = p.name;
         playersList.appendChild(li);
       });
+
+      // ✅ Сіздің қолыңызды және көзірді көрсету
+      const me = players.find(p => p.name === playerName);
+      if (me && me.hand) {
+        handDiv.innerHTML = "";
+        me.hand.forEach(card => {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerText = `${card.value} ${card.suit[0].toUpperCase()}`; // мысалы: 6H, KD
+          handDiv.appendChild(div);
+        });
+      }
+
+      // Көзірді көрсету
+      const anyPlayer = players.find(p => p.trump);
+      if (anyPlayer) {
+        trumpDiv.innerText = `Көзір: ${anyPlayer.trump.value} ${anyPlayer.trump.suit[0].toUpperCase()}`;
+      }
     });
 
     // Сервер қате хабар жіберсе
