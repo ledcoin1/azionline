@@ -7,21 +7,35 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      font-family: Arial;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff;
       text-align: center;
-      padding: 40px;
-      background: #0f172a;
-      color: white;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 20px;
+      color: #22c55e;
     }
 
     button {
-      padding: 15px 30px;
+      padding: 15px 35px;
       font-size: 18px;
-      border-radius: 10px;
+      border-radius: 12px;
       border: none;
       background: #22c55e;
+      color: white;
       cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
       margin-top: 20px;
+    }
+
+    button:hover {
+      background: #16a34a;
+      transform: scale(1.05);
     }
 
     #main-screen, #game-screen {
@@ -34,39 +48,55 @@
 
     #players {
       margin-top: 20px;
-      text-align: left;
       display: inline-block;
-    }
-
-    #messages {
-      margin-top: 20px;
-      font-weight: bold;
+      text-align: left;
+      padding: 10px;
+      border: 2px solid #22c55e;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.3);
     }
 
     #hand {
-      margin-top: 20px;
+      margin-top: 30px;
       display: flex;
       justify-content: center;
-      gap: 10px;
+      gap: 15px;
+      perspective: 1000px;
     }
 
     .card {
-      width: 60px;
-      height: 90px;
-      border-radius: 8px;
-      background: white;
-      color: black;
+      width: 80px;
+      height: 120px;
+      border-radius: 12px;
+      background: #fefefe;
+      color: #111;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 16px;
+      font-size: 18px;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+      transform: rotateY(0deg);
+      transition: transform 0.5s, box-shadow 0.3s;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: rotateY(15deg) translateY(-10px);
+      box-shadow: 0 15px 25px rgba(0,0,0,0.5);
     }
 
     #trump {
       margin-top: 20px;
+      font-size: 20px;
       font-weight: bold;
-      color: yellow;
+      color: #facc15; /* сары түспен көзір */
+    }
+
+    #game-messages {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #38bdf8;
     }
   </style>
 </head>
@@ -91,7 +121,6 @@
     <div id="hand"></div>
 
     <div id="trump"></div>
-
     <div id="game-messages"></div>
   </div>
 
@@ -114,13 +143,11 @@
     const handDiv = document.getElementById("hand");
     const trumpDiv = document.getElementById("trump");
 
-    // Играть батырмасы
     document.getElementById("playBtn").onclick = () => {
       socket.emit("join game", playerName);
       messagesDiv.innerText = "Серверге қосылуда...";
     };
 
-    // Кім кімде тізімі жаңарту
     socket.on("update players", (players) => {
       playersList.innerHTML = "";
       players.forEach(p => {
@@ -130,13 +157,11 @@
       });
     });
 
-    // Комната ашылды
     socket.on("room started", (players) => {
       mainScreen.classList.remove("active");
       gameScreen.classList.add("active");
       gameMessagesDiv.innerText = "Ойын басталды! 🎮";
 
-      // Ойыншылар тізімін көрсету
       playersList.innerHTML = "";
       players.forEach(p => {
         const li = document.createElement("li");
@@ -144,26 +169,25 @@
         playersList.appendChild(li);
       });
 
-      // ✅ Сіздің қолыңызды және көзірді көрсету
+      // 🔹 Сіздің қолыңыз
       const me = players.find(p => p.name === playerName);
       if (me && me.hand) {
         handDiv.innerHTML = "";
         me.hand.forEach(card => {
           const div = document.createElement("div");
           div.className = "card";
-          div.innerText = `${card.value} ${card.suit[0].toUpperCase()}`; // мысалы: 6H, KD
+          div.innerText = `${card.value}${card.suit[0].toUpperCase()}`; // мысалы: 6H, KD
           handDiv.appendChild(div);
         });
       }
 
-      // Көзірді көрсету
+      // 🔹 Көзірді көрсету
       const anyPlayer = players.find(p => p.trump);
       if (anyPlayer) {
-        trumpDiv.innerText = `Көзір: ${anyPlayer.trump.value} ${anyPlayer.trump.suit[0].toUpperCase()}`;
+        trumpDiv.innerText = `Көзір: ${anyPlayer.trump.value}${anyPlayer.trump.suit[0].toUpperCase()}`;
       }
     });
 
-    // Сервер қате хабар жіберсе
     socket.on("error", (msg) => {
       messagesDiv.innerText = msg;
     });
