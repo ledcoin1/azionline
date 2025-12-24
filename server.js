@@ -1,4 +1,4 @@
-const express = require("express"); 
+const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
@@ -8,82 +8,79 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-let players = [];
+// Комнаталар объектісі
 let rooms = {};
 
+// 🔹 1️⃣ Жаңа комната ашу функциясы
 function createRoom() {
   const roomId = `room-${Date.now()}`; // уникалды ID
   rooms[roomId] = {
-    players: [],   // кім кімде
-    deck: [],      // бастапқы колода
+    players: [],       // кім кімде
+    deck: [],          // бастапқы колода (келесі қадамда карталарды қосуға болады)
     status: "waiting", // waiting / started
-    turn: null     // кімнің кезегі
+    turn: null         // кімнің кезегі
   };
   console.log("Жаңа комната ашылды:", roomId);
   return roomId;
 }
 
-// Клиент қосылды
+// 🔹 2️⃣ Клиент қосылды
 io.on("connection", (socket) => {
   console.log("Клиент қосылды:", socket.id);
 
- socket.on("join game", (playerName) => {
-  // 1️⃣ Максимум 5 ойыншы бір комнатаға
-  // Алдымен бос комната іздеу
-  let roomId = null;
-  for (const id in rooms) {
-    if (rooms[id].length < 5) {
-      roomId = id;
-      break;
-    }
-  }
+  // Играть батырмасы басылғанда
+  socket.on("join game", (playerName) => {
+    let roomId = null;
 
-  // Егер бос комната жоқ → жаңа комната жасау
-  if (!roomId) {
-    roomId = `room-${Date.now()}`; // уникалды ID
-    rooms[roomId] = [];
-  }
-
-  // 2️⃣ Ойыншыны кімнің кім екенін тексеріп қосу
-  // Бір телеграм аккаунт тек бір рет қосылады
-  if (!rooms[roomId].some(p => p.id === socket.id)) {
-    rooms[roomId].push({ id: socket.id, name: playerName });
-
-    socket.join(roomId); // Socket.IO room-ға қосу
-
-    // 3️⃣ Егер 2 адам қосылған болса → комната ашылды
-    if (rooms[roomId].length >= 2) {
-      io.to(roomId).emit("room started", rooms[roomId]);
+    // 2.1. Бос комната іздеу
+    for (const id in rooms) {
+      if (rooms[id].players.length < 5 && rooms[id].status === "waiting") {
+        roomId = id;
+        break;
+      }
     }
 
-    // 4️⃣ Барлық ойыншыларға өз комнатадағы ойыншылар тізімін жіберу
-    io.to(roomId).emit("update players", rooms[roomId]);
-  } else {
-    socket.emit("error", "Сіз осы комнатада барсыз");
-  }
-});
+    // 2.2. Егер бос комната жоқ → жаңа комната ашу
+    if (!roomId) {
+      roomId = createRoom();
+    }
 
+    // 2.3. Бір телеграм аккаунт тек бір рет қосылады
+    if (!rooms[roomId].players.some(p => p.id === socket.id)) {
+      rooms[roomId].players.push({ id: socket.id, name: playerName });
+      socket.join(roomId);
 
-  // Ойыншы disconnect болғанда
-socket.on("disconnect", () => {
-  // Әр комнатада ойыншыны өшіру
-  for (const roomId in rooms) {
-    rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
+      console.log(`${playerName} қосылды комнатаға ${roomId}`);
 
-    // Егер кім қалған жоқ болса → комната өшіру
-    if (rooms[roomId].length === 0) {
-      delete rooms[roomId];
+      // 2.4. Егер 2+ адам қосылса → комната ашылды
+      if (rooms[roomId].players.length >= 2 && rooms[roomId].status === "waiting") {
+        rooms[roomId].status = "started";
+        io.to(roomId).emit("room started", rooms[roomId].players);
+        console.log(`Комната ${roomId} ашылды!`);
+      }
+
+      // 2.5. Барлық ойыншыларға кім кімде екенін жіберу
+      io.to(roomId).emit("update players", rooms[roomId].players);
     } else {
-      // Қалғандарға жаңартылған тізімді жіберу
-      io.to(roomId).emit("update players", rooms[roomId]);
+      socket.emit("error", "Сіз осы комнатада барсыз");
     }
-  }
+  });
+
+  // 🔹 3️⃣ Ойыншы disconnect болғанда
+  socket.on("disconnect", () => {
+    for (const roomId in rooms) {
+      const room = rooms[roomId];
+      room.players = room.players.filter(p => p.id !== socket.id);
+
+      if (room.players.length === 0) {
+        delete rooms[roomId]; // кім қалмаса, комната өшіріледі
+        console.log(`Комната ${roomId} жабылды`);
+      } else {
+        io.to(roomId).emit("update players", room.players);
+      }
+    }
+  });
 });
 
-});
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
-
-
-
-
