@@ -11,18 +11,49 @@ app.use(express.static("public"));
 // Комнаталар объектісі
 let rooms = {};
 
-// 🔹 1️⃣ Жаңа комната ашу функциясы
+// 🔹 36 карталық колода жасау
+function createDeck() {
+  const suits = ["hearts", "diamonds", "clubs", "spades"];
+  const values = ["6","7","8","9","10","J","Q","K","A"];
+  const deck = [];
+  for (const suit of suits) {
+    for (const value of values) {
+      deck.push({ suit, value });
+    }
+  }
+  return deck;
+}
+
+// 🔹 Жаңа комната жасау
 function createRoom() {
-  const roomId = `room-${Date.now()}`; // уникалды ID
+  const roomId = `room-${Date.now()}`;
   rooms[roomId] = {
-    players: [],       // кім кімде
-    deck: [],          // бастапқы колода (келесі қадамда карталарды қосуға болады)
-    status: "waiting", // waiting / started
-    turn: null         // кімнің кезегі
+    players: [],
+    deck: [],
+    status: "waiting",
+    turn: null,
+    trump: null // көзір
   };
   console.log("Жаңа комната ашылды:", roomId);
   return roomId;
 }
+
+// 🔹 Карталарды тарату функциясы
+function distributeCards(roomId) {
+  const deck = createDeck();
+  deck.sort(() => Math.random() - 0.5); // shuffle
+  rooms[roomId].deck = deck;
+
+  // Әр ойыншыға 3 карта беру
+  rooms[roomId].players.forEach(player => {
+    player.hand = deck.splice(0, 3);
+  });
+
+  // Көзір – соңғы карта
+  rooms[roomId].trump = deck.pop();
+  console.log(`Комната ${roomId} карталар таралды, көзір:`, rooms[roomId].trump);
+}
+
 
 // 🔹 2️⃣ Клиент қосылды
 io.on("connection", (socket) => {
@@ -84,3 +115,4 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
+
