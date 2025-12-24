@@ -1,20 +1,25 @@
 const express = require("express");
 const app = express();
 
+// JSON қабылдау
 app.use(express.json());
+
+// Frontend беру
 app.use(express.static("public"));
 
-app.post("/api/hello", (req, res) => {
-  console.log("Серверге келді:", req.body);
+// 🔥 Mini App → Server запрос
+app.post("/api/data", (req, res) => {
+  console.log("Клиенттен келді:", req.body);
 
   res.json({
     ok: true,
-    message: "Сервер жауап берді",
-    data: req.body
+    serverTime: Date.now(),
+    received: req.body
   });
 });
 
+// Render порт
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log("Server ONLINE on port", PORT);
 });
