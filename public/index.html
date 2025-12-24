@@ -2,37 +2,88 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>MiniApp Online</title>
+  <title>Mini App Online</title>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { font-family: Arial; text-align:center; padding:20px; }
-    input { padding: 5px; }
-    button { padding: 5px 10px; }
-    #messages { margin-top:20px; }
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 40px;
+      background: #0f172a;
+      color: white;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 10px;
+      border: none;
+      background: #22c55e;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #players {
+      margin-top: 30px;
+      text-align: left;
+      display: inline-block;
+    }
+    #messages {
+      margin-top: 20px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>Mini App Online</h1>
-  <input id="input" placeholder="Хабар жаз..." />
-  <button onclick="send()">Жібер</button>
 
-  <ul id="messages"></ul>
+  <h1>Mini App Online</h1>
+  <p id="user">Жүктелуде...</p>
+  <button id="playBtn">Играть</button>
+
+  <div id="messages"></div>
+  <ul id="players"></ul>
 
   <script>
-    const socket = io();
+    const tg = window.Telegram.WebApp;
+    tg.ready();
 
-    // Серверден хабар келгенде
-    socket.on("chat message", (msg) => {
-      const li = document.createElement("li");
-      li.innerText = msg;
-      document.getElementById("messages").appendChild(li);
+    const socket = io(); // серверге қосылу
+
+    // Telegram user
+    const user = tg.initDataUnsafe.user;
+    const playerName = user ? user.first_name : "Аты жоқ ойыншы";
+    document.getElementById("user").innerText =
+      user ? `Сәлем, ${user.first_name}` : "Telegram user жоқ";
+
+    const messagesDiv = document.getElementById("messages");
+    const playersList = document.getElementById("players");
+
+    // Играть батырмасы
+    document.getElementById("playBtn").onclick = () => {
+      socket.emit("join game", playerName);
+      messagesDiv.innerText = "Серверге қосылуда...";
+    };
+
+    // Сервер ойыншылар тізімін жібергенде
+    socket.on("update players", (players) => {
+      playersList.innerHTML = "";
+      players.forEach(p => {
+        const li = document.createElement("li");
+        li.innerText = p.name;
+        playersList.appendChild(li);
+      });
+      messagesDiv.innerText = `Қосылған ойыншылар саны: ${players.length}`;
     });
 
-    function send() {
-      const input = document.getElementById("input");
-      socket.emit("chat message", input.value);
-      input.value = "";
-    }
+    // Комната ашылды хабарын алған кезде
+    socket.on("room started", (players) => {
+      messagesDiv.innerText = "Комната ашылды! Ойын бастауға дайын 🎮";
+    });
+
+    // Сервер қате хабар жіберсе
+    socket.on("error", (msg) => {
+      messagesDiv.innerText = msg;
+    });
   </script>
+
 </body>
 </html>
