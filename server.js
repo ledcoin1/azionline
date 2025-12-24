@@ -1,25 +1,26 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-// JSON қабылдау
-app.use(express.json());
-
-// Frontend беру
 app.use(express.static("public"));
 
-// 🔥 Mini App → Server запрос
-app.post("/api/data", (req, res) => {
-  console.log("Клиенттен келді:", req.body);
+// Клиент қосылды
+io.on("connection", (socket) => {
+  console.log("Клиент қосылды:", socket.id);
 
-  res.json({
-    ok: true,
-    serverTime: Date.now(),
-    received: req.body
+  // Клиент хабар жіберсе, барлыққа тарату
+  socket.on("chat message", (msg) => {
+    io.emit("chat message", msg);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Клиент кетті:", socket.id);
   });
 });
 
-// Render порт
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server ONLINE on port", PORT);
-});
+server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
