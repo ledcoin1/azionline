@@ -8,19 +8,34 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
+let players = [];
+
 // Клиент қосылды
 io.on("connection", (socket) => {
   console.log("Клиент қосылды:", socket.id);
 
-  // Клиент хабар жіберсе, барлыққа тарату
-  socket.on("chat message", (msg) => {
-    io.emit("chat message", msg);
-  });
+socket.on("join game", (playerName) => {
+  // 1️⃣ Максимум 5 адам тексеру
+  if (players.length < 5) {
+    // 2️⃣ Ойыншы тізімге қосу
+    players.push({ id: socket.id, name: playerName });
 
-  socket.on("disconnect", () => {
-    console.log("Клиент кетті:", socket.id);
-  });
+    // 3️⃣ Егер 1 адамнан көп болса → комната ашу логикасы
+    if (players.length > 1) {
+      // Комната ашылды, бәріне хабар беру
+      io.emit("room started", players);
+    }
+
+    // 4️⃣ Ойыншылар тізімін барлыққа жаңарту
+    io.emit("update players", players);
+  } else {
+    // Ойын толы болса → клиентке хабар беру
+    socket.emit("error", "Ойын толы");
+  }
 });
+
+  
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
+
