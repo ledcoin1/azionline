@@ -1,118 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>3 Ойыншы Комната</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>3 ойыншы ставка ойыны</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      width: 500px;
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    h2 { text-align: center; }
-    input[type=text] {
-      width: 70%;
-      padding: 10px;
-      margin-right: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 6px;
-      background: #4caf50;
-      color: #fff;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #45a049;
-    }
-    ul { list-style: none; padding: 0; }
-    li { padding: 5px 0; }
-    .log { margin-top: 15px; background: #eef; padding: 10px; border-radius: 8px; max-height: 150px; overflow-y: auto; }
-    .status { font-weight: bold; color: #333; margin-top: 10px; text-align: center; }
+    body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+    #log { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; background: #fff; margin-bottom: 10px; }
+    #players { margin-bottom: 10px; }
+    #playerTurn { margin-top: 15px; }
+    button { margin-left: 5px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>3 Ойыншы Комната</h2>
 
-    <div>
-      <input type="text" id="playerName" placeholder="Атыңыз">
-      <button id="joinBtn">Join</button>
-    </div>
+<h2>3 Ойыншы Ойыны</h2>
 
-    <div class="status" id="roomStatus">Кезек күтіп тұр...</div>
+<div id="players">Ойыншылар:</div>
+<div id="log"></div>
 
-    <h3>Ойыншылар:</h3>
-    <ul id="playersList"></ul>
+<!-- Бірінші ойыншы ставка енгізу -->
+<div id="playerTurn" style="display:none;">
+  <input type="number" id="chosenNumber" placeholder="50–150 аралығында сан">
+  <button id="submitNumber">Жіберу</button>
+</div>
 
-    <div class="log" id="log"></div>
-  </div>
+<!-- Екінші ойыншы шешім қабылдау -->
+<div id="playerDecision" style="display:none;">
+  <span>Келесі ставкаға келісесіз бе?</span>
+  <button id="agreeBtn">Келісемін</button>
+  <button id="rejectBtn">Отбой</button>
+</div>
 
-  <script>
-    const socket = io();
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
 
-    const joinBtn = document.getElementById("joinBtn");
-    const playerNameInput = document.getElementById("playerName");
-    const playersList = document.getElementById("playersList");
-    const log = document.getElementById("log");
-    const roomStatus = document.getElementById("roomStatus");
+  const playersDiv = document.getElementById("players");
+  const logDiv = document.getElementById("log");
+  const playerTurnDiv = document.getElementById("playerTurn");
+  const chosenNumberInput = document.getElementById("chosenNumber");
+  const submitNumberBtn = document.getElementById("submitNumber");
+  const playerDecisionDiv = document.getElementById("playerDecision");
+  const agreeBtn = document.getElementById("agreeBtn");
+  const rejectBtn = document.getElementById("rejectBtn");
 
-    joinBtn.addEventListener("click", () => {
-      const name = playerNameInput.value.trim();
-      if (!name) return alert("Атыңызды енгізіңіз!");
-      socket.emit("join", name);
-      joinBtn.disabled = true;
-      playerNameInput.disabled = true;
-      roomStatus.textContent = "Кезек күтіп тұр...";
+  const playerName = prompt("Атыңызды енгізіңіз:");
+  socket.emit("join", playerName);
+
+  function logMessage(msg) {
+    const p = document.createElement("div");
+    p.textContent = msg;
+    logDiv.appendChild(p);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  // Ойыншылардың жаңартылуы
+  socket.on("room_update", (data) => {
+    playersDiv.innerHTML = "Ойыншылар: ";
+    data.players.forEach(p => {
+      playersDiv.innerHTML += `${p.name} (Баланс: ${p.balance}) | `;
     });
+  });
 
-    socket.on("room_update", (data) => {
-      playersList.innerHTML = "";
-      data.players.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent = `${p.name} (${p.balance || 1000})`;
-        playersList.appendChild(li);
-      });
+  // Логтар
+  socket.on("log_update", (data) => {
+    logMessage(data.msg);
+  });
 
-      if (data.status === "started") {
-        roomStatus.textContent = "Ойын басталды!";
-      } else {
-        roomStatus.textContent = `Кезек күтіп тұр... (${data.players.length}/3)`;
-      }
-    });
+  // Бірінші немесе кезегі келген ойыншы
+  socket.on("your_turn", (data) => {
+    logMessage(data.message);
 
-    socket.on("game_started", (data) => {
-      roomStatus.textContent = "🔥 Ойын басталды!";
-      logMessage("Барлық 3 ойыншы қосылды. Ойын басталды!");
-    });
-
-    socket.on("log_update", (data) => {
-      logMessage(data.msg);
-    });
-
-    function logMessage(msg) {
-      const div = document.createElement("div");
-      div.textContent = msg;
-      log.appendChild(div);
-      log.scrollTop = log.scrollHeight;
+    if (data.previousNumber) {
+      // 2-ші ойыншының шешімі
+      playerDecisionDiv.style.display = "block";
+    } else {
+      // Бірінші ойыншының ставка енгізуі
+      playerTurnDiv.style.display = "block";
     }
-  </script>
+  });
+
+  // Бірінші ойыншы ставка жіберу
+  submitNumberBtn.addEventListener("click", () => {
+    const number = parseInt(chosenNumberInput.value);
+    if (isNaN(number) || number < 50 || number > 150) {
+      return alert("50–150 аралығында сан енгізіңіз!");
+    }
+    socket.emit("player_choice", { number });
+    playerTurnDiv.style.display = "none";
+    chosenNumberInput.value = "";
+  });
+
+  // Екінші ойыншы шешім
+  agreeBtn.addEventListener("click", () => {
+    socket.emit("player_decision", { decision: "Келісемін" });
+    playerDecisionDiv.style.display = "none";
+  });
+
+  rejectBtn.addEventListener("click", () => {
+    socket.emit("player_decision", { decision: "Отбой" });
+    playerDecisionDiv.style.display = "none";
+  });
+
+  // Ойын басталды
+  socket.on("game_started", (data) => {
+    logMessage("Ойын басталды! Ойыншылар: " + data.players.map(p => p.name).join(", "));
+  });
+
+  // Қате хабарлар
+  socket.on("error_message", (data) => {
+    alert(data.message);
+  });
+</script>
+
 </body>
 </html>
