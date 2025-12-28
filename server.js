@@ -17,7 +17,14 @@ function createRoom() {
     id: roomId,
     players: [],  // {id, name, balance}
     status: "waiting",
-    turnIndex: null
+    turnIndex: null,
+    firstBet: 0,
+    secondPlayerBet: 0,
+    thirdPlayerBet: 0,
+    secondPlayerAccepted: false,
+    secondPlayerFolded: false,
+    thirdPlayerAccepted: false,
+    thirdPlayerFolded: false
   };
   return rooms[roomId];
 }
@@ -47,6 +54,7 @@ io.on("connection", (socket) => {
     if (room.players.length === 3) {
       room.status = "started";
       room.turnIndex = 0;
+
       io.to(room.id).emit("game_started", { roomId: room.id, players: room.players });
 
       // Бірінші ойыншыға сигнал
@@ -60,6 +68,7 @@ io.on("connection", (socket) => {
     const room = findRoomBySocket(socket);
     if (!room) return;
 
+    // CHANGED: тек ағымдағы ойыншының кезегін тексеру
     if (room.turnIndex !== 0 || room.players[0].id !== socket.id) return;
 
     let bet = data.bet;
@@ -70,60 +79,80 @@ io.on("connection", (socket) => {
 
     const secondPlayer = room.players[1];
     io.to(secondPlayer.id).emit("first_player_bet_doubled", { bet });
-    // Кезек жаңарту
-  room.turnIndex = 1;
-  io.to(room.players[room.turnIndex].id).emit("your_turn", { message: "Сіздің кезегіңіз!" });
-});
 
+    // CHANGED: кезек жаңарту
+    room.turnIndex = 1;
+    io.to(room.players[room.turnIndex].id).emit("your_turn", { message: "Сіздің кезегіңіз!" });
+  });
 
   // --- 2-ойыншы келіссе ---
   socket.on("second_player_accept", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
-    if (room.players[1].id !== socket.id) return;
+
+    // CHANGED: тек ағымдағы ойыншының кезегін тексеру
+    if (room.turnIndex !== 1 || room.players[1].id !== socket.id) return;
 
     room.secondPlayerAccepted = true;
     room.secondPlayerBet = room.firstBet * 2;
 
     const thirdPlayer = room.players[2];
     io.to(thirdPlayer.id).emit("second_player_bet_doubled_again", { bet: room.secondPlayerBet });
+
+    // CHANGED: кезек жаңарту
+    room.turnIndex = 2;
+    io.to(room.players[room.turnIndex].id).emit("your_turn", { message: "Сіздің кезегіңіз!" });
   });
 
   // --- 2-ойыншы отбой ---
   socket.on("second_player_fold", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
-    if (room.players[1].id !== socket.id) return;
+
+    // CHANGED: тек ағымдағы ойыншының кезегін тексеру
+    if (room.turnIndex !== 1 || room.players[1].id !== socket.id) return;
 
     room.secondPlayerFolded = true;
     const bet = room.firstBet * 2;
 
     const thirdPlayer = room.players[2];
     io.to(thirdPlayer.id).emit("second_player_folded_bet", { bet });
+
+    // CHANGED: кезек жаңарту
+    room.turnIndex = 2;
+    io.to(room.players[room.turnIndex].id).emit("your_turn", { message: "Сіздің кезегіңіз!" });
   });
 
   // --- 3-ойыншы келіссе ---
   socket.on("third_player_accept", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
-    if (room.players[2].id !== socket.id) return;
+
+    // CHANGED: тек ағымдағы ойыншының кезегін тексеру
+    if (room.turnIndex !== 2 || room.players[2].id !== socket.id) return;
 
     room.thirdPlayerAccepted = true;
     room.thirdPlayerBet = room.secondPlayerBet;
+
+    // CHANGED: барлық ойыншыларға хабарлау немесе келесі логика
+    io.to(room.id).emit("round_finished", { finalBet: room.thirdPlayerBet });
   });
 
   // --- 3-ойыншы отбой ---
   socket.on("third_player_fold", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
-    if (room.players[2].id !== socket.id) return;
+
+    // CHANGED: тек ағымдағы ойыншының кезегін тексеру
+    if (room.turnIndex !== 2 || room.players[2].id !== socket.id) return;
 
     room.thirdPlayerFolded = true;
-  });
 
-}); // <- Бұл блок міндетті түрде жабылады
+    // CHANGED: барлық ойыншыларға хабарлау немесе келесі логика
+    io.to(room.id).emit("round_finished", { finalBet: room.secondPlayerBet });
+  });
+});
 
 // --- Серверді іске қосу ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
-
