@@ -70,7 +70,11 @@ io.on("connection", (socket) => {
 
     const secondPlayer = room.players[1];
     io.to(secondPlayer.id).emit("first_player_bet_doubled", { bet });
-  });
+    // Кезек жаңарту
+  room.turnIndex = 1;
+  io.to(room.players[room.turnIndex].id).emit("your_turn", { message: "Сіздің кезегіңіз!" });
+});
+
 
   // --- 2-ойыншы келіссе ---
   socket.on("second_player_accept", () => {
@@ -122,3 +126,4 @@ io.on("connection", (socket) => {
 // --- Серверді іске қосу ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
+
