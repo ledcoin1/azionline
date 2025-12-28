@@ -1,191 +1,82 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Card Game Mini App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      margin: 0;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: white;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    button {
-      padding: 14px 28px;
-      font-size: 18px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      background: #00c6ff;
-      color: #000;
-      font-weight: bold;
-    }
-
-    /* ===== JOIN SCREEN ===== */
-    #joinScreen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      gap: 20px;
-    }
-
-    input {
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      width: 220px;
-      text-align: center;
-    }
-
-    /* ===== WAIT SCREEN ===== */
-    #waitScreen {
-      display: none;
-      height: 100vh;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    /* ===== GAME SCREEN ===== */
-    #gameScreen {
-      display: none;
-      position: relative;
-      width: 100%;
-      height: 100vh;
-    }
-
-    .player {
-      position: absolute;
-      padding: 12px 18px;
-      border-radius: 12px;
-      background: rgba(0,0,0,0.4);
-      border: 1px solid rgba(255,255,255,0.2);
-      font-size: 16px;
-    }
-
-    .player.self {
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,198,255,0.3);
-    }
-
-    .player.left {
-      left: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-
-    .player.right {
-      right: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-
-    .table {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.05);
-      border: 2px dashed rgba(255,255,255,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      opacity: 0.8;
-    }
-  </style>
-</head>
-<body>
-
-<!-- JOIN -->
-<div id="joinScreen">
-  <h1>🃏 Card Game</h1>
-  <input id="nameInput" placeholder="Your name">
-  <button onclick="joinGame()">Играть</button>
-</div>
-
-<!-- WAIT -->
-<div id="waitScreen">
-  <h2>⏳ Күту...</h2>
-  <div id="playersCount">0 / 3</div>
-</div>
-
-<!-- GAME -->
-<div id="gameScreen">
-  <div class="table">TABLE</div>
-
-  <div id="playerLeft" class="player left"></div>
-  <div id="playerRight" class="player right"></div>
-  <div id="playerSelf" class="player self"></div>
-</div>
-
-<script>
-  const socket = io();
-
-  const joinScreen = document.getElementById("joinScreen");
-  const waitScreen = document.getElementById("waitScreen");
-  const gameScreen = document.getElementById("gameScreen");
-
-  const playerLeft = document.getElementById("playerLeft");
-  const playerRight = document.getElementById("playerRight");
-  const playerSelf = document.getElementById("playerSelf");
-  const playersCount = document.getElementById("playersCount");
-
-  let myId = null;
-
-  socket.on("connect", () => {
-    myId = socket.id;
-  });
-
-  function joinGame() {
-    const name = document.getElementById("nameInput").value.trim();
-    if (!name) return alert("Атыңды жаз");
-
-    socket.emit("join", name);
-
-    joinScreen.style.display = "none";
-    waitScreen.style.display = "flex";
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3-ойыншы ойын</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    flex-direction: column;
   }
 
-  socket.on("room_update", (data) => {
-    playersCount.innerText = `${data.players.length} / 3`;
-  });
+  .container {
+    background: rgba(0,0,0,0.6);
+    padding: 40px 50px;
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    text-align: center;
+    width: 380px;
+  }
 
-  socket.on("game_started", (data) => {
-    waitScreen.style.display = "none";
-    gameScreen.style.display = "block";
+  h1 {
+    margin-bottom: 20px;
+  }
 
-    const others = data.players.filter(p => p.id !== myId);
-    const me = data.players.find(p => p.id === myId);
+  input, button {
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+  }
 
-    playerSelf.innerText = me ? me.name + " (You)" : "";
+  input { width: 80%; }
+  button {
+    background: #ff6b81;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover { background: #ff4757; }
 
-    if (others[0]) playerLeft.innerText = others[0].name;
-    if (others[1]) playerRight.innerText = others[1].name;
-  });
-</script>
+  .log {
+    margin-top: 20px;
+    background: rgba(255,255,255,0.1);
+    padding: 10px;
+    border-radius: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    text-align: left;
+  }
 
+  .turn {
+    margin-top: 20px;
+    font-weight: bold;
+    font-size: 18px;
+    color: #ffd700;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>3-ойыншы ойын</h1>
+    <input type="text" id="nameInput" placeholder="Атыңды енгіз">
+    <button id="joinBtn">Қосылу</button>
+
+    <div class="turn" id="turnText">Кезек күтілуде...</div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
-
