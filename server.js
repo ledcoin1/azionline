@@ -10,7 +10,6 @@ app.use(express.static("public"));
 
 const rooms = {};
 
-// Комната жасау
 function createRoom() {
   const roomId = "room-" + Date.now();
   rooms[roomId] = {
@@ -19,24 +18,22 @@ function createRoom() {
     status: "waiting",
     turnIndex: null,
     firstBet: 0,
-    secondPlayerBet: 0,
-    thirdPlayerBet: 0,
     secondPlayerAccepted: false,
     secondPlayerFolded: false,
+    secondPlayerBet: 0,
     thirdPlayerAccepted: false,
     thirdPlayerFolded: false,
+    thirdPlayerBet: 0
   };
   return rooms[roomId];
 }
 
-// Кімнің кім екенін табу
 function findRoomBySocket(socket) {
   return Object.values(rooms).find(room =>
     room.players.some(p => p.id === socket.id)
   );
 }
 
-// --- Socket.IO connection ---
 io.on("connection", (socket) => {
   console.log("Клиент қосылды:", socket.id);
 
@@ -56,25 +53,25 @@ io.on("connection", (socket) => {
 
       io.to(room.id).emit("game_started", { roomId: room.id, players: room.players });
 
-      // Бірінші ойыншыға сигнал
+      // 1-ойыншыға сигнал
       const firstPlayer = room.players[0];
       io.to(firstPlayer.id).emit("your_turn", { message: "Сіздің кезегіңіз! 50–150 арасында сан таңдаңыз." });
     }
   });
 
-  // --- 1-ойыншыдан ставка ---
+  // 1-ойыншы ставкасы
   socket.on("first_player_bet", (data) => {
     const room = findRoomBySocket(socket);
     if (!room) return;
-    if (room.players[0].id !== socket.id) return;
+    if (room.turnIndex !== 0 || room.players[0].id !== socket.id) return;
 
-    let bet = data.bet;
+    let bet = Number(data.bet);
     if (bet < 50 || bet > 150) return;
 
     // Баланстан азайту
-    const player1 = room.players[0];
-    if (player1.balance < bet) return;
-    player1.balance -= bet;
+    const player = room.players[0];
+    if (player.balance < bet) return; // жеткіліксіз баланс
+    player.balance -= bet;
 
     // 2 есе көбейту
     room.firstBet = bet * 2;
@@ -82,30 +79,36 @@ io.on("connection", (socket) => {
     // 2-ойыншыға жіберу
     const secondPlayer = room.players[1];
     io.to(secondPlayer.id).emit("first_player_bet_doubled", { bet: room.firstBet });
+
+    // Кезек жаңарту
+    room.turnIndex = 1;
+    io.to(secondPlayer.id).emit("your_turn", { message: "Сіздің кезегіңіз! Accept немесе Fold таңдаңыз." });
   });
 
-  // --- 2-ойыншыдан келісемін ---
+  // 2-ойыншы accept
   socket.on("second_player_accept", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
     if (room.players[1].id !== socket.id) return;
 
-    const player2 = room.players[1];
-    const bet = room.firstBet;
-
-    // Баланс тексеру
-    if (player2.balance < bet) return;
-    player2.balance -= bet;
-
     room.secondPlayerAccepted = true;
-    room.secondPlayerBet = bet * 2;
 
-    // 3-ойыншыға жіберу
+    const player2 = room.players[1];
+    if (player2.balance < room.firstBet) return; // жеткіліксіз баланс
+    player2.balance -= room.firstBet;
+
+    room.secondPlayerBet = room.firstBet * 2;
+
+    // 3-ойыншыға сигнал
     const thirdPlayer = room.players[2];
     io.to(thirdPlayer.id).emit("second_player_bet_doubled_again", { bet: room.secondPlayerBet });
+
+    // Кезек жаңарту
+    room.turnIndex = 2;
+    io.to(thirdPlayer.id).emit("your_turn", { message: "Сіздің кезегіңіз! Accept немесе Fold таңдаңыз." });
   });
 
-  // --- 2-ойыншыдан отбой ---
+  // 2-ойыншы fold
   socket.on("second_player_fold", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
@@ -113,40 +116,34 @@ io.on("connection", (socket) => {
 
     room.secondPlayerFolded = true;
 
-    // 3-ойыншыға жіберу (1-ойыншының ставкасы *2)
+    // 3-ойыншыға ставка бұрынғы күйде
     const thirdPlayer = room.players[2];
     io.to(thirdPlayer.id).emit("second_player_folded_bet", { bet: room.firstBet });
+
+    // Кезек жаңарту
+    room.turnIndex = 2;
+    io.to(thirdPlayer.id).emit("your_turn", { message: "Сіздің кезегіңіз! Accept немесе Fold таңдаңыз." });
   });
 
-  // --- 3-ойыншыдан келісемін ---
+  // 3-ойыншы accept
   socket.on("third_player_accept", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
     if (room.players[2].id !== socket.id) return;
 
-    const player3 = room.players[2];
-    let bet = room.secondPlayerFolded ? room.firstBet : room.secondPlayerBet;
-
-    if (player3.balance < bet) return;
-    player3.balance -= bet;
-
     room.thirdPlayerAccepted = true;
-    room.thirdPlayerBet = bet;
 
-    // Финалдық шешім
-    const p1 = room.players[0];
-    const p2 = room.secondPlayerFolded ? null : room.players[1];
-    const p3 = room.players[2];
+    const player3 = room.players[2];
+    if (player3.balance < room.secondPlayerBet) return;
+    player3.balance -= room.secondPlayerBet;
 
-    const winners = [p1];
-    if (p2) winners.push(p2);
-    winners.push(p3);
+    room.thirdPlayerBet = room.secondPlayerBet;
 
-    // 3 ойыншы да келіскен жағдайда
-    io.to(room.id).emit("game_result", { winners: winners.map(p => p.name) });
+    // Барлық қатысушыларға хабар
+    io.to(room.id).emit("game_result", { message: "Барлық қатысушылар ойындасындар!" });
   });
 
-  // --- 3-ойыншыдан отбой ---
+  // 3-ойыншы fold
   socket.on("third_player_fold", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
@@ -154,21 +151,21 @@ io.on("connection", (socket) => {
 
     room.thirdPlayerFolded = true;
 
-    const p1 = room.players[0];
-    const p2 = room.secondPlayerFolded ? null : room.players[1];
+    // Қалған ойыншыларға хабарлау
+    const activePlayers = room.players.filter(p => {
+      if (p.id === room.players[0].id && room.players[0].balance > 0) return true;
+      if (p.id === room.players[1].id && room.secondPlayerAccepted) return true;
+      return false;
+    });
 
-    const winners = [p1];
-    if (p2) winners.push(p2);
-
-    if (winners.length === 0) {
-      io.to(room.id).emit("game_result", { winners: [], message: "Ешкім келіспеді" });
+    if (activePlayers.length > 0) {
+      io.to(activePlayers.map(p => p.id)).emit("game_result", { message: "Қалған ойыншылар ойындасындар!" });
     } else {
-      io.to(room.id).emit("game_result", { winners: winners.map(p => p.name) });
+      io.to(room.players[0].id).emit("game_result", { message: "Ешкім келіспеді." });
     }
   });
 
-}); // connection end
+}); // connection
 
-// --- Серверді іске қосу ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
