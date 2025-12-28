@@ -1,148 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>3 Ойыншы Карточка Ойыны</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3 Ойыншы Ставка Ойыны</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #players { margin-bottom: 20px; }
-    .player { margin: 5px 0; }
-    #gameArea { border: 1px solid #ccc; padding: 10px; width: 400px; }
-    #messages { height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; margin-top: 10px; }
-    button { margin: 5px; }
+    body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+    .player { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; background: #fff; }
+    .player h2 { margin: 0 0 5px 0; }
+    .hidden { display: none; }
+    button { margin-right: 5px; padding: 5px 10px; }
+    input[type=number] { width: 60px; }
+    #log { border: 1px solid #ccc; background: #eee; padding: 10px; height: 150px; overflow-y: auto; }
   </style>
 </head>
 <body>
 
-<h1>3 Ойыншы Карточка Ойыны</h1>
+<h1>3 Ойыншы Ставка Ойыны</h1>
 
 <div>
-  <label>Аты-жөніңіз: <input type="text" id="nameInput"></label>
+  <label>Атыңызды енгізіңіз: <input type="text" id="playerName"></label>
   <button id="joinBtn">Қосылу</button>
 </div>
 
-<div id="players"></div>
+<div id="game" class="hidden">
+  <div id="players"></div>
 
-<div id="gameArea" style="display:none;">
-  <div id="turnMessage"></div>
-  
-  <div id="firstPlayerArea" style="display:none;">
-    <label>Ставка (50-150): <input type="number" id="betInput"></label>
-    <button id="betBtn">Жіберу</button>
+  <div id="actions" class="hidden">
+    <div id="betDiv">
+      <label>Ставка: <input type="number" id="betInput" min="50" max="150"></label>
+      <button id="betBtn">Жіберу</button>
+    </div>
+    <div id="acceptFoldDiv" class="hidden">
+      <button id="acceptBtn">Келісемін</button>
+      <button id="foldBtn">Отбой</button>
+    </div>
   </div>
 
-  <div id="decisionArea" style="display:none;">
-    <button id="acceptBtn">Келісемін</button>
-    <button id="foldBtn">Отбой</button>
-  </div>
-
-  <div id="messages"></div>
+  <h3>Лог:</h3>
+  <div id="log"></div>
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
 
-  let myId = null;
-  let myIndex = null; // 0,1,2 ойыншының индексі
-
+  const joinBtn = document.getElementById('joinBtn');
+  const playerNameInput = document.getElementById('playerName');
+  const gameDiv = document.getElementById('game');
   const playersDiv = document.getElementById('players');
-  const gameArea = document.getElementById('gameArea');
-  const turnMessage = document.getElementById('turnMessage');
-  const firstPlayerArea = document.getElementById('firstPlayerArea');
+  const actionsDiv = document.getElementById('actions');
+  const betDiv = document.getElementById('betDiv');
   const betInput = document.getElementById('betInput');
   const betBtn = document.getElementById('betBtn');
-  const decisionArea = document.getElementById('decisionArea');
+  const acceptFoldDiv = document.getElementById('acceptFoldDiv');
   const acceptBtn = document.getElementById('acceptBtn');
   const foldBtn = document.getElementById('foldBtn');
-  const messagesDiv = document.getElementById('messages');
+  const logDiv = document.getElementById('log');
 
-  const nameInput = document.getElementById('nameInput');
-  const joinBtn = document.getElementById('joinBtn');
+  let myId = null;
+  let myTurn = false;
+  let myPlayerIndex = null;
+
+  function log(msg) {
+    const p = document.createElement('div');
+    p.textContent = msg;
+    logDiv.appendChild(p);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
 
   joinBtn.onclick = () => {
-    const name = nameInput.value.trim();
-    if (!name) return alert("Атыңызды енгізіңіз!");
-    socket.emit("join", name);
-    nameInput.disabled = true;
+    const name = playerNameInput.value.trim();
+    if (!name) return alert("Атыңызды енгізіңіз");
+    socket.emit('join', name);
+    myId = socket.id;
+    gameDiv.classList.remove('hidden');
     joinBtn.disabled = true;
-  }
+    playerNameInput.disabled = true;
+  };
 
-  function logMessage(msg) {
-    const p = document.createElement("div");
-    p.textContent = msg;
-    messagesDiv.appendChild(p);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  // --- Серверден оқиғалар ---
-  socket.on("room_update", (data) => {
-    playersDiv.innerHTML = "<b>Ойыншылар:</b><br>";
-    data.players.forEach((p, i) => {
-      playersDiv.innerHTML += `<div class="player">${i+1}. ${p.name} (Баланс: ${p.balance})</div>`;
-      if (p.id === socket.id) myId = p.id, myIndex = i;
+  socket.on('room_update', data => {
+    playersDiv.innerHTML = '';
+    data.players.forEach((p, index) => {
+      const div = document.createElement('div');
+      div.className = 'player';
+      div.innerHTML = `<h2>${p.name}</h2><p>Баланс: ${p.balance}</p>`;
+      playersDiv.appendChild(div);
+      if (p.id === myId) myPlayerIndex = index;
     });
   });
 
-  socket.on("game_started", (data) => {
-    logMessage("Ойын басталды!");
-    gameArea.style.display = "block";
+  socket.on('game_started', data => {
+    log("Ойын басталды! Кезекпен ойнаңыз.");
   });
 
-  socket.on("your_turn", (data) => {
-    turnMessage.textContent = data.message;
-
-    if (myIndex === 0) {
-      firstPlayerArea.style.display = "block";
-      decisionArea.style.display = "none";
+  socket.on('your_turn', data => {
+    myTurn = true;
+    log(data.message);
+    if (myPlayerIndex === 0) {
+      betDiv.classList.remove('hidden');
+      acceptFoldDiv.classList.add('hidden');
     } else {
-      firstPlayerArea.style.display = "none";
-      decisionArea.style.display = "block";
+      betDiv.classList.add('hidden');
+      acceptFoldDiv.classList.remove('hidden');
     }
+    actionsDiv.classList.remove('hidden');
   });
 
-  // Бірінші ойыншы ставка жіберу
   betBtn.onclick = () => {
     const bet = parseInt(betInput.value);
-    if (!bet || bet < 50 || bet > 150) return alert("50-150 аралығында сан енгізіңіз!");
-    socket.emit("first_player_bet", { bet });
-    firstPlayerArea.style.display = "none";
-    logMessage(`Сіздің ставкаңыз: ${bet}`);
-  }
+    if (!bet || bet < 50 || bet > 150) return alert("50-150 аралығында сан енгізіңіз");
+    socket.emit('first_player_bet', { bet });
+    betDiv.classList.add('hidden');
+    myTurn = false;
+    log(`Сіз ставка жібердіңіз: ${bet}`);
+  };
 
-  // Келісемін / Отбой батырмалары
   acceptBtn.onclick = () => {
-    if (myIndex === 1) socket.emit("second_player_decision", { decision: "accept" });
-    if (myIndex === 2) socket.emit("third_player_decision", { decision: "accept" });
-    decisionArea.style.display = "none";
-    logMessage("Сіз Келісемін деп таңдадыңыз.");
-  }
+    if (myPlayerIndex === 1) {
+      socket.emit('second_player_accept');
+      log("Сіз келісдіңіз");
+    } else if (myPlayerIndex === 2) {
+      socket.emit('third_player_accept');
+      log("Сіз келісдіңіз");
+    }
+    acceptFoldDiv.classList.add('hidden');
+    myTurn = false;
+  };
 
   foldBtn.onclick = () => {
-    if (myIndex === 1) socket.emit("second_player_decision", { decision: "fold" });
-    if (myIndex === 2) socket.emit("third_player_decision", { decision: "fold" });
-    decisionArea.style.display = "none";
-    logMessage("Сіз Отбой деп таңдадыңыз.");
-  }
+    if (myPlayerIndex === 1) {
+      socket.emit('second_player_fold');
+      log("Сіз отбой жасадыңыз");
+    } else if (myPlayerIndex === 2) {
+      socket.emit('third_player_fold');
+      log("Сіз отбой жасадыңыз");
+    }
+    acceptFoldDiv.classList.add('hidden');
+    myTurn = false;
+  };
 
-  // Серверден ставкалар мен шешімдерді көрсету
-  socket.on("first_player_bet_doubled", (data) => {
-    logMessage(`2-ойыншыға ставка жіберілді: ${data.bet}`);
+  // 2-ойыншы сигналдар
+  socket.on('first_player_bet_doubled', data => {
+    log(`1-ойыншы ставкасын 2 есе көбейтті: ${data.bet}`);
   });
 
-  socket.on("second_player_bet_doubled_again", (data) => {
-    logMessage(`3-ойыншыға ставка жіберілді: ${data.bet}`);
+  socket.on('second_player_bet_doubled_again', data => {
+    log(`2-ойыншы ставкасын 2 есе көбейтті: ${data.bet}`);
   });
 
-  socket.on("second_player_folded_bet", (data) => {
-    logMessage(`2-ойыншы Отбой, 3-ойыншыға ставка: ${data.bet}`);
+  socket.on('second_player_folded_bet', data => {
+    log(`2-ойыншы отбой: 1-ойыншы ставкасы 2 есе көбейтілді және сізге жіберілді: ${data.bet}`);
   });
 
-  socket.on("game_result", (data) => {
-    logMessage(`Нәтиже: ${data.message}`);
-    if (data.finalBets) logMessage(`Ставкалар: ${JSON.stringify(data.finalBets)}`);
+  socket.on('game_result', data => {
+    if (data.winners && data.winners.length > 0) {
+      log("Жеңімпаздар: " + data.winners.join(", "));
+    } else {
+      log("Ешкім келіспеді");
+    }
   });
-
 </script>
+
 </body>
 </html>
