@@ -1,154 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3-ойыншы ойын</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #fff;
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    flex-direction: column;
-  }
-
-  .container {
-    background: rgba(0,0,0,0.6);
-    padding: 40px 50px;
-    border-radius: 20px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
-    text-align: center;
-    width: 400px;
-  }
-
-  h1 {
-    margin-bottom: 20px;
-  }
-
-  input, button {
-    padding: 10px 15px;
-    margin: 10px 0;
-    border-radius: 10px;
-    border: none;
-    outline: none;
-    font-size: 16px;
-  }
-
-  input { width: 80%; }
-  button {
-    background: #ff6b81;
-    color: #fff;
-    cursor: pointer;
-    transition: 0.3s;
-  }
-  button:hover { background: #ff4757; }
-
-  .log {
-    margin-top: 20px;
-    background: rgba(255,255,255,0.1);
-    padding: 10px;
-    border-radius: 10px;
-    max-height: 200px;
-    overflow-y: auto;
-    text-align: left;
-  }
-
-  .turn {
-    margin-top: 20px;
-    font-weight: bold;
-    font-size: 18px;
-    color: #ffd700;
-  }
-
-  #choiceDiv {
-    margin-top: 20px;
-    display: none;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3 Ойыншы Ойын</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #74ebd5, #ACB6E5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+    h1 { margin-bottom: 10px; }
+    #login, #game { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); width: 320px; text-align: center; }
+    #game { display: none; }
+    input[type=text], input[type=number] {
+      width: 80%;
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #4CAF50;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover { background: #45a049; }
+    #players { margin-bottom: 10px; }
+    #log { margin-top: 15px; text-align: left; height: 120px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 6px; background: #f9f9f9; }
+    #turnText { font-weight: bold; margin: 10px 0; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>3-ойыншы ойын</h1>
-    <input type="text" id="nameInput" placeholder="Атыңды енгіз">
+  <h1>3 Ойыншы Ойын</h1>
+
+  <div id="login">
+    <input type="text" id="playerName" placeholder="Атыңызды енгізіңіз">
     <button id="joinBtn">Қосылу</button>
-
-    <div class="turn" id="turnText">Кезек күтілуде...</div>
-
-    <div id="choiceDiv">
-      <input type="number" id="numberInput" min="50" max="150" placeholder="50–150 арасында сан">
-      <button id="sendBtn">Жіберу</button>
-    </div>
-
-    <div class="log" id="log"></div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-
-    const joinBtn = document.getElementById("joinBtn");
-    const nameInput = document.getElementById("nameInput");
-    const logDiv = document.getElementById("log");
-    const turnText = document.getElementById("turnText");
-
-    const choiceDiv = document.getElementById("choiceDiv");
-    const numberInput = document.getElementById("numberInput");
-    const sendBtn = document.getElementById("sendBtn");
-
-    // Қосылу
-    joinBtn.addEventListener("click", () => {
-      const name = nameInput.value.trim();
-      if (!name) return alert("Атыңды енгіз!");
-      socket.emit("join", name);
-      addLog(`✅ Сен қосылдың: ${name}`);
-      joinBtn.disabled = true;
-      nameInput.disabled = true;
-    });
-
-    // Комната жаңартуы
-    socket.on("room_update", (data) => {
-      addLog(`👥 Комната жаңартылды: ${data.players.map(p => p.name).join(", ")} (${data.players.length}/3)`);
-    });
-
-    // Ойын басталды
-    socket.on("game_started", (data) => {
-      addLog("🔥 Ойын басталды!");
-      addLog(`Ойыншылар: ${data.players.map(p => p.name).join(", ")}`);
-      turnText.textContent = "Кезек күтілуде...";
-    });
-
-    // Сенің кезегің
-    socket.on("your_turn", (data) => {
-      turnText.textContent = data.message || "Сенің кезегің!";
-      addLog(`⚡ Саған сигнал келді: ${data.message || "Сенің кезегің!"}`);
-      choiceDiv.style.display = "block";
-    });
-
-    // Жауап жіберу
-    sendBtn.addEventListener("click", () => {
-      const number = parseInt(numberInput.value);
-      if (isNaN(number) || number < 50 || number > 150) {
-        return alert("50–150 аралығында сан таңда!");
-      }
-      socket.emit("player_choice", { number });
-      addLog(`✅ Сен таңдадың: ${number}`);
-      choiceDiv.style.display = "none";
-      numberInput.value = "";
-      turnText.textContent = "Кезек күтілуде...";
-    });
-
-    // Логқа қосу функциясы
-    function addLog(msg) {
-      const p = document.createElement("p");
-      p.textContent = msg;
-      logDiv.appendChild(p);
-      logDiv.scrollTop = logDiv.scrollHeight;
-    }
-  </script>
-</body>
-</html>
+  <div id="game">
+    <div id="players"></div>
+    <div id="turnText"></div>
+    <input type="number" id="choiceInput" placeholder="50–150 аралығында сан">
+    <button id="
