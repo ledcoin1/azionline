@@ -8,17 +8,12 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-/**
- * Барлық комнаталар
- */
+// Барлық комнаталар
 const rooms = {};
 
-/**
- * Комната жасау
- */
+// Комната жасау
 function createRoom() {
   const roomId = "room-" + Date.now();
-
   rooms[roomId] = {
     id: roomId,
     players: [],
@@ -26,31 +21,23 @@ function createRoom() {
     phase: "waiting",
     turnIndex: null
   };
-
   console.log("🟢 Комната ашылды:", roomId);
   return roomId;
 }
 
-/**
- * Сокет арқылы кімнің қай комнатада екенін табу
- */
+// Сокет арқылы кімнің қай комнатада екенін табу
 function findRoomBySocket(socket) {
   return Object.values(rooms).find(room =>
     room.players.some(p => p.id === socket.id)
   );
 }
 
-
- io.on("connection", (socket) => {
+io.on("connection", (socket) => {
   console.log("🔵 Клиент қосылды:", socket.id);
 
-  // Клиент қосылған кезде сигналдар
+  // JOIN сигнал
   socket.on("join", (playerName) => {
-    console.log("➡️ JOIN:", playerName);
-
-    let room = Object.values(rooms).find(
-      r => r.status === "waiting" && r.players.length < 3
-    );
+    let room = Object.values(rooms).find(r => r.status === "waiting" && r.players.length < 3);
 
     if (!room) {
       const roomId = createRoom();
@@ -68,53 +55,49 @@ function findRoomBySocket(socket) {
       status: room.status
     });
 
-  
-
-    // 3 ойыншы болса — ойын басталды
+    // 3 ойыншы қосылғанда ойын басталады
     if (room.players.length === 3) {
       room.status = "started";
       room.phase = "playing";
       room.turnIndex = 0;
 
       console.log("🔥 ОЙЫН БАСТАЛДЫ:", room.id);
-
       io.to(room.id).emit("game_started", {
         roomId: room.id,
         players: room.players
       });
 
-      // Бірінші ойыншыға сұрақ
+      // Бірінші ойыншыға сигнал жіберу
       const firstPlayer = room.players[room.turnIndex];
-      io.to(firstPlayer.id).emit("your_turn", { message: "50–150 арасында сан таңда!" });
+      io.to(firstPlayer.id).emit("your_turn", {
+        message: "Сен бірінші ойыншысың, 50–150 арасында сан таңда!"
+      });
     }
   });
 
-  // 1-ші ойыншыдан жауап қабылдау (осы жерде, join ішінде емес)
+  // Ойыншыдан сан қабылдау
   socket.on("player_choice", (data) => {
-  const room = findRoomBySocket(socket); // функция арқылы кімнің кім екенін табу
-  if (!room) return;
+    const room = findRoomBySocket(socket);
+    if (!room) return;
 
-  const chosenNumber = data.number;
-  console.log(`🎯 ${socket.id} таңдауы: ${chosenNumber}`);
+    const chosenNumber = data.number;
+    const doubledNumber = chosenNumber * 2;
 
-  // санды 2 есе көбейту
-  const doubledNumber = chosenNumber * 2;
+    // Лог көрсету
+    io.to(room.id).emit("log_update", {
+      msg: `${socket.id} таңдаған сан: ${chosenNumber}, 2 есе көбейтілді: ${doubledNumber}`
+    });
 
-  // turnIndex жаңарту — келесі ойыншыға беру
-  room.turnIndex = (room.turnIndex + 1) % room.players.length;
-  const nextPlayer = room.players[room.turnIndex];
+    // Келесі ойыншыға кезек беру
+    room.turnIndex = (room.turnIndex + 1) % room.players.length;
+    const nextPlayer = room.players[room.turnIndex];
 
-  io.to(nextPlayer.id).emit("your_turn", {
-    message: `Сенің кезегің! Алдыңғы сан 2 есе көбейтілді: ${doubledNumber}`
+    io.to(nextPlayer.id).emit("your_turn", {
+      message: `Сенің кезегің! Алдыңғы сан 2 есе көбейтілді: ${doubledNumber}`
+    });
   });
 
-  // Барлығына лог ретінде көрсету (қалауы бойынша)
-  io.to(room.id).emit("log_update", {
-    msg: `${socket.id} таңдаған сан: ${chosenNumber}, 2 есе көбейтілді: ${doubledNumber}`
-  });
-});
-
-
+  // Disconnect
   socket.on("disconnect", () => {
     console.log("❌ Клиент шықты:", socket.id);
 
@@ -128,7 +111,6 @@ function findRoomBySocket(socket) {
     }
   });
 });
-
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
