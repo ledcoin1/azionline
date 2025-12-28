@@ -64,6 +64,11 @@
     font-size: 18px;
     color: #ffd700;
   }
+
+  #choiceDiv {
+    margin-top: 20px;
+    display: none;
+  }
 </style>
 </head>
 <body>
@@ -73,6 +78,12 @@
     <button id="joinBtn">Қосылу</button>
 
     <div class="turn" id="turnText">Кезек күтілуде...</div>
+
+    <div id="choiceDiv">
+      <input type="number" id="numberInput" min="50" max="150" placeholder="50–150 арасында сан">
+      <button id="sendBtn">Жіберу</button>
+    </div>
+
     <div class="log" id="log"></div>
   </div>
 
@@ -85,6 +96,11 @@
     const logDiv = document.getElementById("log");
     const turnText = document.getElementById("turnText");
 
+    const choiceDiv = document.getElementById("choiceDiv");
+    const numberInput = document.getElementById("numberInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    // Қосылу
     joinBtn.addEventListener("click", () => {
       const name = nameInput.value.trim();
       if (!name) return alert("Атыңды енгіз!");
@@ -108,9 +124,23 @@
 
     // Сенің кезегің
     socket.on("your_turn", (data) => {
-  turnText.textContent = `🌟 Сенің кезегің! Сан: ${data.number}`;
-  addLog(`⚡ Саған сан келді: ${data.number}`);
-});
+      turnText.textContent = data.message || "Сенің кезегің!";
+      addLog(`⚡ Саған сигнал келді: ${data.message || "Сенің кезегің!"}`);
+      choiceDiv.style.display = "block";
+    });
+
+    // Жауап жіберу
+    sendBtn.addEventListener("click", () => {
+      const number = parseInt(numberInput.value);
+      if (isNaN(number) || number < 50 || number > 150) {
+        return alert("50–150 аралығында сан таңда!");
+      }
+      socket.emit("player_choice", { number });
+      addLog(`✅ Сен таңдадың: ${number}`);
+      choiceDiv.style.display = "none";
+      numberInput.value = "";
+      turnText.textContent = "Кезек күтілуде...";
+    });
 
     // Логқа қосу функциясы
     function addLog(msg) {
@@ -122,4 +152,3 @@
   </script>
 </body>
 </html>
-
