@@ -51,66 +51,98 @@ io.on("connection", (socket) => {
       // Бірінші ойыншыға сигнал
       const firstPlayer = room.players[room.turnIndex];
       io.to(firstPlayer.id).emit("your_turn", { message: "Сіздің кезегіңіз! 50–150 арасында сан таңдаңыз." });
-    }
-  });
+    
+      // Тек 1-ойыншыдан 50–150 аралығындағы ставка сигналы
+socket.on("first_player_bet", (data) => {
+  const room = findRoomBySocket(socket);
+  if (!room) return;
 
-  // Бірінші ойыншыдан ставка қабылдау
-  socket.on("player_choice", (data) => {
-    const room = findRoomBySocket(socket);
-    if (!room) return;
+  // тек бірінші ойыншы
+  if (room.turnIndex !== 0 || room.players[0].id !== socket.id) return;
 
-    const player = room.players.find(p => p.id === socket.id);
-    if (!player) return;
+  let bet = data.bet;
+  if (bet < 50 || bet > 150) return;
 
-    const chosenNumber = data.number;
+  // 2 есе көбейту
+  bet *= 2;
 
-    if (player.balance < chosenNumber) {
-      socket.emit("error_message", { message: "Баланс жеткіліксіз!" });
-      return;
-    }
+  // ставка сақтау
+  room.firstBet = bet;
 
-    // Баланстан алу
-    player.balance -= chosenNumber;
-
-    // Барлығына жаңарту
-    io.to(room.id).emit("room_update", { players: room.players, status: room.status });
-    io.to(room.id).emit("log_update", { msg: `${player.name} ставка тікті: ${chosenNumber}` });
-
-    // Келесі ойыншыға сигнал: 2 есе көбейтілген сан
-    room.turnIndex = (room.turnIndex + 1) % room.players.length;
-    const nextPlayer = room.players[room.turnIndex];
-    io.to(nextPlayer.id).emit("your_turn", { 
-      message: `Сіздің кезегіңіз! Алдыңғы ставка 2 есе көбейтілді: ${chosenNumber * 2}`,
-      previousNumber: chosenNumber * 2
-    });
-  });
-
-  // 2-ші ойыншы келісім/отбой сигнал
-  socket.on("player_decision", (data) => {
-    const room = findRoomBySocket(socket);
-    if (!room) return;
-
-    const player = room.players.find(p => p.id === socket.id);
-    if (!player) return;
-
-    io.to(room.id).emit("log_update", { msg: `${player.name} шешімі: ${data.decision}` });
-
-    // Мұнда келесі ойыншыға кезекті беру немесе ойын логикасын жалғастыруға болады
-  });
-
-  socket.on("disconnect", () => {
-    const room = findRoomBySocket(socket);
-    if (!room) return;
-
-    room.players = room.players.filter(p => p.id !== socket.id);
-    io.to(room.id).emit("room_update", { players: room.players, status: room.status });
-
-    if (room.players.length === 0) {
-      delete rooms[room.id];
-      console.log("Комната өшірілді:", room.id);
-    }
-  });
+  // тек 2-ойыншыға сигнал жіберу
+  const secondPlayer = room.players[1];
+  io.to(secondPlayer.id).emit("first_player_bet_doubled", { bet });
 });
+
+// 2-ойыншыдан "келісемін" сигналы
+socket.on("second_player_accept", () => {
+  const room = findRoomBySocket(socket);
+  if (!room) return;
+
+  if (room.players[1].id !== socket.id) return;
+
+  room.secondPlayerAccepted = true;
+
+   // 1-ойыншының 2 есе көбейтілген ставкасы (100) 2-ойыншының ставкасына айналады
+  room.secondPlayerBet = room.firstBet;
+
+  // 2-ойыншының келісімін тағы 2 есе көбейту
+  room.secondPlayerBet *= 2; // енді 200
+
+  // тек 3-ойыншыға сигнал
+  const thirdPlayer = room.players[2];
+  io.to(thirdPlayer.id).emit("second_player_bet_doubled_again", {
+    bet: room.secondPlayerBet
+  });
+
+
+});
+
+// 2-ойыншыдан "отбой" сигналы
+socket.on("second_player_fold", () => {
+  const room = findRoomBySocket(socket);
+  if (!room) return;
+
+  if (room.players[1].id !== socket.id) return;
+
+  // 2-ойыншы ойыннан шығады
+  room.secondPlayerFolded = true;
+
+  // 1-ойыншының ставкасын өзгеріссіз сақтаймыз (екі еселенген күйде)
+  const bet = room.firstBet * 2;
+
+  // тек 3-ойыншыға сигнал
+  const thirdPlayer = room.players[2];
+  io.to(thirdPlayer.id).emit("second_player_folded_bet", { bet });
+});
+
+// 3-ойыншыдан "келісемін" сигналы
+socket.on("third_player_accept", () => {
+  const room = findRoomBySocket(socket);
+  if (!room) return;
+  if (room.players[2].id !== socket.id) return;
+
+  room.thirdPlayerAccepted = true;
+
+  // 3-ойыншының ставкасы серверде сақталады (2-ойыншыдан кейінгі соңғы көбейтілген ставка)
+  room.thirdPlayerBet = room.secondPlayerBet;
+
+  // Қажет болса, басқа ойыншыларға хабарлау немесе келесі логикаға өту
+});
+
+// 3-ойыншыдан "отбой" сигналы
+socket.on("third_player_fold", () => {
+  const room = findRoomBySocket(socket);
+  if (!room) return;
+  if (room.players[2].id !== socket.id) return;
+
+  room.thirdPlayerFolded = true;
+
+  // Қажет болса, басқа ойыншыларға хабарлау немесе келесі логика
+});
+
+
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log("Server ONLINE on port", PORT));
+
