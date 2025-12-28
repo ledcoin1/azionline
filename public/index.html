@@ -23,7 +23,7 @@
     border-radius: 20px;
     box-shadow: 0 0 30px rgba(0,0,0,0.5);
     text-align: center;
-    width: 380px;
+    width: 400px;
   }
 
   h1 {
@@ -77,6 +77,48 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
+  <script>
+    const socket = io();
+
+    const joinBtn = document.getElementById("joinBtn");
+    const nameInput = document.getElementById("nameInput");
+    const logDiv = document.getElementById("log");
+    const turnText = document.getElementById("turnText");
+
+    joinBtn.addEventListener("click", () => {
+      const name = nameInput.value.trim();
+      if (!name) return alert("Атыңды енгіз!");
+      socket.emit("join", name);
+      addLog(`✅ Сен қосылдың: ${name}`);
+      joinBtn.disabled = true;
+      nameInput.disabled = true;
+    });
+
+    // Комната жаңартуы
+    socket.on("room_update", (data) => {
+      addLog(`👥 Комната жаңартылды: ${data.players.map(p => p.name).join(", ")} (${data.players.length}/3)`);
+    });
+
+    // Ойын басталды
+    socket.on("game_started", (data) => {
+      addLog("🔥 Ойын басталды!");
+      addLog(`Ойыншылар: ${data.players.map(p => p.name).join(", ")}`);
+      turnText.textContent = "Кезек күтілуде...";
+    });
+
+    // Сенің кезегің
+    socket.on("your_turn", () => {
+      turnText.textContent = "🌟 Сенің кезегің!";
+      addLog("⚡ Саған сигнал келді: сенің кезегің!");
+    });
+
+    // Логқа қосу функциясы
+    function addLog(msg) {
+      const p = document.createElement("p");
+      p.textContent = msg;
+      logDiv.appendChild(p);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+  </script>
 </body>
 </html>
