@@ -87,8 +87,9 @@ io.on("connection", (socket) => {
         players: room.players
       });
        
-      const firstPlayer = room.players[room.turnIndex];
-  io.to(firstPlayer.id).emit("your_turn");
+   const firstPlayer = room.players[room.turnIndex];
+  const randomNumber = Math.floor(Math.random() * 101) + 50; // 50–150
+  io.to(firstPlayer.id).emit("your_turn", { number: randomNumber });
 }
     }
   );
