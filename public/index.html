@@ -1,190 +1,37 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <title>Card Game Mini App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+const socket = io();
 
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
+const joinBtn = document.getElementById("joinBtn");
+const nameInput = document.getElementById("nameInput");
+const logDiv = document.getElementById("log");
+const turnText = document.getElementById("turnText");
 
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
+joinBtn.addEventListener("click", () => {
+  const name = nameInput.value.trim();
+  if (!name) return alert("Атыңды енгіз!");
+  socket.emit("join", name);
+  addLog(`Сен қосылдың: ${name}`);
+});
 
-    body {
-      margin: 0;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: white;
-      height: 100vh;
-      overflow: hidden;
-    }
+// Барлық ойыншылар жаңартуы
+socket.on("room_update", (data) => {
+  addLog(`Комната жаңартылды: ${data.players.map(p=>p.name).join(", ")} (${data.players.length}/3)`);
+});
 
-    button {
-      padding: 14px 28px;
-      font-size: 18px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      background: #00c6ff;
-      color: #000;
-      font-weight: bold;
-    }
+// Ойын басталды
+socket.on("game_started", (data) => {
+  addLog("🔥 Ойын басталды!");
+  addLog(`Ойыншылар: ${data.players.map(p=>p.name).join(", ")}`);
+});
 
-    /* ===== JOIN SCREEN ===== */
-    #joinScreen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      gap: 20px;
-    }
+// Сенің кезегің
+socket.on("your_turn", () => {
+  turnText.textContent = "🌟 Сенің кезегің!";
+  addLog("Саған сигнал келді: сенің кезегің!");
+});
 
-    input {
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      width: 220px;
-      text-align: center;
-    }
-
-    /* ===== WAIT SCREEN ===== */
-    #waitScreen {
-      display: none;
-      height: 100vh;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    /* ===== GAME SCREEN ===== */
-    #gameScreen {
-      display: none;
-      position: relative;
-      width: 100%;
-      height: 100vh;
-    }
-
-    .player {
-      position: absolute;
-      padding: 12px 18px;
-      border-radius: 12px;
-      background: rgba(0,0,0,0.4);
-      border: 1px solid rgba(255,255,255,0.2);
-      font-size: 16px;
-    }
-
-    .player.self {
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,198,255,0.3);
-    }
-
-    .player.left {
-      left: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-
-    .player.right {
-      right: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-
-    .table {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.05);
-      border: 2px dashed rgba(255,255,255,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      opacity: 0.8;
-    }
-  </style>
-</head>
-<body>
-
-<!-- JOIN -->
-<div id="joinScreen">
-  <h1>🃏 Card Game</h1>
-  <input id="nameInput" placeholder="Your name">
-  <button onclick="joinGame()">Играть</button>
-</div>
-
-<!-- WAIT -->
-<div id="waitScreen">
-  <h2>⏳ Күту...</h2>
-  <div id="playersCount">0 / 3</div>
-</div>
-
-<!-- GAME -->
-<div id="gameScreen">
-  <div class="table">TABLE</div>
-
-  <div id="playerLeft" class="player left"></div>
-  <div id="playerRight" class="player right"></div>
-  <div id="playerSelf" class="player self"></div>
-</div>
-
-<script>
-  const socket = io();
-
-  const joinScreen = document.getElementById("joinScreen");
-  const waitScreen = document.getElementById("waitScreen");
-  const gameScreen = document.getElementById("gameScreen");
-
-  const playerLeft = document.getElementById("playerLeft");
-  const playerRight = document.getElementById("playerRight");
-  const playerSelf = document.getElementById("playerSelf");
-  const playersCount = document.getElementById("playersCount");
-
-  let myId = null;
-
-  socket.on("connect", () => {
-    myId = socket.id;
-  });
-
-  function joinGame() {
-    const name = document.getElementById("nameInput").value.trim();
-    if (!name) return alert("Атыңды жаз");
-
-    socket.emit("join", name);
-
-    joinScreen.style.display = "none";
-    waitScreen.style.display = "flex";
-  }
-
-  socket.on("room_update", (data) => {
-    playersCount.innerText = `${data.players.length} / 3`;
-  });
-
-  socket.on("game_started", (data) => {
-    waitScreen.style.display = "none";
-    gameScreen.style.display = "block";
-
-    const others = data.players.filter(p => p.id !== myId);
-    const me = data.players.find(p => p.id === myId);
-
-    playerSelf.innerText = me ? me.name + " (You)" : "";
-
-    if (others[0]) playerLeft.innerText = others[0].name;
-    if (others[1]) playerRight.innerText = others[1].name;
-  });
-</script>
-
-</body>
-</html>
+function addLog(msg) {
+  const p = document.createElement("p");
+  p.textContent = msg;
+  logDiv.appendChild(p);
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
