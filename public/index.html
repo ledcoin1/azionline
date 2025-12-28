@@ -5,49 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3 Ойыншы Ойын</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(to right, #74ebd5, #ACB6E5);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: 100vh;
-    padding: 20px;
-    color: #333;
-  }
-  h1 { margin-bottom: 10px; }
-  #login, #game {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    width: 350px;
-    text-align: center;
-  }
-  #game { display: none; }
-  input[type=text], input[type=number] {
-    width: 80%;
-    padding: 8px;
-    margin: 10px 0;
-    border-radius: 6px;
-    border: 1px solid #aaa;
-    font-size: 16px;
-  }
-  button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    background: #4CAF50;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 10px;
-  }
-  button:hover { background: #45a049; }
-  #players { margin-bottom: 10px; }
-  #log { margin-top: 15px; text-align: left; height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 6px; background: #f9f9f9; }
-  #turnText { font-weight: bold; margin: 10px 0; }
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to right, #74ebd5, #ACB6E5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  color: #333;
+}
+h1 { margin-bottom: 10px; }
+#login, #game {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  width: 350px;
+  text-align: center;
+}
+#game { display: none; }
+input[type=text], input[type=number] {
+  width: 80%;
+  padding: 8px;
+  margin: 10px 0;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  font-size: 16px;
+}
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #4CAF50;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+button:hover { background: #45a049; }
+#players { margin-bottom: 10px; }
+#log { margin-top: 15px; text-align: left; height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 6px; background: #f9f9f9; }
+#turnText { font-weight: bold; margin: 10px 0; }
 </style>
 </head>
 <body>
@@ -91,6 +90,8 @@ joinBtn.addEventListener("click", () => {
   socket.emit("join", name);
   loginDiv.style.display = "none";
   gameDiv.style.display = "block";
+  choiceInput.disabled = true;
+  sendChoiceBtn.disabled = true;
 });
 
 // Комната жаңарту
@@ -99,7 +100,7 @@ socket.on("room_update", (data) => {
 });
 
 // Ойын басталды
-socket.on("game_started", (data) => {
+socket.on("game_started", () => {
   addLog("🔥 Ойын басталды!");
 });
 
