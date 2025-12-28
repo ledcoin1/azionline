@@ -1,132 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3 Ойыншы Ойын</title>
-<style>
-body { font-family: Arial; background: #f0f4f7; display: flex; flex-direction: column; align-items: center; min-height:100vh; padding:20px;}
-#login, #game { background: white; padding: 20px; border-radius: 12px; box-shadow:0 4px 10px rgba(0,0,0,0.2); width:350px; text-align:center;}
-#game { display:none; }
-input[type=text], input[type=number] { width:80%; padding:8px; margin:10px 0; border-radius:6px; border:1px solid #aaa; font-size:16px;}
-button { padding:10px 20px; border:none; border-radius:6px; background:#4CAF50; color:white; font-size:16px; cursor:pointer; margin-top:10px;}
-button:hover { background:#45a049; }
-#players { margin-bottom:10px; }
-#log { margin-top:15px; text-align:left; height:150px; overflow-y:auto; border:1px solid #ccc; padding:10px; border-radius:6px; background:#f9f9f9;}
-#turnText { font-weight:bold; margin:10px 0;}
-</style>
+  <meta charset="UTF-8">
+  <title>Ойын - 1-2</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+    h1 { text-align: center; }
+    #players { margin-bottom: 20px; display: flex; gap: 20px; }
+    .player { border: 1px solid #ccc; border-radius: 10px; padding: 10px; width: 150px; background: #fff; }
+    #log { border: 1px solid #ccc; border-radius: 10px; padding: 10px; height: 150px; overflow-y: auto; background: #fff; }
+    #turn { font-weight: bold; margin: 10px 0; }
+    input[type="number"] { width: 80px; padding: 5px; }
+    button { padding: 5px 10px; margin-left: 5px; cursor: pointer; }
+    #confirmButtons { display: none; margin-top: 10px; }
+  </style>
 </head>
 <body>
+  <h1>Ойын 1-2</h1>
 
-<h1>3 Ойыншы Ойын</h1>
-
-<div id="login">
-  <input type="text" id="playerName" placeholder="Атыңызды енгізіңіз">
-  <button id="joinBtn">Қосылу</button>
-</div>
-
-<div id="game">
-  <div id="players"></div>
-  <div id="turnText"></div>
-  <input type="number" id="choiceInput" placeholder="50–150 аралығында сан">
-  <button id="sendChoiceBtn">Жіберу</button>
-  <div id="confirmButtons" style="display:none;">
-    <button id="agreeBtn">Келісемін</button>
-    <button id="passBtn">Отбой</button>
+  <div>
+    <label>Атыңыз: <input type="text" id="nameInput"></label>
+    <button id="joinBtn">Қосылу</button>
   </div>
+
+  <div id="players"></div>
+
+  <div id="turn"></div>
+
+  <div id="choiceDiv">
+    <input type="number" id="choiceInput" min="50" max="150">
+    <button id="sendChoiceBtn">Жіберу</button>
+  </div>
+
+  <div id="confirmButtons">
+    <button id="confirmBtn">Келісемін</button>
+    <button id="declineBtn">Отбой</button>
+  </div>
+
+  <h3>Лог:</h3>
   <div id="log"></div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket = io();
+  <script>
+    const socket = io();
 
-const loginDiv = document.getElementById("login");
-const gameDiv = document.getElementById("game");
-const playerNameInput = document.getElementById("playerName");
-const joinBtn = document.getElementById("joinBtn");
-const playersDiv = document.getElementById("players");
-const turnText = document.getElementById("turnText");
-const choiceInput = document.getElementById("choiceInput");
-const sendChoiceBtn = document.getElementById("sendChoiceBtn");
-const confirmButtons = document.getElementById("confirmButtons");
-const agreeBtn = document.getElementById("agreeBtn");
-const passBtn = document.getElementById("passBtn");
-const logDiv = document.getElementById("log");
+    const nameInput = document.getElementById("nameInput");
+    const joinBtn = document.getElementById("joinBtn");
+    const playersDiv = document.getElementById("players");
+    const logDiv = document.getElementById("log");
+    const turnText = document.getElementById("turn");
+    const choiceDiv = document.getElementById("choiceDiv");
+    const choiceInput = document.getElementById("choiceInput");
+    const sendChoiceBtn = document.getElementById("sendChoiceBtn");
+    const confirmButtons = document.getElementById("confirmButtons");
+    const confirmBtn = document.getElementById("confirmBtn");
+    const declineBtn = document.getElementById("declineBtn");
 
-let myName = "";
+    let myName = "";
+    let myId = "";
 
-// Қосылу
-joinBtn.addEventListener("click", () => {
-  const name = playerNameInput.value.trim();
-  if (!name) return alert("Атыңызды енгізіңіз");
-  myName = name;
-  socket.emit("join", name);
-  loginDiv.style.display = "none";
-  gameDiv.style.display = "block";
-  choiceInput.disabled = true;
-  sendChoiceBtn.disabled = true;
-});
+    // Қосылу
+    joinBtn.onclick = () => {
+      myName = nameInput.value.trim();
+      if (!myName) return alert("Атыңызды енгізіңіз");
+      socket.emit("join", myName);
+      nameInput.disabled = true;
+      joinBtn.disabled = true;
+    };
 
-// Комната жаңарту
-socket.on("room_update", (data) => {
-  playersDiv.innerHTML = "<strong>Ойыншылар:</strong><br>" + data.players.map(p => p.name).join("<br>");
-});
+    // Ойыншылар жаңарту
+    socket.on("room_update", (data) => {
+      playersDiv.innerHTML = "";
+      data.players.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "player";
+        div.innerHTML = `<strong>${p.name}</strong><br>Баланс: ${p.balance}`;
+        playersDiv.appendChild(div);
+      });
+    });
 
-// Ойын басталды
-socket.on("game_started", () => addLog("🔥 Ойын басталды!"));
+    // Ойын басталды
+    socket.on("game_started", (data) => {
+      addLog("🔥 Ойын басталды!");
+      choiceDiv.style.display = "none";
+      confirmButtons.style.display = "none";
+      turnText.textContent = "";
+    });
 
-// 1-ші ойыншыдан сан сұрау
-socket.on("your_turn", (data) => {
-  turnText.textContent = data.message;
-  choiceInput.disabled = false;
-  sendChoiceBtn.disabled = false;
-  confirmButtons.style.display = "none";
-  addLog("⚡ Сенің кезегің келді!");
-});
+    // 1-ші ойыншыға сан таңдау
+    socket.on("your_turn", (data) => {
+      turnText.textContent = data.message;
+      choiceInput.value = "";
+      choiceDiv.style.display = "block";
+      sendChoiceBtn.disabled = false;
+      confirmButtons.style.display = "none";
+    });
 
-// 2-ші, 3-ші ойыншылар батырмамен
-socket.on("your_turn_button", (data) => {
-  turnText.textContent = `Алдыңғы сан: ${data.number}`;
-  choiceInput.disabled = true;
-  sendChoiceBtn.disabled = true;
-  confirmButtons.style.display = "block";
-});
+    // 2-ші және 3-ші ойыншыға батырма
+    socket.on("your_turn_button", (data) => {
+      turnText.textContent = `Алдыңғы сан: ${data.number} | Баланс: ${data.balance}`;
+      choiceDiv.style.display = "none";
+      confirmButtons.style.display = "block";
+    });
 
-// Лог жаңарту
-socket.on("log_update", (data) => addLog(data.msg));
+    // Лог жаңарту
+    socket.on("log_update", (data) => {
+      addLog(data.msg);
+    });
 
-// Жіберу батырмасы (1-ші ойыншы)
-sendChoiceBtn.addEventListener("click", () => {
-  const number = parseInt(choiceInput.value);
-  if (isNaN(number) || number < 50 || number > 150) return alert("50–150 аралығында сан енгізіңіз");
-  socket.emit("player_choice", { number });
-  choiceInput.value = "";
-  choiceInput.disabled = true;
-  sendChoiceBtn.disabled = true;
-  turnText.textContent = "Кезек күтуде...";
-});
+    // Баланс жаңарту
+    socket.on("balance_update", (data) => {
+      playersDiv.innerHTML = "";
+      data.players.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "player";
+        div.innerHTML = `<strong>${p.name}</strong><br>Баланс: ${p.balance}`;
+        playersDiv.appendChild(div);
+      });
+    });
 
-// Келісу/Отбой (2-ші,3-ші ойыншы)
-agreeBtn.addEventListener("click", () => {
-  socket.emit("player_confirm", { choice: "Келісемін" });
-  confirmButtons.style.display = "none";
-  turnText.textContent = "Кезек күтуде...";
-});
-passBtn.addEventListener("click", () => {
-  socket.emit("player_confirm", { choice: "Отбой" });
-  confirmButtons.style.display = "none";
-  turnText.textContent = "Кезек күтуде...";
-});
+    // Жіберу батырмасы
+    sendChoiceBtn.onclick = () => {
+      const number = parseInt(choiceInput.value);
+      if (isNaN(number) || number < 50 || number > 150) return alert("50–150 арасында сан таңдаңыз");
+      socket.emit("player_choice", { number });
+      choiceDiv.style.display = "none";
+    };
 
-// Логқа қосу
-function addLog(msg) {
-  const p = document.createElement("div");
-  p.textContent = msg;
-  logDiv.appendChild(p);
-  logDiv.scrollTop = logDiv.scrollHeight;
-}
-</script>
+    // Келісемін / Отбой
+    confirmBtn.onclick = () => {
+      socket.emit("player_confirm", { choice: "Келісемін" });
+      confirmButtons.style.display = "none";
+    };
+    declineBtn.onclick = () => {
+      socket.emit("player_confirm", { choice: "Отбой" });
+      confirmButtons.style.display = "none";
+    };
 
+    function addLog(msg) {
+      const p = document.createElement("div");
+      p.textContent = msg;
+      logDiv.appendChild(p);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+  </script>
 </body>
 </html>
