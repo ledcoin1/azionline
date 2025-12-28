@@ -31,12 +31,21 @@ function createRoom() {
   return roomId;
 }
 
+/**
+ * Сокет арқылы кімнің қай комнатада екенін табу
+ */
+function findRoomBySocket(socket) {
+  return Object.values(rooms).find(room =>
+    room.players.some(p => p.id === socket.id)
+  );
+}
 
-
- io.on("connection", (socket) => {
+io.on("connection", (socket) => {
   console.log("🔵 Клиент қосылды:", socket.id);
 
-  // Клиент қосылған кезде сигналдар
+  /**
+   * JOIN
+   */
   socket.on("join", (playerName) => {
     console.log("➡️ JOIN:", playerName);
 
@@ -79,12 +88,36 @@ function createRoom() {
     }
   });
 
-  // 1-ші ойыншыдан жауап қабылдау (осы жерде, join ішінде емес)
+  /**
+   * Ойыншының таңдауын қабылдау
+   */
   socket.on("player_choice", (data) => {
-    console.log(`🎯 ${socket.id} таңдауы: ${data.number}`);
-    // Мұнда келесі ойыншыға кезекті беру немесе нәтиже есептеу логикасы
+    const room = findRoomBySocket(socket);
+    if (!room) return;
+
+    const chosenNumber = data.number;
+    console.log(`🎯 ${socket.id} таңдауы: ${chosenNumber}`);
+
+    // санды 2 есе көбейту
+    const doubledNumber = chosenNumber * 2;
+
+    // turnIndex жаңарту — келесі ойыншыға беру
+    room.turnIndex = (room.turnIndex + 1) % room.players.length;
+    const nextPlayer = room.players[room.turnIndex];
+
+    io.to(nextPlayer.id).emit("your_turn", {
+      message: `Сенің кезегің! Алдыңғы сан 2 есе көбейтілді: ${doubledNumber}`
+    });
+
+    // Барлығына лог ретінде көрсету
+    io.to(room.id).emit("log_update", {
+      msg: `${socket.id} таңдаған сан: ${chosenNumber}, 2 есе көбейтілді: ${doubledNumber}`
+    });
   });
 
+  /**
+   * Disconnect
+   */
   socket.on("disconnect", () => {
     console.log("❌ Клиент шықты:", socket.id);
 
@@ -98,7 +131,6 @@ function createRoom() {
     }
   });
 });
-
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
