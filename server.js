@@ -14,8 +14,10 @@ const io = new Server(server, {
 
 app.use(express.static("public"));
 
+// Комнаталар
 const rooms = {};
 
+// Комната жасау
 function createRoom() {
   const roomId = "room-" + Date.now();
   rooms[roomId] = {
@@ -26,15 +28,19 @@ function createRoom() {
   return rooms[roomId];
 }
 
+// Socket.IO қосылым
 io.on("connection", (socket) => {
   console.log("CONNECTED:", socket.id);
 
+  // JOIN сигнал
   socket.on("join", (data) => {
+    // Бос комната іздеу
     let room = Object.values(rooms).find(
       r => r.status === "waiting" && r.players.length < 3
     );
     if (!room) room = createRoom();
 
+    // Ойыншы объектісі
     const player = {
       id: socket.id,
       telegramId: data.telegramId,
@@ -42,24 +48,35 @@ io.on("connection", (socket) => {
       balance: 1000
     };
 
+    // Комнатаға қосу
     room.players.push(player);
     socket.join(room.id);
 
-    socket.emit("joined", { balance: 1000 });
+    // Ойыншыға бастапқы баланс жіберу
+    socket.emit("joined", { balance: player.balance });
 
     console.log("JOIN:", player.username);
 
+    // Егер 3 ойыншы қосылса
     if (room.players.length === 3) {
       room.status = "started";
+
+      // Барлық 3 ойыншыға бірдей 500 ставка жіберу
+      io.to(room.id).emit("start_bet", { bet: 500 });
+
+      // Барлық ойыншыларға комта ашылды сигнал
       io.to(room.id).emit("room_opened", {
         roomId: room.id,
         players: room.players
       });
+
+      console.log(`ROOM STARTED: ${room.id}`);
     }
   });
 });
 
+// Серверді іске қосу
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () =>
-  console.log("SERVER RUNNING ON", PORT)
+  console.log("SERVER RUNNING ON PORT", PORT)
 );
