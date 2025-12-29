@@ -1,144 +1,77 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>3 Player Lobby</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <meta charset="UTF-8">
+  <title>3 Player Game</title>
+  <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-
-    .app {
-      background: #020617;
-      border-radius: 12px;
-      padding: 24px;
-      width: 360px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 16px;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      border: none;
-      outline: none;
-    }
-
-    button {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      background: #334155;
-      cursor: not-allowed;
-    }
-
-    .log {
-      margin-top: 16px;
-      background: #020617;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      padding: 10px;
-      height: 180px;
-      overflow-y: auto;
-      font-size: 14px;
-    }
-
-    .balance {
-      margin-top: 10px;
-      font-weight: bold;
-      color: #22c55e;
-    }
-
-    .player {
-      margin-top: 4px;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .player { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    .status { font-weight: bold; margin-top: 5px; }
   </style>
 </head>
 <body>
+  <h1>3 Player Game Demo</h1>
 
-<div class="app">
-  <h2>3 Player Lobby</h2>
+  <div>
+    <label>Telegram ID: <input type="text" id="telegramId"></label><br>
+    <label>Username: <input type="text" id="username"></label><br>
+    <button id="joinBtn">Join Game</button>
+  </div>
 
-  <input id="telegramId" placeholder="Telegram ID (кез келген сан)" />
-  <input id="username" placeholder="Username" />
+  <hr>
 
-  <button id="joinBtn">Lobby-ге кіру</button>
+  <div id="gameArea" style="display:none;">
+    <h2>Комта мәліметтері</h2>
+    <div id="playersList"></div>
+    <div id="betInfo"></div>
+  </div>
 
-  <div class="balance" id="balance"></div>
+  <script>
+    const socket = io();
 
-  <div class="log" id="log"></div>
-</div>
+    const joinBtn = document.getElementById("joinBtn");
+    const telegramInput = document.getElementById("telegramId");
+    const usernameInput = document.getElementById("username");
+    const gameArea = document.getElementById("gameArea");
+    const playersList = document.getElementById("playersList");
+    const betInfo = document.getElementById("betInfo");
 
-<script>
-  const socket = io();
+    let myBalance = 0;
 
-  const joinBtn = document.getElementById("joinBtn");
-  const logBox = document.getElementById("log");
-  const balanceBox = document.getElementById("balance");
+    joinBtn.onclick = () => {
+      const telegramId = telegramInput.value.trim();
+      const username = usernameInput.value.trim();
+      if (!telegramId || !username) {
+        alert("Толық ақпарат енгізіңіз");
+        return;
+      }
+      socket.emit("join", { telegramId, username });
+    };
 
-  function log(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    logBox.appendChild(div);
-    logBox.scrollTop = logBox.scrollHeight;
-  }
-
-  joinBtn.onclick = () => {
-    const telegramId = document.getElementById("telegramId").value;
-    const username = document.getElementById("username").value;
-
-    if (!telegramId || !username) {
-      alert("Telegram ID және Username толтыр");
-      return;
-    }
-
-    socket.emit("join", {
-      telegramId,
-      username
+    // Серверден бастапқы баланс
+    socket.on("joined", (data) => {
+      myBalance = data.balance;
+      gameArea.style.display = "block";
+      betInfo.innerText = `Сіздің балансыңыз: ${myBalance}`;
     });
 
-    joinBtn.disabled = true;
-    log("⏳ Lobby-ге қосылуда...");
-  };
-
-  /* ===== SERVER EVENTS ===== */
-
-  socket.on("joined", (data) => {
-    log("✅ Lobby-ге қосылдыңыз");
-    balanceBox.textContent = "Баланс: " + data.balance;
-  });
-
-  socket.on("room_opened", (data) => {
-    log("🏠 Комната ашылды!");
-    log("Room ID: " + data.roomId);
-
-    log("👥 Ойыншылар:");
-    data.players.forEach((p, i) => {
-      log(`${i + 1}. ${p.username} | Баланс: ${p.balance}`);
+    // Комта ашылды
+    socket.on("room_opened", (data) => {
+      playersList.innerHTML = "";
+      data.players.forEach((p, idx) => {
+        const div = document.createElement("div");
+        div.className = "player";
+        div.innerHTML = `<strong>Ойыншы ${idx+1}:</strong> ${p.username} (Баланс: ${p.balance})`;
+        playersList.appendChild(div);
+      });
     });
-  });
-</script>
 
+    // 3 ойыншыға бірдей ставка сигнал
+    socket.on("start_bet", (data) => {
+      betInfo.innerText += `\nБастапқы ставка: ${data.bet}`;
+      alert(`Комтадағы барлық ойыншыларға ставка жіберілді: ${data.bet}`);
+    });
+  </script>
 </body>
 </html>
