@@ -3,128 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3 Player Card Game</title>
+<title>Дурак Мини Апп</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #f0f0f0; }
-  .player { border: 1px solid #ccc; padding: 10px; margin: 10px; background: #fff; }
-  .cards { margin-top: 5px; }
-  button { margin: 5px; padding: 5px 10px; }
-  #game-log { border: 1px solid #aaa; padding: 10px; background: #fff; height: 200px; overflow-y: auto; margin: 10px 0; }
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+  #log { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; background: #fff; }
+  .player-info { margin-bottom: 10px; }
+  button { margin-right: 10px; }
+  #hand { margin-top: 10px; }
+  .card { display: inline-block; padding: 5px 10px; margin: 2px; border: 1px solid #333; border-radius: 4px; background: #fff; }
 </style>
 </head>
 <body>
 
-<h2>3 Player Card Game</h2>
+<h1>Дурак Мини Апп</h1>
 
-<div>
-  <input type="text" id="username" placeholder="Telegram username">
-  <button id="joinBtn">Join Game</button>
+<div id="info">
+  <p>Баланс: <span id="balance">2000</span></p>
+  <p>Комта банкі: <span id="bank">0</span></p>
+  <p>Комта ID: <span id="roomId">---</span></p>
+  <p>Раундқа қатысатындар: <span id="players">---</span></p>
+  <p>Козырь: <span id="kozir">---</span></p>
 </div>
 
-<div id="players"></div>
-
-<div id="your-info"></div>
-
-<div id="actions" style="display:none;">
-  <button id="acceptBtn">Accept</button>
-  <button id="foldBtn">Fold</button>
+<div id="actions">
+  <button id="readyBtn">Готов</button>
+  <button id="foldBtn">Отбой</button>
 </div>
 
-<div id="your-cards" class="cards"></div>
+<div id="hand">
+  <strong>Қолыңыздағы карталар:</strong>
+  <div id="cards"></div>
+</div>
 
-<h3>Game Log</h3>
-<div id="game-log"></div>
+<h3>Жүйе логы:</h3>
+<div id="log"></div>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-  const socket = io();
+const socket = io();
 
-  let myId = null;
-  let myBalance = 0;
+// HTML элементтер
+const logEl = document.getElementById('log');
+const balanceEl = document.getElementById('balance');
+const bankEl = document.getElementById('bank');
+const roomIdEl = document.getElementById('roomId');
+const playersEl = document.getElementById('players');
+const kozEl = document.getElementById('kozir');
+const cardsEl = document.getElementById('cards');
+const readyBtn = document.getElementById('readyBtn');
+const foldBtn = document.getElementById('foldBtn');
 
-  const joinBtn = document.getElementById("joinBtn");
-  const usernameInput = document.getElementById("username");
-  const playersDiv = document.getElementById("players");
-  const yourInfoDiv = document.getElementById("your-info");
-  const actionsDiv = document.getElementById("actions");
-  const acceptBtn = document.getElementById("acceptBtn");
-  const foldBtn = document.getElementById("foldBtn");
-  const yourCardsDiv = document.getElementById("your-cards");
-  const gameLogDiv = document.getElementById("game-log");
+let mySocketId = null;
+let myBalance = 2000;
 
-  function log(msg) {
-    const p = document.createElement("p");
-    p.textContent = msg;
-    gameLogDiv.appendChild(p);
-    gameLogDiv.scrollTop = gameLogDiv.scrollHeight;
-  }
+// Логқа жазу функциясы
+function log(msg) {
+  const p = document.createElement('p');
+  p.textContent = msg;
+  logEl.appendChild(p);
+  logEl.scrollTop = logEl.scrollHeight;
+}
 
-  joinBtn.addEventListener("click", () => {
-    const username = usernameInput.value.trim();
-    if (!username) return alert("Enter username!");
-    socket.emit("join", { telegramId: username, username });
-    usernameInput.disabled = true;
-    joinBtn.disabled = true;
+// Өз socketId-імізді алу
+socket.on('connect', () => {
+  mySocketId = socket.id;
+  log(`Серверге қосылды: ${mySocketId}`);
+});
+
+// Комтаға қосылғанда
+socket.on('joinedRoom', (data) => {
+  roomIdEl.textContent = data.roomId;
+  playersEl.textContent = data.players.join(', ');
+  bankEl.textContent = data.totalPot;
+  log(`Комтаға қосылдың: ${data.roomId}`);
+});
+
+// Сервер 500 ставка сұрағанда
+socket.on('askBet', (data) => {
+  log(`Сервер сұрайды: ставка ${data.betAmount}`);
+});
+
+// Баланс жеткіліксіз болса
+socket.on('notEnoughBalance', (data) => {
+  alert(`Баланс жетпейді! Қажетті: ${data.required}, Қолыңызда: ${data.balance}`);
+});
+
+// Раунд басталғанда
+socket.on('roundStart', (data) => {
+  log(`Раунд басталды! Козырь: ${data.kozir}`);
+  kozEl.textContent = data.kozir.suit + data.kozir.rank;
+  bankEl.textContent = data.bank;
+  cardsEl.innerHTML = '';
+  data.players.forEach(p => {
+    if (p.id === mySocketId) {
+      p.hand.forEach(card => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.textContent = card.suit + card.rank;
+        cardsEl.appendChild(div);
+      });
+    }
   });
+});
 
-  socket.on("joined", (data) => {
-    myBalance = data.balance;
-    yourInfoDiv.textContent = `Ваш баланс: ${myBalance}`;
-    log("You joined the game!");
-    myId = socket.id;
-  });
+// Батырмаларға жауап беру
+readyBtn.addEventListener('click', () => {
+  socket.emit('betResponse', { socketId: mySocketId, response: 'готов' });
+  log('Ставка: готов басылды');
+});
 
-  socket.on("room_opened", (data) => {
-    playersDiv.innerHTML = "<h3>Players in room:</h3>";
-    data.players.forEach(p => {
-      const div = document.createElement("div");
-      div.className = "player";
-      div.textContent = `${p.username} - Balance: ${p.balance}`;
-      playersDiv.appendChild(div);
-    });
-    log("Room is opened! Waiting for round...");
-  });
-
-  socket.on("start_bet", (data) => {
-    log(`Round started! Bet: ${data.bet}, Trump: ${data.trump.suit} ${data.trump.value}`);
-    actionsDiv.style.display = "block";
-  });
-
-  socket.on("your_turn", (data) => {
-    log(data.message);
-    actionsDiv.style.display = "block";
-  });
-
-  acceptBtn.addEventListener("click", () => {
-    socket.emit("player_accept");
-    actionsDiv.style.display = "none";
-    log("You pressed ACCEPT");
-  });
-
-  foldBtn.addEventListener("click", () => {
-    socket.emit("player_fold");
-    actionsDiv.style.display = "none";
-    log("You pressed FOLD");
-  });
-
-  socket.on("player_accepted", (data) => {
-    log(`${data.username} accepted the round`);
-  });
-
-  socket.on("player_folded", (data) => {
-    log(`${data.username} folded`);
-  });
-
-  socket.on("your_cards", (data) => {
-    yourCardsDiv.innerHTML = "<h4>Your Cards:</h4>";
-    data.cards.forEach(card => {
-      const span = document.createElement("span");
-      span.textContent = `${card.value} of ${card.suit} `;
-      yourCardsDiv.appendChild(span);
-    });
-    log("Cards have been dealt!");
-  });
+foldBtn.addEventListener('click', () => {
+  socket.emit('betResponse', { socketId: mySocketId, response: 'отбой' });
+  log('Ставка: отбой басылды');
+});
 </script>
-
 </body>
 </html>
