@@ -17,19 +17,41 @@ app.use(express.static("public"));
 // --- Комнаталар ---
 const rooms = {};
 
+// --- Комната жасау ---
+function createRoom() {
+  const roomId = "room-" + Date.now();
+  rooms[roomId] = {
+    id: roomId,
+    players: [],
+    status: "waiting",
+    deck: [],
+    trump: null,
+    currentTurnIndex: null
+  };
+  return rooms[roomId];
+}
+
+// --- Кімнің кім екенін табу ---
+function findRoomBySocket(socket) {
+  return Object.values(rooms).find(room =>
+    room.players.some(p => p.id === socket.id)
+  );
+}
+
 // --- Колода жасау ---
 function createDeck() {
   const suits = ["hearts", "diamonds", "clubs", "spades"];
-  const values = ["6","7","8","9","10","J","Q","K","A"];
+  const values = [6, 7, 8, 9, 10, "J", "Q", "K", "A"];
   const deck = [];
-  for (let suit of suits) {
-    for (let value of values) {
+  for (const suit of suits) {
+    for (const value of values) {
       deck.push({ suit, value });
     }
   }
   return deck;
 }
 
+// --- Колоданы араластыру ---
 function shuffle(deck) {
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -38,119 +60,111 @@ function shuffle(deck) {
   return deck;
 }
 
-// --- Комната жасау ---
-function createRoom() {
-  const roomId = "room-" + Date.now();
-  rooms[roomId] = {
-    id: roomId,
-    players: [], // {id, username, balance, roundStatus, cards}
-    status: "waiting",
-    turnIndex: null,
-    deck: [],
-    trump: null
-  };
-  return rooms[roomId];
-}
+// --- Раундтағы кезекті ауыстыру ---
+function nextTurn(room) {
+  const activePlayers = room.players.filter(p => !p.folded);
+  if (activePlayers.length === 0) return;
 
-// --- Табу кім қай бөлмеде ---
-function findRoomBySocket(socket) {
-  return Object.values(rooms).find(room =>
-    room.players.some(p => p.id === socket.id)
-  );
-}
-
-// --- Раунд аяқтау ---
-function finishRound(room) {
-  const accepted = room.players.filter(p => p.roundStatus === "accepted");
-  if (accepted.length === 0) {
-    io.to(room.id).emit("round_result", { message: "Ешкім келіспеді!" });
+  if (room.currentTurnIndex == null) {
+    room.currentTurnIndex = Math.floor(Math.random() * activePlayers.length);
   } else {
-    // Accepted ойыншыларға карталар тарату
-    const deck = shuffle(createDeck());
-    room.trump = deck.pop();
-    accepted.forEach(p => {
-      p.cards = [deck.pop(), deck.pop(), deck.pop()];
-      io.to(p.id).emit("your_cards", { cards: p.cards, trump: room.trump });
-    });
-    io.to(room.id).emit("round_result", { message: "Раунд басталды!" });
+    room.currentTurnIndex = (room.currentTurnIndex + 1) % activePlayers.length;
   }
 
-  // Раунд аяқталған соң барлық ойыншылардың статусын қайта баптау
-  room.players.forEach(p => p.roundStatus = "waiting");
-  room.status = "waiting";
-}
-
-// --- Раунд аяқталғанын тексеру ---
-function checkRoundEnd(room) {
-  const waiting = room.players.some(p => p.roundStatus === "waiting");
-  if (!waiting) finishRound(room);
+  const currentPlayer = activePlayers[room.currentTurnIndex];
+  io.to(currentPlayer.id).emit("your_turn", { message: "Сіздің кезегіңіз!" });
 }
 
 // --- Socket.IO connection ---
-io.on("connection", socket => {
+io.on("connection", (socket) => {
   console.log("CONNECTED:", socket.id);
 
   // --- JOIN сигнал ---
-  socket.on("join", ({ telegramId, username }) => {
+  socket.on("join", (data) => {
     let room = Object.values(rooms).find(r => r.status === "waiting" && r.players.length < 3);
     if (!room) room = createRoom();
 
-    const player = { id: socket.id, telegramId, username, balance: 1000, roundStatus: "waiting" };
+    const player = {
+      id: socket.id,
+      telegramId: data.telegramId,
+      username: data.username,
+      balance: 1000,
+      folded: false,
+      cards: []
+    };
+
     room.players.push(player);
     socket.join(room.id);
 
+    // Ойыншыға бастапқы баланс
     socket.emit("joined", { balance: player.balance });
-    io.to(room.id).emit("room_update", { players: room.players, status: room.status });
 
     console.log("JOIN:", player.username);
 
     if (room.players.length === 3) {
       room.status = "started";
-      io.to(room.id).emit("room_opened", { roomId: room.id, players: room.players });
 
-      // Барлық accepted/fold жауаптарын сұрау
-      room.players.forEach(p => {
-        io.to(p.id).emit("start_bet", { bet: 500 }); // мысал ставка
-        // Таймер 10 сек ішінде жауап болмаса auto fold
-        p.timer = setTimeout(() => {
-          if (p.roundStatus === "waiting") {
-            p.roundStatus = "folded";
-            io.to(room.id).emit("player_auto_fold", { username: p.username });
-            checkRoundEnd(room);
-          }
-        }, 10000);
+      // Колоданы жасау, араластыру
+      room.deck = shuffle(createDeck());
+      room.trump = room.deck[room.deck.length - 1];
+
+      // Барлық 3 ойыншыға бірдей 500 ставка жіберу
+      io.to(room.id).emit("start_bet", { bet: 500, trump: room.trump });
+
+      // Барлық ойыншыларға комта ашылды сигнал
+      io.to(room.id).emit("room_opened", {
+        roomId: room.id,
+        players: room.players
       });
+
+      console.log(`ROOM STARTED: ${room.id}`);
+
+      // Бірінші рандом жүрісті бастау
+      nextTurn(room);
     }
   });
 
-  // --- Accept ---
-  socket.on("accept", () => {
+  // --- accept сигнал ---
+  socket.on("player_accept", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
     const player = room.players.find(p => p.id === socket.id);
-    if (!player || player.roundStatus !== "waiting") return;
+    if (!player) return;
 
-    clearTimeout(player.timer);
-    player.roundStatus = "accepted";
-    player.balance -= 500; // accepted ойыншылардың балансынан аламыз
-    io.to(room.id).emit("player_accepted", { username: player.username, balance: player.balance });
-    checkRoundEnd(room);
+    player.balance -= 500;
+    player.folded = false;
+
+    io.to(room.id).emit("player_accepted", { username: player.username });
+
+    // Карталарды тарату тек accept басқан ойыншыларға
+    const activePlayers = room.players.filter(p => !p.folded);
+    activePlayers.forEach(p => {
+      p.cards = room.deck.splice(0, 3);
+      io.to(p.id).emit("your_cards", { cards: p.cards, trump: room.trump });
+    });
+
+    // Келесі жүрісті беру
+    nextTurn(room);
   });
 
-  // --- Fold ---
-  socket.on("fold", () => {
+  // --- fold сигнал ---
+  socket.on("player_fold", () => {
     const room = findRoomBySocket(socket);
     if (!room) return;
     const player = room.players.find(p => p.id === socket.id);
-    if (!player || player.roundStatus !== "waiting") return;
+    if (!player) return;
 
-    clearTimeout(player.timer);
-    player.roundStatus = "folded";
+    player.folded = true;
+
     io.to(room.id).emit("player_folded", { username: player.username });
-    checkRoundEnd(room);
-  });
 
+    // Келесі жүрісті беру
+    nextTurn(room);
+  });
 });
 
+// --- Серверді іске қосу ---
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("SERVER RUNNING ON PORT", PORT));
+server.listen(PORT, () =>
+  console.log("SERVER RUNNING ON PORT", PORT)
+);
