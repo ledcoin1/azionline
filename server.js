@@ -62,31 +62,22 @@ io.on("connection", (socket) => {
   if (waitingPlayers.length === 3) {
     const room = createKomta(); // Жаңа комта жасаймыз
     room.kaloda = generateDeck(); // generateDeck() функциясымен
-    // карталарды араластыру (shuffle)
-  room.kaloda = shuffle(room.kaloda);
+    room.kaloda = shuffle(room.kaloda);
 
     room.skipPlayers = []; // "отбой" басқан ойыншылардың тізімі
 
-
     waitingPlayers.forEach((playerSocket) => {
-  playerSocket.join(room.id);
+      playerSocket.join(room.id);
 
-  
       room.igroktar.push({
-    socketId: playerSocket.id,
-    balance: 2000 // 👈 міндетті
-  });
+        socketId: playerSocket.id,
+        balance: 2000 // 👈 міндетті
+      });
 
-
-      
-
-      
-      
-      
       room.betResponses[playerSocket.id] = null; // әлі жауап жоқ деп белгілейміз
       playerSocket.emit("askBet", { betAmount: room.betAmount }); 
       // Клиентке хабар: 500 ставканы қабылдайсың ба?
-       
+
       // клиентке қосылған комта туралы хабарлау
       playerSocket.emit("joinedRoom", {
         roomId: room.id, // комта идентификаторы
@@ -101,100 +92,97 @@ io.on("connection", (socket) => {
     waitingPlayers.length = 0; // келесі ойыншылар үшін кезекті босатамыз
 
     // =============================================
-   // =============================================
-socket.on("betResponse", (data) => {
-  const { socketId, response } = data;
+    socket.on("betResponse", (data) => {
+      const { socketId, response } = data;
 
-  // ойыншы қай комтада екенін табамыз
-  const room = Object.values(komta).find(r =>
-    r.igroktar.some(p => p.socketId === socketId)
-  );
-  if (!room) return;
+      // ойыншы қай комтада екенін табамыз
+      const room = Object.values(komta).find(r =>
+        r.igroktar.some(p => p.socketId === socketId)
+      );
+      if (!room) return;
 
-  const player = room.igroktar.find(p => p.socketId === socketId);
-  if (!player) return;
+      const player = room.igroktar.find(p => p.socketId === socketId);
+      if (!player) return;
 
-  room.betResponses[socketId] = response;
+      room.betResponses[socketId] = response;
 
-  // =========================
-  // ОТБОЙ
-  // =========================
-  if (response === "отбой") {
-    if (!room.skipPlayers.includes(socketId)) {
-      room.skipPlayers.push(socketId);
-    }
-    console.log(`РАУНДҚА ҚАТЫСПАЙТЫН ОЙЫНШЫ: ${socketId}`);
-    return;
-  }
+      // =========================
+      // ОТБОЙ
+      // =========================
+      if (response === "отбой") {
+        if (!room.skipPlayers.includes(socketId)) {
+          room.skipPlayers.push(socketId);
+        }
+        console.log(`РАУНДҚА ҚАТЫСПАЙТЫН ОЙЫНШЫ: ${socketId}`);
+        return;
+      }
 
-  // =========================
-  // ГОТОВ
-  // =========================
-  if (response === "готов") {
-    // 1️⃣ Баланс тексеру
-    if (player.balance < room.betAmount) {
-      io.to(socketId).emit("notEnoughBalance", {
-        required: room.betAmount,
-        balance: player.balance
-      });
-      room.skipPlayers.push(socketId);
-      room.betResponses[socketId] = "отбой";
-      return;
-    }
+      // =========================
+      // ГОТОВ
+      // =========================
+      if (response === "готов") {
+        // 1️⃣ Баланс тексеру
+        if (player.balance < room.betAmount) {
+          io.to(socketId).emit("notEnoughBalance", {
+            required: room.betAmount,
+            balance: player.balance
+          });
+          room.skipPlayers.push(socketId);
+          room.betResponses[socketId] = "отбой";
+          return;
+        }
 
-    // 2️⃣ Баланс азайту + банкке қосу
-    player.balance -= room.betAmount;
-    room.bank += room.betAmount;
+        // 2️⃣ Баланс азайту + банкке қосу
+        player.balance -= room.betAmount;
+        room.bank += room.betAmount;
 
-    // 3️⃣ Ставканы тіркеу
-    room.playerBets[socketId] = room.betAmount;
-    room.totalPot = room.bank;
+        // 3️⃣ Ставканы тіркеу
+        room.playerBets[socketId] = room.betAmount;
+        room.totalPot = room.bank;
 
-    console.log(`💸 ${socketId} банкке ${room.betAmount} салды`);
-  }
+        console.log(`💸 ${socketId} банкке ${room.betAmount} салды`);
+      }
 
-  // =========================
-  // БАРЛЫҚ ЖАУАПТАР КЕЛДІ МЕ?
-  // =========================
-  const responses = Object.values(room.betResponses);
-  if (
-    responses.length === room.igroktar.length &&
-    responses.every(r => r === "готов" || r === "отбой")
-  ) {
-    // 4️⃣ Раунд басталады
-    room.status = "playing";
+      // =========================
+      // БАРЛЫҚ ЖАУАПТАР КЕЛДІ МЕ?
+      // =========================
+      const responses = Object.values(room.betResponses);
+      if (
+        responses.length === room.igroktar.length &&
+        responses.every(r => r === "готов" || r === "отбой")
+      ) {
+        room.status = "playing";
 
-    // Раундқа қатысатын ойыншылар
-    const activePlayers = room.igroktar.filter(
-      p => !room.skipPlayers.includes(p.socketId)
-    );
+        const activePlayers = room.igroktar.filter(
+            p => !room.skipPlayers.includes(p.socketId)
+        );
 
-    // 5️⃣ Әр ойыншыға 3 карта тарату
-    activePlayers.forEach(player => {
-      player.hand = room.kaloda.splice(0, 3);
-    });
+        // Әр ойыншыға 3 карта тарату
+        activePlayers.forEach(player => {
+            player.hand = room.kaloda.splice(0, 3);
+        });
 
-    // 6️⃣ Козырь таңдау
-    room.kozir = room.kaloda.pop();
+        // Козырь таңдау
+        room.kozir = room.kaloda.pop();
 
-    // 7️⃣ Лог
-    console.log("РАУНД БАСТАЛДЫ!", room.id);
-    console.log(
-      "Раундқа қатысатын ойыншылар:",
-      activePlayers.map(p => p.socketId)
-    );
-    console.log(
-      "Раундқа тараған карталар:",
-      activePlayers.map(p => ({ id: p.socketId, hand: p.hand }))
-    );
-    console.log("Козырь:", room.kozir);
-    console.log("РАУНД БАНКІ:", room.bank);
-  }
-});
- }
-});
+        console.log("РАУНД БАСТАЛДЫ!", room.id);
+        console.log(
+          "Раундқа тараған карталар:",
+          activePlayers.map(p => ({ id: p.socketId, hand: p.hand }))
+        );
+        console.log("Козырь:", room.kozir);
+        console.log("РАУНД БАНКІ:", room.bank);
 
-
+        // ⚡ Клиентке хабарлау
+        io.to(room.id).emit('roundStart', {
+            players: activePlayers,
+            kozir: room.kozir,
+            bank: room.bank
+        });
+      }
+    }); // socket.on("betResponse") жабу
+  } // if (waitingPlayers.length === 3) жабу
+}); // io.on("connection") жабу
 
 // --- Колода генерациясы ---
 function generateDeck() {
