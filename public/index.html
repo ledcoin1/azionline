@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Mini Game</title>
 
   <!-- Telegram Mini App -->
@@ -29,7 +29,7 @@
     .app {
       width: 100%;
       max-width: 420px;
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255,255,255,0.04);
       border-radius: 24px;
       padding: 28px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.4);
@@ -54,18 +54,26 @@
       font-size: 18px;
       font-weight: 600;
       cursor: pointer;
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      color: #022c22;
-      transition: transform .15s ease, opacity .15s ease;
+      margin-top: 12px;
     }
 
-    button:active {
-      transform: scale(0.97);
-      opacity: 0.9;
+    .play {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+    }
+
+    .yes {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+    }
+
+    .no {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
     }
 
     .status {
-      margin-top: 20px;
+      margin-top: 18px;
       font-size: 16px;
       opacity: 0.85;
     }
@@ -81,7 +89,7 @@
     .player {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
+      padding: 6px 0;
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
 
@@ -90,8 +98,13 @@
     }
 
     .balance {
-      font-weight: 600;
       color: #22c55e;
+      font-weight: 600;
+    }
+
+    .question {
+      margin-top: 20px;
+      display: none;
     }
   </style>
 </head>
@@ -99,60 +112,116 @@
 
 <div class="app">
   <h1>♠ Mini Game</h1>
-  <div class="subtitle">Ойынға қосылу үшін басыңыз</div>
+  <div class="subtitle">Ойынға қосылу</div>
 
-  <button id="playBtn">🎮 Играть</button>
+  <!-- PLAY -->
+  <button id="playBtn" class="play">🎮 Играть</button>
 
+  <!-- STATUS -->
   <div class="status" id="status"></div>
 
+  <!-- ROOM INFO -->
   <div class="room" id="room" style="display:none;">
     <strong>Комната:</strong>
+    <div id="roomId"></div>
+    <hr style="opacity:.1">
     <div id="players"></div>
+  </div>
+
+  <!-- ROUND QUESTION -->
+  <div class="question" id="question">
+    <div style="margin-bottom:10px;">1 раунд ойнаймыз ба?</div>
+    <button class="yes" id="yesBtn">✅ ИӘ</button>
+    <button class="no" id="noBtn">❌ ЖОҚ</button>
   </div>
 </div>
 
 <script>
+  // ===== Telegram Mini App =====
   const tg = window.Telegram?.WebApp;
   if (tg) {
     tg.ready();
     tg.expand();
   }
 
+  // ===== Socket =====
   const socket = io();
 
+  // ===== Elements =====
   const playBtn = document.getElementById("playBtn");
   const statusEl = document.getElementById("status");
   const roomEl = document.getElementById("room");
+  const roomIdEl = document.getElementById("roomId");
   const playersEl = document.getElementById("players");
+  const questionEl = document.getElementById("question");
+  const yesBtn = document.getElementById("yesBtn");
+  const noBtn = document.getElementById("noBtn");
 
-  playBtn.addEventListener("click", () => {
-    statusEl.textContent = "⏳ Күтуде...";
+  let currentRoomId = null;
+
+  // ===== PLAY =====
+  playBtn.onclick = () => {
     playBtn.disabled = true;
     playBtn.style.opacity = 0.6;
-
+    statusEl.textContent = "⏳ Күтуде...";
     socket.emit("play");
-  });
+  };
 
-  socket.on("waiting", (data) => {
+  // ===== WAITING =====
+  socket.on("waiting", data => {
     statusEl.textContent = `👥 Ойыншылар: ${data.count} / ${data.needed}`;
   });
 
-  socket.on("room_joined", (data) => {
-    statusEl.textContent = `🏠 Комната ашылды: ${data.roomId}`;
+  // ===== ROOM JOINED =====
+  socket.on("room_joined", data => {
+    currentRoomId = data.roomId;
+
+    statusEl.textContent = "🏠 Комнатаға кірдің";
     roomEl.style.display = "block";
+    roomIdEl.textContent = data.roomId;
 
     playersEl.innerHTML = "";
-
-    data.players.forEach((player, index) => {
+    data.players.forEach((p, i) => {
       const div = document.createElement("div");
       div.className = "player";
       div.innerHTML = `
-        <span>Игрок ${index + 1}</span>
-        <span class="balance">${player.balance}</span>
+        <span>Игрок ${i + 1}</span>
+        <span class="balance">${p.balance}</span>
       `;
       playersEl.appendChild(div);
     });
   });
+
+  // ===== GAME STARTED =====
+  socket.on("game_started", () => {
+    statusEl.textContent = "🎮 Ойын басталды";
+  });
+
+  // ===== ASK ROUND =====
+  socket.on("ask_round", data => {
+    statusEl.textContent = "❓ Сұрақ келді";
+    questionEl.style.display = "block";
+    console.log("SERVER:", data.message);
+  });
+
+  // ===== ANSWERS =====
+  yesBtn.onclick = () => {
+    questionEl.style.display = "none";
+    statusEl.textContent = "✅ Сен: ИӘ";
+    socket.emit("round_answer", {
+      roomId: currentRoomId,
+      answer: true
+    });
+  };
+
+  noBtn.onclick = () => {
+    questionEl.style.display = "none";
+    statusEl.textContent = "❌ Сен: ЖОҚ";
+    socket.emit("round_answer", {
+      roomId: currentRoomId,
+      answer: false
+    });
+  };
 </script>
 
 </body>
