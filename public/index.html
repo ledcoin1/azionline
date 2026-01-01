@@ -1,121 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Дурак Мини Апп</title>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
-  #log { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; background: #fff; }
-  .player-info { margin-bottom: 10px; }
-  button { margin-right: 10px; }
-  #hand { margin-top: 10px; }
-  .card { display: inline-block; padding: 5px 10px; margin: 2px; border: 1px solid #333; border-radius: 4px; background: #fff; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Mini Game</title>
+
+  <!-- Telegram Mini App -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(160deg, #0f172a, #020617);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 26px;
+    }
+
+    .subtitle {
+      opacity: 0.7;
+      margin-bottom: 24px;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      border-radius: 16px;
+      border: none;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    button:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 16px;
+      opacity: 0.85;
+    }
+
+    .room {
+      margin-top: 20px;
+      text-align: left;
+      background: rgba(0,0,0,0.3);
+      padding: 16px;
+      border-radius: 14px;
+    }
+
+    .player {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .player:last-child {
+      border-bottom: none;
+    }
+
+    .balance {
+      font-weight: 600;
+      color: #22c55e;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Дурак Мини Апп</h1>
+<div class="app">
+  <h1>♠ Mini Game</h1>
+  <div class="subtitle">Ойынға қосылу үшін басыңыз</div>
 
-<div id="info">
-  <p>Баланс: <span id="balance">2000</span></p>
-  <p>Комта банкі: <span id="bank">0</span></p>
-  <p>Комта ID: <span id="roomId">---</span></p>
-  <p>Раундқа қатысатындар: <span id="players">---</span></p>
-  <p>Козырь: <span id="kozir">---</span></p>
+  <button id="playBtn">🎮 Играть</button>
+
+  <div class="status" id="status"></div>
+
+  <div class="room" id="room" style="display:none;">
+    <strong>Комната:</strong>
+    <div id="players"></div>
+  </div>
 </div>
 
-<div id="actions">
-  <button id="readyBtn">Готов</button>
-  <button id="foldBtn">Отбой</button>
-</div>
-
-<div id="hand">
-  <strong>Қолыңыздағы карталар:</strong>
-  <div id="cards"></div>
-</div>
-
-<h3>Жүйе логы:</h3>
-<div id="log"></div>
-
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-const socket = io();
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+  }
 
-// HTML элементтер
-const logEl = document.getElementById('log');
-const balanceEl = document.getElementById('balance');
-const bankEl = document.getElementById('bank');
-const roomIdEl = document.getElementById('roomId');
-const playersEl = document.getElementById('players');
-const kozEl = document.getElementById('kozir');
-const cardsEl = document.getElementById('cards');
-const readyBtn = document.getElementById('readyBtn');
-const foldBtn = document.getElementById('foldBtn');
+  const socket = io();
 
-let mySocketId = null;
-let myBalance = 2000;
+  const playBtn = document.getElementById("playBtn");
+  const statusEl = document.getElementById("status");
+  const roomEl = document.getElementById("room");
+  const playersEl = document.getElementById("players");
 
-// Логқа жазу функциясы
-function log(msg) {
-  const p = document.createElement('p');
-  p.textContent = msg;
-  logEl.appendChild(p);
-  logEl.scrollTop = logEl.scrollHeight;
-}
+  playBtn.addEventListener("click", () => {
+    statusEl.textContent = "⏳ Күтуде...";
+    playBtn.disabled = true;
+    playBtn.style.opacity = 0.6;
 
-// Өз socketId-імізді алу
-socket.on('connect', () => {
-  mySocketId = socket.id;
-  log(`Серверге қосылды: ${mySocketId}`);
-});
-
-// Комтаға қосылғанда
-socket.on('joinedRoom', (data) => {
-  roomIdEl.textContent = data.roomId;
-  playersEl.textContent = data.players.join(', ');
-  bankEl.textContent = data.totalPot;
-  log(`Комтаға қосылдың: ${data.roomId}`);
-});
-
-// Сервер 500 ставка сұрағанда
-socket.on('askBet', (data) => {
-  log(`Сервер сұрайды: ставка ${data.betAmount}`);
-});
-
-// Баланс жеткіліксіз болса
-socket.on('notEnoughBalance', (data) => {
-  alert(`Баланс жетпейді! Қажетті: ${data.required}, Қолыңызда: ${data.balance}`);
-});
-
-// Раунд басталғанда
-socket.on('roundStart', (data) => {
-  log(`Раунд басталды! Козырь: ${data.kozir}`);
-  kozEl.textContent = data.kozir.suit + data.kozir.rank;
-  bankEl.textContent = data.bank;
-  cardsEl.innerHTML = '';
-  data.players.forEach(p => {
-    if (p.id === mySocketId) {
-      p.hand.forEach(card => {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.textContent = card.suit + card.rank;
-        cardsEl.appendChild(div);
-      });
-    }
+    socket.emit("play");
   });
-});
 
-// Батырмаларға жауап беру
-readyBtn.addEventListener('click', () => {
-  socket.emit('betResponse', { socketId: mySocketId, response: 'готов' });
-  log('Ставка: готов басылды');
-});
+  socket.on("waiting", (data) => {
+    statusEl.textContent = `👥 Ойыншылар: ${data.count} / ${data.needed}`;
+  });
 
-foldBtn.addEventListener('click', () => {
-  socket.emit('betResponse', { socketId: mySocketId, response: 'отбой' });
-  log('Ставка: отбой басылды');
-});
+  socket.on("room_joined", (data) => {
+    statusEl.textContent = `🏠 Комната ашылды: ${data.roomId}`;
+    roomEl.style.display = "block";
+
+    playersEl.innerHTML = "";
+
+    data.players.forEach((player, index) => {
+      const div = document.createElement("div");
+      div.className = "player";
+      div.innerHTML = `
+        <span>Игрок ${index + 1}</span>
+        <span class="balance">${player.balance}</span>
+      `;
+      playersEl.appendChild(div);
+    });
+  });
 </script>
+
 </body>
 </html>
