@@ -11,6 +11,51 @@ const io = new Server(server);
 // public/index.html үшін
 app.use(express.static("public"));
 
+function getCardSuit(card) {
+  return card.slice(-1); // ♠ ♥ ♦ ♣
+}
+
+function getCardRank(card) {
+  return card.slice(0, -1); // 6,7,8,9,10,J,Q,K,A
+}
+
+function getCardPower(rank) {
+  const order = ["6","7","8","9","10","J","Q","K","A"];
+  return order.indexOf(rank);
+}
+
+// кім жүрісті ұтты анықтайды
+function determineTrickWinner(turns, trump) {
+  const trumpSuit = getCardSuit(trump);
+  const leadSuit = getCardSuit(turns[0].card);
+
+  let winner = turns[0];
+
+  for (const turn of turns.slice(1)) {
+    const winSuit = getCardSuit(winner.card);
+    const turnSuit = getCardSuit(turn.card);
+
+    // 1️⃣ козырь козырь емес картаны ұтады
+    if (turnSuit === trumpSuit && winSuit !== trumpSuit) {
+      winner = turn;
+      continue;
+    }
+
+    // 2️⃣ бір масть болса — үлкені ұтады
+    if (
+      turnSuit === winSuit &&
+      getCardPower(getCardRank(turn.card)) >
+      getCardPower(getCardRank(winner.card))
+    ) {
+      winner = turn;
+    }
+  }
+
+  return winner.playerId;
+}
+
+
+
 // ================== CARDS ==================
 
 // 36 карталық колода жасау
@@ -86,7 +131,11 @@ io.on("connection", (socket) => {
         roundRequest: {
           active: false,   // сұрақ белсенді ме
           answers: {}      // жауаптар { socketId: true/false }
-        }
+        },
+
+         turns: [],        // бір жүрістегі тасталған 3 карта
+  tricksWon: {},    // { socketId: саны }
+  currentTurn: null // кімнің кезегі (рандом кейін толады)
       };
 
       console.log("🏠 Room created:", roomId);
@@ -248,6 +297,83 @@ console.log("⚡ First turn randomly assigned to:", firstPlayer.id);
   });
 
 
+  // ================= PLAY CARD =================
+  socket.on("play_card", ({ roomId, card }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    // тек кезегі келген ойыншы
+    if (room.currentTurn !== socket.id) return;
+
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+
+    // карта бар ма?
+    const index = player.hand.indexOf(card);
+    if (index === -1) return;
+
+    // қолынан өшіреміз
+    player.hand.splice(index, 1);
+
+    // жүріске қосамыз
+    room.turns.push({
+      playerId: socket.id,
+      card
+    });
+
+    console.log("🃏 Card played:", socket.id, card);
+
+    // барлығына көрсету
+    io.to(roomId).emit("card_played", {
+      playerId: socket.id,
+      card
+    });
+  
+
+  
+// ---------- 3 CARD CHECK ----------
+if (room.turns.length === 3) {
+
+  const winnerId = determineTrickWinner(room.turns, room.trump);
+
+  console.log("🏆 Trick winner:", winnerId);
+
+  // санау (кім неше жүріс ұтты)
+  room.tricksWon[winnerId] = (room.tricksWon[winnerId] || 0) + 1;
+
+  // бәріне хабар
+  io.to(roomId).emit("trick_winner", {
+    winnerId,
+    tricksWon: room.tricksWon
+  });
+
+  // келесі жүріс — ұтқан ойыншыдан
+  room.currentTurn = winnerId;
+
+  // жүрісті тазалаймыз
+  room.turns = [];
+
+  // сол ойыншыға кезек береміз
+  io.to(winnerId).emit("your_turn", {
+    message: "Сіз жүрісті ұттыңыз, қайта жүресіз"
+  });
+  // ---------- CHECK GAME OVER ----------
+if (room.tricksWon[winnerId] >= 2) {
+  console.log("🎉 Game over! Winner:", winnerId);
+
+  io.to(roomId).emit("game_ended", {
+    winnerId,
+    message: "Ойын аяқталды! Жеңімпаз: " + winnerId
+  });
+
+  // room-ды өшіреміз
+  delete rooms[roomId];
+}
+
+}
+
+});
+
 
   // ---------- DISCONNECT ----------
   socket.on("disconnect", () => {
@@ -260,6 +386,8 @@ console.log("⚡ First turn randomly assigned to:", firstPlayer.id);
     }
   });
 });
+
+  
 
 // ================== SERVER START ==================
 const PORT = 3000;
