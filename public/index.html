@@ -4,219 +4,169 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Дурак Онлайн</title>
-
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background: linear-gradient(135deg, #f9f9f9, #c9f0ff);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    h1 {
-      margin-top: 20px;
-      color: #333;
-    }
-
-    #lobby, #round-question, #game-area {
-      margin-top: 30px;
-      width: 90%;
-      max-width: 600px;
-      text-align: center;
-    }
-
-    button {
-      padding: 12px 24px;
-      font-size: 16px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      background-color: #4f46e5;
-      color: white;
-      margin: 5px;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      background-color: #4338ca;
-    }
-
-    .cards {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-
-    .card {
-      width: 60px;
-      height: 90px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 20px;
-      margin: 5px;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-    }
-
-    .trump {
-      margin-top: 20px;
-      font-size: 22px;
-      color: #e11d48;
-      font-weight: bold;
-    }
-
-    #messages {
-      margin-top: 20px;
-      font-size: 18px;
-      color: #333;
-      min-height: 30px;
-    }
-
-    .winner {
-      font-size: 22px;
-      color: green;
-      font-weight: bold;
-      margin-top: 20px;
-    }
-  </style>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-green-900 text-white">
 
-  <h1>Дурак Онлайн</h1>
+<div id="root"></div>
 
-  <!-- Lobby / Play button -->
-  <div id="lobby">
-    <button id="play-btn">Играть</button>
-    <div id="waiting-msg"></div>
-  </div>
+<script type="text/babel">
 
-  <!-- Round Question -->
-  <div id="round-question" style="display:none;">
-    <p>1 раунд ойнаймыз ба?</p>
-    <button id="round-yes">Иә</button>
-    <button id="round-no">Жоқ</button>
-  </div>
+const { useState, useEffect } = React;
 
-  <!-- Game Area -->
-  <div id="game-area" style="display:none;">
-    <div class="trump" id="trump-card"></div>
-    <div class="cards" id="player-hand"></div>
-    <div id="messages"></div>
-  </div>
+function App() {
+  const [socket, setSocket] = useState(null);
+  const [roomId, setRoomId] = useState(null);
+  const [players, setPlayers] = useState([]);
+  const [hand, setHand] = useState([]);
+  const [trump, setTrump] = useState(null);
+  const [centralCards, setCentralCards] = useState([]);
+  const [message, setMessage] = useState("");
+  const [currentTurn, setCurrentTurn] = useState(null);
+  const [tricksWon, setTricksWon] = useState({});
+  const [gameOver, setGameOver] = useState(false);
 
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+  useEffect(() => {
+    const sock = io();
+    setSocket(sock);
 
-    const playBtn = document.getElementById("play-btn");
-    const waitingMsg = document.getElementById("waiting-msg");
-    const roundQuestionDiv = document.getElementById("round-question");
-    const roundYesBtn = document.getElementById("round-yes");
-    const roundNoBtn = document.getElementById("round-no");
-    const gameArea = document.getElementById("game-area");
-    const playerHandDiv = document.getElementById("player-hand");
-    const messagesDiv = document.getElementById("messages");
-    const trumpDiv = document.getElementById("trump-card");
-
-    let myId = null;
-    let roomId = null;
-    let myHand = [];
-
-    // ---------- PLAY BUTTON ----------
-    playBtn.addEventListener("click", () => {
-      socket.emit("play");
-      waitingMsg.textContent = "Күтіп тұр...";
+    sock.on("waiting", (data) => {
+      setMessage(`Ойын күтіп тұр: ${data.count}/3`);
     });
 
-    // ---------- WAITING ----------
-    socket.on("waiting", ({count, needed}) => {
-      waitingMsg.textContent = `Lobby: ${count}/${needed} ойыншы жиналды`;
+    sock.on("room_joined", (data) => {
+      setRoomId(data.roomId);
+      setPlayers(data.players);
+      setMessage("Room-ға қосылдыңыз!");
     });
 
-    // ---------- ROOM JOINED ----------
-    socket.on("room_joined", (data) => {
-      myId = socket.id;
-      roomId = data.roomId;
-      waitingMsg.textContent = `Room: ${roomId}, ойыншылар дайын!`;
+    sock.on("game_started", () => {
+      setMessage("Ойын басталды!");
+      setCentralCards([]);
     });
 
-    // ---------- ASK ROUND ----------
-    socket.on("ask_round", (data) => {
-      roundQuestionDiv.style.display = "block";
+    sock.on("ask_round", (data) => {
+      if(confirm(data.message)) {
+        sock.emit("round_answer", { roomId, answer: true });
+      } else {
+        sock.emit("round_answer", { roomId, answer: false });
+      }
     });
 
-    roundYesBtn.addEventListener("click", () => {
-      socket.emit("round_answer", { roomId, answer:true });
-      roundQuestionDiv.style.display = "none";
-      messagesDiv.textContent = "Күтіп тұр...";
+    sock.on("round_started", (data) => {
+      setMessage(data.message);
     });
 
-    roundNoBtn.addEventListener("click", () => {
-      socket.emit("round_answer", { roomId, answer:false });
-      roundQuestionDiv.style.display = "none";
-      messagesDiv.textContent = "Сіз бас тарттыңыз!";
+    sock.on("your_cards", (data) => {
+      setHand(data.hand);
+      setTrump(data.trump);
     });
 
-    // ---------- ROUND STARTED ----------
-    socket.on("round_started", (data) => {
-      messagesDiv.textContent = "Раунд басталды!";
-      gameArea.style.display = "block";
+    sock.on("your_turn", (data) => {
+      setMessage(data.message);
+      setCurrentTurn(sock.id);
     });
 
-    // ---------- RECEIVE CARDS ----------
-    socket.on("your_cards", ({hand, trump}) => {
-      myHand = hand;
-      trumpDiv.textContent = "Trump: " + trump;
-      playerHandDiv.innerHTML = "";
-      hand.forEach(card => {
-        const cardEl = document.createElement("div");
-        cardEl.classList.add("card");
-        cardEl.textContent = card;
-        cardEl.addEventListener("click", () => {
-          socket.emit("play_card", { roomId, card });
-          cardEl.remove();
-        });
-        playerHandDiv.appendChild(cardEl);
-      });
+    sock.on("card_played", (data) => {
+      setCentralCards(prev => [...prev, data]);
     });
 
-    // ---------- CARD PLAYED ----------
-    socket.on("card_played", ({playerId, card}) => {
-      messagesDiv.textContent = `Ойыншы ${playerId} карта ойнады: ${card}`;
+    sock.on("trick_winner", (data) => {
+      setTricksWon(data.tricksWon);
+      setMessage(`Жүріс ұтқан: ${data.winnerId}`);
+      setCentralCards([]);
     });
 
-    // ---------- TRICK WINNER ----------
-    socket.on("trick_winner", ({winnerId, tricksWon}) => {
-      messagesDiv.textContent = `🏆 ${winnerId} жүрісті ұтты!`;
+    sock.on("game_ended", (data) => {
+      setMessage(data.message);
+      setGameOver(true);
+      setCentralCards([]);
     });
 
-    // ---------- YOUR TURN ----------
-    socket.on("your_turn", (data) => {
-      messagesDiv.textContent = data.message;
-    });
+    return () => sock.disconnect();
+  }, []);
 
-    // ---------- GAME ENDED ----------
-    socket.on("game_ended", ({winnerId, message}) => {
-      messagesDiv.textContent = message;
-    });
+  const handlePlay = () => {
+    if(socket) socket.emit("play");
+  };
 
-  </script>
+  const playCard = (card) => {
+    if(socket && socket.id === currentTurn) {
+      socket.emit("play_card", { roomId, card });
+      setHand(hand.filter(c => c !== card));
+      setCurrentTurn(null);
+    } else {
+      alert("Сіздің кезегіңіз емес!");
+    }
+  };
+
+  return (
+    <div className="p-4 max-w-3xl mx-auto text-center">
+      <h1 className="text-3xl font-bold mb-4">🃏 Дурак Онлайн</h1>
+      <p className="mb-2">{message}</p>
+
+      {!roomId && <button 
+        className="bg-yellow-500 text-black font-bold px-4 py-2 rounded hover:bg-yellow-400"
+        onClick={handlePlay}
+      >Ойнату</button>}
+
+      {roomId && (
+        <>
+          <div className="my-4">
+            <h2 className="font-bold">Ойыншылар:</h2>
+            <div className="flex justify-center gap-4 mt-2">
+              {players.map(p => (
+                <div key={p.id} className={`p-2 border rounded ${p.id === socket.id ? "bg-yellow-500 text-black" : "bg-gray-800"}`}>
+                  {p.id} <br/>
+                  {tricksWon[p.id] || 0} жүріс
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="my-4">
+            <h2 className="font-bold">Trump:</h2>
+            <div className="text-2xl">{trump}</div>
+          </div>
+
+          <div className="my-4">
+            <h2 className="font-bold">Орталықтағы карталар:</h2>
+            <div className="flex justify-center gap-4 mt-2">
+              {centralCards.map((c, i) => (
+                <div key={i} className="p-4 border rounded bg-gray-700 text-2xl">{c.card}</div>
+              ))}
+            </div>
+          </div>
+
+          <div className="my-4">
+            <h2 className="font-bold">Сіздің карталарыңыз:</h2>
+            <div className="flex justify-center gap-4 mt-2">
+              {hand.map((c, i) => (
+                <button 
+                  key={i}
+                  className="p-4 border rounded bg-blue-500 hover:bg-blue-400 text-2xl"
+                  onClick={() => playCard(c)}
+                  disabled={gameOver}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {gameOver && <div className="mt-4 text-xl font-bold text-red-400">Ойын аяқталды!</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
 </body>
 </html>
