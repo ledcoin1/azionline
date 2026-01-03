@@ -11,6 +11,33 @@ const io = new Server(server);
 // public/index.html үшін
 app.use(express.static("public"));
 
+// ================== CARDS ==================
+
+// 36 карталық колода жасау
+function createDeck() {
+  const suits = ["♠", "♥", "♦", "♣"];
+  const values = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+  const deck = [];
+
+  for (let suit of suits) {
+    for (let value of values) {
+      deck.push(value + suit);
+    }
+  }
+
+  return deck;
+}
+
+// Карталарды араластыру (Fisher–Yates)
+function shuffle(deck) {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+}
+
+
+
 // ================== DATA ==================
 
 // lobby — ойынды күтіп тұрған ойыншылар
@@ -38,7 +65,7 @@ io.on("connection", (socket) => {
       // Алғашқы 3 адамды аламыз
       const playersIds = lobby.splice(0, 3);
 
-      // Уникальный room id
+      // Уникальный room idroom
       const roomId = "room_" + Date.now();
 
       // ---------- ROOM ҚҰРУ ----------
@@ -115,6 +142,113 @@ io.on("connection", (socket) => {
     }
   });
 
+    // ---------- ROUND ANSWER ----------
+  socket.on("round_answer", (data) => {
+    const { roomId, answer } = data;
+    // answer: true (yes) немесе false (no)
+
+    const room = rooms[roomId];
+    if (!room) return;
+
+    // Егер сұрақ актив емес болса — қабылдамаймыз
+    if (!room.roundRequest.active) return;
+
+    // Жауапты сақтаймыз
+    room.roundRequest.answers[socket.id] = answer;
+
+    console.log(
+      `📝 Answer from ${socket.id} in ${roomId}:`,
+      answer
+    );
+
+    // ---------- БАРЛЫҒЫ ЖАУАП БЕРДІ МЕ? ----------
+    const totalPlayers = room.players.length;
+    const totalAnswers = Object.keys(room.roundRequest.answers).length;
+
+    if (totalAnswers === totalPlayers) {
+      // Сұрақты жабамыз
+      room.roundRequest.active = false;
+
+      // ---------- YES / NO ТЕКСЕРУ ----------
+      const answers = Object.values(room.roundRequest.answers);
+
+      const allYes = answers.every(a => a === true);
+
+      if (allYes) {
+        console.log("✅ All players agreed. Round starts!");
+
+        io.to(roomId).emit("round_started", {
+          message: "Раунд басталды!"
+        });
+
+        // ---------- ROUND START: DECK ----------
+const deck = createDeck();
+shuffle(deck);
+
+// room-ға сақтаймыз
+room.deck = deck;
+
+console.log("🃏 New deck created for", roomId);
+
+// ---------- TRUMP ----------
+const trump = room.deck[room.deck.length - 1];
+room.trump = trump;
+
+console.log("🂡 Trump card:", trump);
+
+// ---------- DEAL 3 CARDS ----------
+room.players.forEach(player => {
+  player.hand = room.deck.splice(0, 3);
+});
+
+// ---------- SEND CARDS TO PLAYERS ----------
+room.players.forEach(player => {
+  io.to(player.id).emit("your_cards", {
+    hand: player.hand,  // тек осы ойыншының картасы
+    trump: room.trump
+  });
+});
+
+console.log("🃏 Cards sent to players. Trump:", room.trump);
+
+
+// ---------- RANDOM FIRST ATTACKER ----------
+const randomIndex = Math.floor(Math.random() * room.players.length);
+const firstPlayer = room.players[randomIndex];
+
+// room-да сақтаймыз
+room.currentTurn = firstPlayer.id;
+
+// сол ойыншыға хабар жібереміз
+io.to(firstPlayer.id).emit("your_turn", {
+  message: "Сіз бірінші жүресіз"
+});
+
+console.log("⚡ First turn randomly assigned to:", firstPlayer.id);
+
+
+
+
+
+
+        // ⬇️ келесі қадамда осы жерде
+        // карталарды тарату / ставка / логика басталады
+
+      } else {
+        console.log("⛔ Someone declined. Game ends.");
+
+        io.to(roomId).emit("game_ended", {
+          message: "Кем дегенде бір ойыншы бас тартты"
+        });
+
+        // room-ды өшіреміз
+        delete rooms[roomId];
+      }
+    }
+  });
+
+
+
   // ---------- DISCONNECT ----------
   socket.on("disconnect", () => {
     console.log("❌ User disconnected:", socket.id);
@@ -132,3 +266,4 @@ const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
