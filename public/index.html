@@ -1,231 +1,189 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kk">
 <head>
-  <meta charset="UTF-8">
-  <title>Telegram Card Game</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #1e5631; /* жасыл фон */
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    h1 {
-      margin-top: 20px;
-    }
-
-    #lobby {
-      margin: 20px;
-    }
-
-    #game {
-      display: none;
-      width: 100%;
-      max-width: 800px;
-      text-align: center;
-    }
-
-    #players {
-      display: flex;
-      justify-content: space-around;
-      margin-bottom: 20px;
-    }
-
-    .player {
-      border: 2px solid #fff;
-      padding: 10px;
-      border-radius: 10px;
-      width: 120px;
-    }
-
-    #table {
-      min-height: 150px;
-      border: 2px dashed #fff;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 10px;
-    }
-
-    .card {
-      background: #fff;
-      color: #000;
-      font-weight: bold;
-      font-size: 20px;
-      width: 50px;
-      height: 70px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 5px;
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.2s;
-    }
-
-    .card:hover {
-      transform: scale(1.1);
-    }
-
-    #hand {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
-      background-color: #ffcc00;
-      color: #000;
-      font-weight: bold;
-    }
-
-    #status {
-      margin-bottom: 10px;
-      min-height: 20px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🃏 Telegram Card Game</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #2e7d32; /* жасыл үстел */
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  h1 { margin: 20px 0; }
+  #lobby, #round, #game, #winner { margin-top: 20px; }
+  button { padding: 10px 20px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; font-size: 16px; }
+  #cards { display: flex; gap: 10px; margin-top: 20px; }
+  .card { width: 60px; height: 90px; background: #fff; color: #000; display: flex; justify-content: center; align-items: center; border-radius: 5px; font-weight: bold; cursor: pointer; }
+  .card.disabled { opacity: 0.5; cursor: default; }
+  #center-cards { display: flex; gap: 10px; margin-top: 20px; }
+  .center-card { width: 60px; height: 90px; background: #fff; color: #000; display: flex; justify-content: center; align-items: center; border-radius: 5px; font-weight: bold; }
+  #players { margin-top: 20px; display: flex; gap: 20px; }
+  .player { text-align: center; }
+</style>
 </head>
 <body>
-  <h1>🃏 Telegram Card Game</h1>
 
-  <div id="lobby">
-    <button id="playBtn">Играть</button>
-    <p id="lobbyStatus">Ожидаем игроков...</p>
-  </div>
+<h1>🃏 Telegram Card Game</h1>
 
-  <div id="game">
-    <div id="status"></div>
-    <div id="players"></div>
-    <div id="table"></div>
-    <div id="hand"></div>
-  </div>
+<div id="lobby">
+  <button id="playBtn">Играть</button>
+  <div id="waitingMsg"></div>
+</div>
 
-  <script>
-    const socket = io();
+<div id="round" style="display:none;">
+  <p id="roundMsg"></p>
+  <button id="yesBtn">Ия</button>
+  <button id="noBtn">Жоқ</button>
+</div>
 
-    const playBtn = document.getElementById("playBtn");
-    const lobbyStatus = document.getElementById("lobbyStatus");
-    const gameDiv = document.getElementById("game");
-    const playersDiv = document.getElementById("players");
-    const tableDiv = document.getElementById("table");
-    const handDiv = document.getElementById("hand");
-    const statusDiv = document.getElementById("status");
+<div id="game" style="display:none;">
+  <h2>Сіздің карталарыңыз</h2>
+  <div id="cards"></div>
 
-    let roomId = null;
-    let playerId = null;
-    let hand = [];
-    let trump = null;
+  <h2>Орталықтағы карталар</h2>
+  <div id="center-cards"></div>
 
-    // ---------- Play button ----------
-    playBtn.onclick = () => {
-      socket.emit("play");
-      playBtn.disabled = true;
-      lobbyStatus.textContent = "Ждем других игроков...";
+  <h3 id="turnMsg"></h3>
+
+  <div id="players"></div>
+</div>
+
+<div id="winner" style="display:none;">
+  <h2 id="winnerMsg"></h2>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+// ---------- DOM Elements ----------
+const playBtn = document.getElementById('playBtn');
+const waitingMsg = document.getElementById('waitingMsg');
+const roundDiv = document.getElementById('round');
+const roundMsg = document.getElementById('roundMsg');
+const yesBtn = document.getElementById('yesBtn');
+const noBtn = document.getElementById('noBtn');
+const gameDiv = document.getElementById('game');
+const cardsDiv = document.getElementById('cards');
+const centerCardsDiv = document.getElementById('center-cards');
+const turnMsg = document.getElementById('turnMsg');
+const playersDiv = document.getElementById('players');
+const winnerDiv = document.getElementById('winner');
+const winnerMsg = document.getElementById('winnerMsg');
+
+let myHand = [];
+let myId = null;
+let roomId = null;
+
+// ---------- Play ----------
+playBtn.onclick = () => {
+  socket.emit('play');
+  playBtn.disabled = true;
+};
+
+// ---------- Waiting ----------
+socket.on('waiting', data => {
+  waitingMsg.textContent = `Күтіп тұрмыз: ${data.count}/3`;
+});
+
+// ---------- Room Joined ----------
+socket.on('room_joined', data => {
+  roomId = data.roomId;
+  myId = socket.id;
+  console.log('Room joined:', roomId, 'My ID:', myId);
+});
+
+// ---------- Round Question ----------
+socket.on('ask_round', data => {
+  roundDiv.style.display = 'block';
+  roundMsg.textContent = data.message;
+});
+
+yesBtn.onclick = () => {
+  socket.emit('round_answer', { roomId, answer: true });
+  roundDiv.style.display = 'none';
+};
+noBtn.onclick = () => {
+  socket.emit('round_answer', { roomId, answer: false });
+  roundDiv.style.display = 'none';
+};
+
+// ---------- Round Started ----------
+socket.on('round_started', () => {
+  gameDiv.style.display = 'block';
+  centerCardsDiv.innerHTML = '';
+  cardsDiv.innerHTML = '';
+  playersDiv.innerHTML = '';
+  turnMsg.textContent = '';
+});
+
+// ---------- Receive Hand ----------
+socket.on('your_cards', data => {
+  myHand = data.hand;
+  cardsDiv.innerHTML = '';
+  myHand.forEach(card => {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.textContent = card;
+    c.onclick = () => {
+      if (!c.classList.contains('disabled')) {
+        socket.emit('play_card', { roomId, card });
+      }
     };
+    cardsDiv.appendChild(c);
+  });
+});
 
-    // ---------- Waiting ----------
-    socket.on("waiting", data => {
-      lobbyStatus.textContent = `Ждем игроков: ${data.count}/${data.needed}`;
+// ---------- Card Played ----------
+socket.on('card_played', data => {
+  const c = document.createElement('div');
+  c.className = 'center-card';
+  c.textContent = data.card;
+  centerCardsDiv.appendChild(c);
+
+  // Егер өз картасын жүрсе, disable
+  if (data.playerId === myId) {
+    [...cardsDiv.children].forEach(ch => {
+      if (ch.textContent === data.card) ch.classList.add('disabled');
     });
+  }
+});
 
-    // ---------- Room joined ----------
-    socket.on("room_joined", data => {
-      roomId = data.roomId;
-      playerId = socket.id;
-      console.log("Joined room:", roomId, "as", playerId);
-    });
+// ---------- Your Turn ----------
+socket.on('your_turn', data => {
+  turnMsg.textContent = data.message;
+});
 
-    // ---------- Game started ----------
-    socket.on("game_started", () => {
-      lobbyStatus.style.display = "none";
-      gameDiv.style.display = "block";
-      statusDiv.textContent = "Игра началась!";
-      tableDiv.innerHTML = "";
-      handDiv.innerHTML = "";
-    });
+// ---------- Trick Winner ----------
+socket.on('trick_winner', data => {
+  centerCardsDiv.innerHTML = '';
+  turnMsg.textContent = `🏆 ${data.winnerId} ұтты`;
+  // Ойыншылар мен ұтқан жүріс санын көрсету
+  playersDiv.innerHTML = '';
+  for (const pid in data.tricksWon) {
+    const div = document.createElement('div');
+    div.className = 'player';
+    div.textContent = `${pid}: ${data.tricksWon[pid]} жүріс`;
+    playersDiv.appendChild(div);
+  }
+});
 
-    // ---------- Ask round ----------
-    socket.on("ask_round", data => {
-      statusDiv.textContent = data.message;
-    });
-
-    // ---------- Round started ----------
-    socket.on("round_started", data => {
-      statusDiv.textContent = data.message;
-    });
-
-    // ---------- Receive cards ----------
-    socket.on("your_cards", data => {
-      hand = data.hand;
-      trump = data.trump;
-      renderHand();
-      renderStatus(`Туз: ${trump} ♠`);
-    });
-
-    // ---------- Card played ----------
-    socket.on("card_played", data => {
-      const cardEl = document.createElement("div");
-      cardEl.className = "card";
-      cardEl.textContent = data.card;
-      tableDiv.appendChild(cardEl);
-    });
-
-    // ---------- Trick winner ----------
-    socket.on("trick_winner", data => {
-      renderStatus(`Ход выиграл: ${data.winnerId}`);
-      tableDiv.innerHTML = "";
-    });
-
-    // ---------- Your turn ----------
-    socket.on("your_turn", data => {
-      renderStatus(data.message);
-    });
-
-    // ---------- Game ended ----------
-    socket.on("game_ended", data => {
-      renderStatus(`Игра окончена! Победитель: ${data.winnerId}`);
-      handDiv.innerHTML = "";
-      tableDiv.innerHTML = "";
-    });
-
-    // ---------- Render hand ----------
-    function renderHand() {
-      handDiv.innerHTML = "";
-      hand.forEach(card => {
-        const cardEl = document.createElement("div");
-        cardEl.className = "card";
-        cardEl.textContent = card;
-        cardEl.onclick = () => playCard(card);
-        handDiv.appendChild(cardEl);
-      });
-    }
-
-    function playCard(card) {
-      socket.emit("play_card", { roomId, card });
-      // карта өз қолынан өшіріледі, UI жаңартылады
-      hand = hand.filter(c => c !== card);
-      renderHand();
-    }
-
-    function renderStatus(text) {
-      statusDiv.textContent = text;
-    }
-  </script>
+// ---------- Game Ended ----------
+socket.on('game_ended', data => {
+  gameDiv.style.display = 'none';
+  winnerDiv.style.display = 'block';
+  if(data.winnerId){
+    winnerMsg.textContent = `Жеңімпаз: ${data.winnerId}`;
+  } else {
+    winnerMsg.textContent = data.message;
+  }
+});
+</script>
 </body>
 </html>
