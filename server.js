@@ -298,80 +298,87 @@ console.log("⚡ First turn randomly assigned to:", firstPlayer.id);
 
 
   // ================= PLAY CARD =================
-  socket.on("play_card", ({ roomId, card }) => {
-    const room = rooms[roomId];
-    if (!room) return;
+socket.on("play_card", ({ roomId, card }) => {
+  const room = rooms[roomId];
+  if (!room) return;
 
-    // тек кезегі келген ойыншы
-    if (room.currentTurn !== socket.id) return;
+  // Тек кезегі келген ойыншы ғана ойнай алады
+  if (room.currentTurn !== socket.id) return;
 
-    const player = room.players.find(p => p.id === socket.id);
-    if (!player) return;
+  const player = room.players.find(p => p.id === socket.id);
+  if (!player) return;
 
-    // карта бар ма?
-    const index = player.hand.indexOf(card);
-    if (index === -1) return;
+  // Карта қолында бар ма?
+  const index = player.hand.indexOf(card);
+  if (index === -1) return;
 
-    // қолынан өшіреміз
-    player.hand.splice(index, 1);
+  // Қолынан карта шығару
+  player.hand.splice(index, 1);
 
-    // жүріске қосамыз
-    room.turns.push({
-      playerId: socket.id,
-      card
+  // Жүріске қосу
+  room.turns.push({
+    playerId: socket.id,
+    card
+  });
+
+  console.log("🃏 Card played:", socket.id, card);
+
+  // Орталыққа барлық ойыншыларға көрсету
+  io.to(roomId).emit("card_played", {
+    playerId: socket.id,
+    card
+  });
+
+  // ---------- 3 CARD CHECK ----------
+  if (room.turns.length === 3) {
+    // Жүріс жеңімпазын анықтау
+    const winnerId = determineTrickWinner(room.turns, room.trump);
+    console.log("🏆 Trick winner:", winnerId);
+
+    // Ұтқан жүріс санын санау
+    room.tricksWon[winnerId] = (room.tricksWon[winnerId] || 0) + 1;
+
+    // Барлығына хабарлау
+    io.to(roomId).emit("trick_winner", {
+      winnerId,
+      tricksWon: room.tricksWon
     });
 
-    console.log("🃏 Card played:", socket.id, card);
+    // Келесі жүріс — ұтқан ойыншыдан
+    room.currentTurn = winnerId;
 
-    // барлығына көрсету
-    io.to(roomId).emit("card_played", {
-      playerId: socket.id,
-      card
+    // Жүрісті тазалау
+    room.turns = [];
+
+    // Сол ойыншыға кезек беру
+    io.to(winnerId).emit("your_turn", {
+      message: "Сіз жүрісті ұттыңыз, қайта жүресіз"
     });
-  
 
-  
-// ---------- 3 CARD CHECK ----------
-if (room.turns.length === 3) {
+    // ---------- CHECK GAME OVER ----------
+    if (room.tricksWon[winnerId] >= 2) {
+      console.log("🎉 Game over! Winner:", winnerId);
+      io.to(roomId).emit("game_ended", {
+        winnerId,
+        message: "Ойын аяқталды! Жеңімпаз: " + winnerId
+      });
 
-  const winnerId = determineTrickWinner(room.turns, room.trump);
+      // Room-ды өшіру
+      delete rooms[roomId];
+    }
+  } else {
+    // ---------- NEXT TURN ----------
+    // Келесі ойыншының кезегі (роум.players массивінде) 
+    const currentIndex = room.players.findIndex(p => p.id === socket.id);
+    const nextIndex = (currentIndex + 1) % room.players.length;
+    const nextPlayer = room.players[nextIndex];
 
-  console.log("🏆 Trick winner:", winnerId);
+    room.currentTurn = nextPlayer.id;
 
-  // санау (кім неше жүріс ұтты)
-  room.tricksWon[winnerId] = (room.tricksWon[winnerId] || 0) + 1;
-
-  // бәріне хабар
-  io.to(roomId).emit("trick_winner", {
-    winnerId,
-    tricksWon: room.tricksWon
-  });
-
-  // келесі жүріс — ұтқан ойыншыдан
-  room.currentTurn = winnerId;
-
-  // жүрісті тазалаймыз
-  room.turns = [];
-
-  // сол ойыншыға кезек береміз
-  io.to(winnerId).emit("your_turn", {
-    message: "Сіз жүрісті ұттыңыз, қайта жүресіз"
-  });
-  // ---------- CHECK GAME OVER ----------
-if (room.tricksWon[winnerId] >= 2) {
-  console.log("🎉 Game over! Winner:", winnerId);
-
-  io.to(roomId).emit("game_ended", {
-    winnerId,
-    message: "Ойын аяқталды! Жеңімпаз: " + winnerId
-  });
-
-  // room-ды өшіреміз
-  delete rooms[roomId];
-}
-
-}
-
+    io.to(nextPlayer.id).emit("your_turn", {
+      message: "Сіздің кезегіңіз"
+    });
+  }
 });
 
 
@@ -394,4 +401,3 @@ const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
-
