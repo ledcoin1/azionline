@@ -1,172 +1,231 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Дурак Онлайн</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-green-900 text-white">
-
-<div id="root"></div>
-
-<script type="text/babel">
-
-const { useState, useEffect } = React;
-
-function App() {
-  const [socket, setSocket] = useState(null);
-  const [roomId, setRoomId] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [hand, setHand] = useState([]);
-  const [trump, setTrump] = useState(null);
-  const [centralCards, setCentralCards] = useState([]);
-  const [message, setMessage] = useState("");
-  const [currentTurn, setCurrentTurn] = useState(null);
-  const [tricksWon, setTricksWon] = useState({});
-  const [gameOver, setGameOver] = useState(false);
-
-  useEffect(() => {
-    const sock = io();
-    setSocket(sock);
-
-    sock.on("waiting", (data) => {
-      setMessage(`Ойын күтіп тұр: ${data.count}/3`);
-    });
-
-    sock.on("room_joined", (data) => {
-      setRoomId(data.roomId);
-      setPlayers(data.players);
-      setMessage("Room-ға қосылдыңыз!");
-    });
-
-    sock.on("game_started", () => {
-      setMessage("Ойын басталды!");
-      setCentralCards([]);
-    });
-
-    sock.on("ask_round", (data) => {
-      if(confirm(data.message)) {
-        sock.emit("round_answer", { roomId, answer: true });
-      } else {
-        sock.emit("round_answer", { roomId, answer: false });
-      }
-    });
-
-    sock.on("round_started", (data) => {
-      setMessage(data.message);
-    });
-
-    sock.on("your_cards", (data) => {
-      setHand(data.hand);
-      setTrump(data.trump);
-    });
-
-    sock.on("your_turn", (data) => {
-      setMessage(data.message);
-      setCurrentTurn(sock.id);
-    });
-
-    sock.on("card_played", (data) => {
-      setCentralCards(prev => [...prev, data]);
-    });
-
-    sock.on("trick_winner", (data) => {
-      setTricksWon(data.tricksWon);
-      setMessage(`Жүріс ұтқан: ${data.winnerId}`);
-      setCentralCards([]);
-    });
-
-    sock.on("game_ended", (data) => {
-      setMessage(data.message);
-      setGameOver(true);
-      setCentralCards([]);
-    });
-
-    return () => sock.disconnect();
-  }, []);
-
-  const handlePlay = () => {
-    if(socket) socket.emit("play");
-  };
-
-  const playCard = (card) => {
-    if(socket && socket.id === currentTurn) {
-      socket.emit("play_card", { roomId, card });
-      setHand(hand.filter(c => c !== card));
-      setCurrentTurn(null);
-    } else {
-      alert("Сіздің кезегіңіз емес!");
+  <meta charset="UTF-8">
+  <title>Telegram Card Game</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1e5631; /* жасыл фон */
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
     }
-  };
 
-  return (
-    <div className="p-4 max-w-3xl mx-auto text-center">
-      <h1 className="text-3xl font-bold mb-4">🃏 Дурак Онлайн</h1>
-      <p className="mb-2">{message}</p>
+    h1 {
+      margin-top: 20px;
+    }
 
-      {!roomId && <button 
-        className="bg-yellow-500 text-black font-bold px-4 py-2 rounded hover:bg-yellow-400"
-        onClick={handlePlay}
-      >Ойнату</button>}
+    #lobby {
+      margin: 20px;
+    }
 
-      {roomId && (
-        <>
-          <div className="my-4">
-            <h2 className="font-bold">Ойыншылар:</h2>
-            <div className="flex justify-center gap-4 mt-2">
-              {players.map(p => (
-                <div key={p.id} className={`p-2 border rounded ${p.id === socket.id ? "bg-yellow-500 text-black" : "bg-gray-800"}`}>
-                  {p.id} <br/>
-                  {tricksWon[p.id] || 0} жүріс
-                </div>
-              ))}
-            </div>
-          </div>
+    #game {
+      display: none;
+      width: 100%;
+      max-width: 800px;
+      text-align: center;
+    }
 
-          <div className="my-4">
-            <h2 className="font-bold">Trump:</h2>
-            <div className="text-2xl">{trump}</div>
-          </div>
+    #players {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
 
-          <div className="my-4">
-            <h2 className="font-bold">Орталықтағы карталар:</h2>
-            <div className="flex justify-center gap-4 mt-2">
-              {centralCards.map((c, i) => (
-                <div key={i} className="p-4 border rounded bg-gray-700 text-2xl">{c.card}</div>
-              ))}
-            </div>
-          </div>
+    .player {
+      border: 2px solid #fff;
+      padding: 10px;
+      border-radius: 10px;
+      width: 120px;
+    }
 
-          <div className="my-4">
-            <h2 className="font-bold">Сіздің карталарыңыз:</h2>
-            <div className="flex justify-center gap-4 mt-2">
-              {hand.map((c, i) => (
-                <button 
-                  key={i}
-                  className="p-4 border rounded bg-blue-500 hover:bg-blue-400 text-2xl"
-                  onClick={() => playCard(c)}
-                  disabled={gameOver}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
+    #table {
+      min-height: 150px;
+      border: 2px dashed #fff;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+    }
 
-          {gameOver && <div className="mt-4 text-xl font-bold text-red-400">Ойын аяқталды!</div>}
-        </>
-      )}
-    </div>
-  );
-}
+    .card {
+      background: #fff;
+      color: #000;
+      font-weight: bold;
+      font-size: 20px;
+      width: 50px;
+      height: 70px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 5px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s;
+    }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script>
+    .card:hover {
+      transform: scale(1.1);
+    }
 
+    #hand {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      background-color: #ffcc00;
+      color: #000;
+      font-weight: bold;
+    }
+
+    #status {
+      margin-bottom: 10px;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🃏 Telegram Card Game</h1>
+
+  <div id="lobby">
+    <button id="playBtn">Играть</button>
+    <p id="lobbyStatus">Ожидаем игроков...</p>
+  </div>
+
+  <div id="game">
+    <div id="status"></div>
+    <div id="players"></div>
+    <div id="table"></div>
+    <div id="hand"></div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    const playBtn = document.getElementById("playBtn");
+    const lobbyStatus = document.getElementById("lobbyStatus");
+    const gameDiv = document.getElementById("game");
+    const playersDiv = document.getElementById("players");
+    const tableDiv = document.getElementById("table");
+    const handDiv = document.getElementById("hand");
+    const statusDiv = document.getElementById("status");
+
+    let roomId = null;
+    let playerId = null;
+    let hand = [];
+    let trump = null;
+
+    // ---------- Play button ----------
+    playBtn.onclick = () => {
+      socket.emit("play");
+      playBtn.disabled = true;
+      lobbyStatus.textContent = "Ждем других игроков...";
+    };
+
+    // ---------- Waiting ----------
+    socket.on("waiting", data => {
+      lobbyStatus.textContent = `Ждем игроков: ${data.count}/${data.needed}`;
+    });
+
+    // ---------- Room joined ----------
+    socket.on("room_joined", data => {
+      roomId = data.roomId;
+      playerId = socket.id;
+      console.log("Joined room:", roomId, "as", playerId);
+    });
+
+    // ---------- Game started ----------
+    socket.on("game_started", () => {
+      lobbyStatus.style.display = "none";
+      gameDiv.style.display = "block";
+      statusDiv.textContent = "Игра началась!";
+      tableDiv.innerHTML = "";
+      handDiv.innerHTML = "";
+    });
+
+    // ---------- Ask round ----------
+    socket.on("ask_round", data => {
+      statusDiv.textContent = data.message;
+    });
+
+    // ---------- Round started ----------
+    socket.on("round_started", data => {
+      statusDiv.textContent = data.message;
+    });
+
+    // ---------- Receive cards ----------
+    socket.on("your_cards", data => {
+      hand = data.hand;
+      trump = data.trump;
+      renderHand();
+      renderStatus(`Туз: ${trump} ♠`);
+    });
+
+    // ---------- Card played ----------
+    socket.on("card_played", data => {
+      const cardEl = document.createElement("div");
+      cardEl.className = "card";
+      cardEl.textContent = data.card;
+      tableDiv.appendChild(cardEl);
+    });
+
+    // ---------- Trick winner ----------
+    socket.on("trick_winner", data => {
+      renderStatus(`Ход выиграл: ${data.winnerId}`);
+      tableDiv.innerHTML = "";
+    });
+
+    // ---------- Your turn ----------
+    socket.on("your_turn", data => {
+      renderStatus(data.message);
+    });
+
+    // ---------- Game ended ----------
+    socket.on("game_ended", data => {
+      renderStatus(`Игра окончена! Победитель: ${data.winnerId}`);
+      handDiv.innerHTML = "";
+      tableDiv.innerHTML = "";
+    });
+
+    // ---------- Render hand ----------
+    function renderHand() {
+      handDiv.innerHTML = "";
+      hand.forEach(card => {
+        const cardEl = document.createElement("div");
+        cardEl.className = "card";
+        cardEl.textContent = card;
+        cardEl.onclick = () => playCard(card);
+        handDiv.appendChild(cardEl);
+      });
+    }
+
+    function playCard(card) {
+      socket.emit("play_card", { roomId, card });
+      // карта өз қолынан өшіріледі, UI жаңартылады
+      hand = hand.filter(c => c !== card);
+      renderHand();
+    }
+
+    function renderStatus(text) {
+      statusDiv.textContent = text;
+    }
+  </script>
 </body>
 </html>
