@@ -1,153 +1,146 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>3 Card Game</title>
+  <title>Дурак Online</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #lobby, #round, #cards { margin-bottom: 20px; }
-    .card { display: inline-block; padding: 10px 20px; margin: 5px; border: 1px solid #000; cursor: pointer; }
-    .disabled { opacity: 0.5; cursor: not-allowed; }
-    #messages { margin-top: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #lobby, #room, #round { margin-top: 20px; }
+    .hand { display: flex; gap: 5px; margin-top: 10px; }
+    .card { padding: 10px 15px; border: 1px solid #000; border-radius: 5px; cursor: pointer; }
+    .card.disabled { opacity: 0.5; cursor: default; }
   </style>
 </head>
 <body>
-  <h1>3 Card Game</h1>
+  <h1>Дурак Online</h1>
+  <button id="playBtn">Играть</button>
 
-  <!-- Lobby -->
-  <div id="lobby">
-    <button id="playBtn">Ойнау</button>
-    <p id="waitingText"></p>
-  </div>
+  <div id="lobby"></div>
+  <div id="room"></div>
+  <div id="round"></div>
 
-  <!-- Round ask -->
-  <div id="round" style="display:none;">
-    <p id="roundMessage"></p>
-    <button id="yesBtn">Иә</button>
-    <button id="noBtn">Жоқ</button>
-  </div>
+  <script>
+    const socket = io();
 
-  <!-- Cards -->
-  <div id="cards" style="display:none;">
-    <p id="turnMessage"></p>
-    <div id="hand"></div>
-    <p id="trump"></p>
-  </div>
+    const playBtn = document.getElementById('playBtn');
+    const lobbyDiv = document.getElementById('lobby');
+    const roomDiv = document.getElementById('room');
+    const roundDiv = document.getElementById('round');
 
-  <!-- Spectator -->
-  <div id="spectator" style="display:none;">
-    <p>Сіз spectator болдыңыз, ойыншыны көресіз</p>
-    <p id="spectatorTrump"></p>
-  </div>
+    let myRoomId = null;
+    let myHand = [];
+    let activePlayers = [];
+    let spectators = [];
+    let currentTurn = null;
+    let trump = null;
 
-  <!-- Messages -->
-  <div id="messages"></div>
-
-<script>
-const socket = io();
-
-// ---------- Play button ----------
-const playBtn = document.getElementById("playBtn");
-playBtn.onclick = () => {
-  socket.emit("play");
-  playBtn.disabled = true;
-  document.getElementById("waitingText").innerText = "Lobby-ге қосылдыңыз, күтіңіз...";
-};
-
-// ---------- Waiting ----------
-socket.on("waiting", data => {
-  document.getElementById("waitingText").innerText = `Қазір lobby-де ${data.count} адам, кем дегенде ${data.needed} керек.`;
-});
-
-// ---------- Room joined ----------
-socket.on("room_joined", data => {
-  console.log("Room joined:", data);
-});
-
-// ---------- Game started ----------
-socket.on("game_started", data => {
-  console.log("Game started:", data);
-});
-
-// ---------- Ask round ----------
-socket.on("ask_round", data => {
-  document.getElementById("roundMessage").innerText = data.message;
-  document.getElementById("round").style.display = "block";
-});
-
-// ---------- Round buttons ----------
-document.getElementById("yesBtn").onclick = () => {
-  socket.emit("round_answer", { roomId: currentRoom, answer: true });
-  document.getElementById("round").style.display = "none";
-};
-document.getElementById("noBtn").onclick = () => {
-  socket.emit("round_answer", { roomId: currentRoom, answer: false });
-  document.getElementById("round").style.display = "none";
-};
-
-// ---------- Store current room ----------
-let currentRoom = null;
-socket.on("room_joined", data => {
-  currentRoom = data.roomId;
-});
-
-// ---------- Your cards ----------
-socket.on("your_cards", data => {
-  document.getElementById("cards").style.display = "block";
-  document.getElementById("hand").innerHTML = "";
-  data.hand.forEach(card => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerText = card;
-    div.onclick = () => {
-      if (!div.classList.contains("disabled")) {
-        socket.emit("play_card", { roomId: currentRoom, card });
-        div.classList.add("disabled");
-      }
+    // ---------- Играть батырмасы ----------
+    playBtn.onclick = () => {
+      socket.emit('play');
+      playBtn.disabled = true;
+      lobbyDiv.innerHTML = 'Ожидание других игроков...';
     };
-    document.getElementById("hand").appendChild(div);
-  });
-  document.getElementById("trump").innerText = "Trump: " + data.trump;
-});
 
-// ---------- Spectator ----------
-socket.on("spectator", data => {
-  document.getElementById("spectator").style.display = "block";
-  document.getElementById("spectatorTrump").innerText = "Trump: " + data.trump;
-});
+    // ---------- Room joined ----------
+    socket.on('room_joined', ({ roomId, players }) => {
+      myRoomId = roomId;
+      lobbyDiv.innerHTML = '';
+      roomDiv.innerHTML = `<h3>Комната: ${roomId}</h3>
+                           <p>Игроки: ${players.map(p => p.id).join(', ')}</p>`;
+    });
 
-// ---------- Turn ----------
-socket.on("your_turn", data => {
-  document.getElementById("turnMessage").innerText = data.message;
-});
+    // ---------- Раундқа сұрақ ----------
+    socket.on('ask_round', ({ message, players }) => {
+      roundDiv.innerHTML = `<p>${message}</p>`;
+      const yesBtn = document.createElement('button');
+      yesBtn.textContent = 'Да';
+      yesBtn.onclick = () => {
+        socket.emit('round_answer', { roomId: myRoomId, answer: true });
+        roundDiv.innerHTML = 'Вы участвуете в раунде, ждите начала...';
+      };
+      const noBtn = document.createElement('button');
+      noBtn.textContent = 'Нет';
+      noBtn.onclick = () => {
+        socket.emit('round_answer', { roomId: myRoomId, answer: false });
+        roundDiv.innerHTML = 'Вы наблюдаете за раундом';
+      };
+      roundDiv.appendChild(yesBtn);
+      roundDiv.appendChild(noBtn);
+    });
 
-// ---------- Card played ----------
-socket.on("card_played", data => {
-  const msg = document.createElement("p");
-  msg.innerText = `${data.playerId} ойнады: ${data.card}`;
-  document.getElementById("messages").appendChild(msg);
-});
+    // ---------- Раунд басталды ----------
+    socket.on('round_started', ({ message, activePlayers: ap, spectators: sp, bank, trump: t }) => {
+      activePlayers = ap;
+      spectators = sp;
+      trump = t;
+      roundDiv.innerHTML = `<p>${message}</p>
+                            <p>Банк: ${bank}</p>
+                            <p>Козырь: ${trump}</p>
+                            <div id="hand" class="hand"></div>`;
+    });
 
-// ---------- Trick winner ----------
-socket.on("trick_winner", data => {
-  const msg = document.createElement("p");
-  msg.innerText = `Trick жеңді: ${data.winnerId}`;
-  document.getElementById("messages").appendChild(msg);
-});
+    // ---------- Карта ойнау ----------
+    socket.on('your_turn', ({ message }) => {
+      currentTurn = true;
+      roundDiv.innerHTML += `<p><b>${message}</b></p>`;
+      renderHand();
+    });
 
-// ---------- Round ended ----------
-socket.on("round_ended", data => {
-  const msg = document.createElement("p");
-  msg.innerText = `Раунд аяқталды! Жеңімпаз: ${data.winnerId}, банк: ${data.bank}`;
-  document.getElementById("messages").appendChild(msg);
+    // ---------- Картаны көрсету ----------
+    socket.on('card_played', ({ playerId, card }) => {
+      roundDiv.innerHTML += `<p>${playerId} сыграл карту ${card}</p>`;
+      // Егер мен ойнаған карта болса — hand-дан шығару
+      const handDiv = document.getElementById('hand');
+      if (handDiv) {
+        const cardDiv = Array.from(handDiv.children).find(c => c.textContent === card);
+        if (cardDiv) cardDiv.classList.add('disabled');
+      }
+    });
 
-  // Баланстар жаңартылады
-  console.log("Balances:", data.balances);
+    // ---------- Трик жеңімпазы ----------
+    socket.on('trick_winner', ({ winnerId, tricksWon }) => {
+      roundDiv.innerHTML += `<p>Трик выиграл: ${winnerId}</p>`;
+    });
 
-  // Келесі раундқа дайындық
-  document.getElementById("cards").style.display = "none";
-});
-</script>
+    // ---------- Раунд аяқталды ----------
+    socket.on('round_ended', ({ winnerId, bank, balances }) => {
+      roundDiv.innerHTML += `<p>Раунд окончен! Победитель: ${winnerId}, банк: ${bank}</p>`;
+      roundDiv.innerHTML += `<p>Баланс игроков: ${balances.map(b => b.id + ': ' + b.balance).join(', ')}</p>`;
+      document.getElementById('hand').innerHTML = '';
+    });
+
+    // ---------- Ойыншының hand көрсету ----------
+    function renderHand() {
+      if (!myHand || myHand.length === 0) return;
+      const handDiv = document.getElementById('hand');
+      handDiv.innerHTML = '';
+      myHand.forEach(card => {
+        const cardDiv = document.createElement('div');
+        cardDiv.textContent = card;
+        cardDiv.className = 'card';
+        cardDiv.onclick = () => {
+          if (currentTurn) {
+            socket.emit('play_card', { roomId: myRoomId, card });
+            currentTurn = false;
+          }
+        };
+        handDiv.appendChild(cardDiv);
+      });
+    }
+
+    // ---------- Раунд басталғанда hand жаңарту ----------
+    socket.on('round_started', ({ activePlayers: ap }) => {
+      if (ap.includes(socket.id)) {
+        // hand серверден алынады
+        const room = {}; // frontend hand серверден келеді, бұл тек визуализация
+      }
+    });
+
+    // ---------- Lobby хабарламасы ----------
+    socket.on('waiting', ({ count, needed }) => {
+      lobbyDiv.innerHTML = `Ожидание игроков: ${count}/${needed}`;
+    });
+  </script>
 </body>
 </html>
