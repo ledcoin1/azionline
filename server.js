@@ -24,6 +24,42 @@ function getCardPower(rank) {
   return order.indexOf(rank);
 }
 
+function isValidMove(card, hand, turns, trump) {
+  // Егер бұл бірінші жүріс болса — бәріне рұқсат
+  if (turns.length === 0) {
+    return true;
+  }
+
+  const leadSuit = getCardSuit(turns[0].card);
+  const cardSuit = getCardSuit(card);
+  const trumpSuit = getCardSuit(trump);
+
+  // 1️⃣ Қолда leadSuit бар ма?
+  const hasLeadSuit = hand.some(
+    c => getCardSuit(c) === leadSuit
+  );
+
+  if (hasLeadSuit) {
+    // Бар болса — ОБЯЗАТЕЛЬНО соны жүру керек
+    return cardSuit === leadSuit;
+  }
+
+  // 2️⃣ LeadSuit жоқ → козырь бар ма?
+  const hasTrump = hand.some(
+    c => getCardSuit(c) === trumpSuit
+  );
+
+  if (hasTrump) {
+    // Бар болса — козырь жүру керек
+    return cardSuit === trumpSuit;
+  }
+
+  // 3️⃣ Ештеңе жоқ → кез келген карта
+  return true;
+}
+
+
+
 // кім жүрісті ұтты анықтайды
 function determineTrickWinner(turns, trump) {
   const trumpSuit = getCardSuit(trump);
@@ -87,257 +123,205 @@ function shuffle(deck) {
 
 // lobby — ойынды күтіп тұрған ойыншылар
 const lobby = [];
-
-// rooms — ашылған барлық комнаталар
 const rooms = {};
 
-// ================== SOCKET LOGIC ==================
 io.on("connection", (socket) => {
   console.log("🔗 User connected:", socket.id);
 
   // ---------- Играть батырмасы ----------
- socket.on("play", () => {
-  console.log("▶️ Play pressed:", socket.id);
+  socket.on("play", () => {
+    console.log("▶️ Play pressed:", socket.id);
 
-  // Егер lobby-де жоқ болса ғана қосамыз
-  if (!lobby.includes(socket.id)) {
-    lobby.push(socket.id);
-  }
+    if (!lobby.includes(socket.id)) lobby.push(socket.id);
 
-  // ----------2-5 адам ----------
-  if (lobby.length >= 2) {
-    const playerCount = Math.min(lobby.length, 5);
-    const playersIds = lobby.splice(0, playerCount);
-
-    // Уникальный room id
-    const roomId = "room_" + Date.now();
-
-    // ---------- ROOM ҚҰРУ ----------
-    rooms[roomId] = {
-      id: roomId,
-      state: "ready",
-      players: playersIds.map(id => ({
-        id: id,
-        balance: 1000,
-        status: "idle"
-      })),
-      turns: [],
-      tricksWon: {},
-      currentTurn: null,
-      round: {
-        activePlayers: [],
-        spectators: [],
-        bank: 0
+    // ---------- Бос room іздеу ----------
+    let roomToJoin = null;
+    for (let rId in rooms) {
+      const r = rooms[rId];
+      if (r.state === "playing" && r.players.length < 5) {
+        roomToJoin = r;
+        break;
       }
-    };
+    }
 
-    console.log("🏠 Room created:", roomId);
+    // ---------- Егер бос room жоқ → жаңа room ----------
+    if (!roomToJoin) {
+      const roomId = "room_" + Date.now();
+      const playerObj = { id: socket.id, balance: 1000, status: "idle", hand: [] };
+      rooms[roomId] = {
+        id: roomId,
+        state: "playing",
+        players: [playerObj],
+        turns: [],
+        tricksWon: {},
+        currentTurn: null,
+        round: { activePlayers: [], spectators: [], bank: 0 },
+        trump: null
+      };
+      roomToJoin = rooms[roomId];
+      console.log("🏠 New room created:", roomId);
+    } else {
+      const playerObj = { id: socket.id, balance: 1000, status: "idle", hand: [] };
+      roomToJoin.players.push(playerObj);
+      console.log("➕ Player added to existing room:", roomToJoin.id);
+    }
 
-    // ---------- ОЙЫНШЫЛАРДЫ ROOM-ҒА ҚОСУ ----------
-    playersIds.forEach(id => {
-      const playerSocket = io.sockets.sockets.get(id);
-      if (playerSocket) {
-        playerSocket.join(roomId);
-        playerSocket.emit("room_joined", {
-          roomId,
-          players: rooms[roomId].players
-        });
-      }
-    });
+    socket.join(roomToJoin.id);
+    socket.emit("room_joined", { roomId: roomToJoin.id, players: roomToJoin.players });
 
-    // ---------- 1 СЕКУНДТАН КЕЙІН РАУНД СҰРАҒЫ ----------
-    setTimeout(() => {
-      if (!rooms[roomId]) return;
+    // ---------- Раундқа сұрақ ----------
+    askRound(roomToJoin.id);
+  });
 
-      // Room күйін ауыстырамыз
-      rooms[roomId].state = "playing";
-
-      // Клиенттерге: ойын басталды
-      io.to(roomId).emit("game_started", { roomId });
-      console.log("🎮 Game started:", roomId);
-
-      // ---------- Раундқа дайындық сұрағы ----------
-      const FIXED_BET = 100;
-      io.to(roomId).emit("ask_round", {
-        message: `1 раунд ойнаймыз ба? Ставка: ${FIXED_BET}`
-      });
-
-      console.log("❓ Round request sent with fixed bet:", roomId);
-
-    }, 1000);
-
-  } else {
-    // ---------- ӘЛІ 2 АДАМ ЖОҚ ----------
-    socket.emit("waiting", {
-      count: lobby.length,
-      needed: 2
-    });
-  }
-});
-
- 
- 
- 
-
-    // ---------- ROUND ANSWER ----------
+  // ---------- ROUND ANSWER ----------
   socket.on("round_answer", ({ roomId, answer }) => {
-  const room = rooms[roomId];
-  if (!room) return;
+    const room = rooms[roomId];
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
 
-  const player = room.players.find(p => p.id === socket.id);
-  if (!player) return;
+    const FIXED_BET = 100;
 
-  const FIXED_BET = 100;
+    if (answer) {
+      room.round.activePlayers.push(socket.id);
+      player.balance -= FIXED_BET;
+      room.round.bank += FIXED_BET;
+    } else {
+      room.round.spectators.push(socket.id);
+    }
 
-  // ---------- Иә / жоқ жауаптарды есептеу ----------
-  if (answer) {
-    // Раундқа кіргендер
-    room.round.activePlayers.push(socket.id);
+    console.log(`📝 Answer from ${socket.id} in ${roomId}: ${answer}`);
 
-    // Баланстан ставка блоктау
-    player.balance -= FIXED_BET;
-    room.round.bank += FIXED_BET;
-  } else {
-    // Spectator
-    room.round.spectators.push(socket.id);
-  }
-
-  console.log(`📝 Answer from ${socket.id} in ${roomId}: ${answer}`);
-
-  // ---------- Раунд бастау шартын тексеру ----------
-  if (room.round.activePlayers.length >= 2) {
-    // барлығы дайын болды ма тексеру — барлығы activePlayers жауап берді деп қабылдаймыз
     const totalResponses = room.round.activePlayers.length + room.round.spectators.length;
-    const totalPlayers = room.players.length;
-
-    if (totalResponses === totalPlayers || room.round.activePlayers.length === totalPlayers) {
-      // ---------- Раунд басталады ----------
-      io.to(roomId).emit("round_started", {
-        message: "Раунд басталды!",
-        bank: room.round.bank,
-        activePlayers: room.round.activePlayers,
-        spectators: room.round.spectators
-      });
-
-      console.log("🎮 Round started in room:", roomId);
-
-      // ---------- Карталарды тарату ----------
-      const deck = createDeck();
-      shuffle(deck);
-      room.deck = deck;
-
-      // Трамп
-      room.trump = room.deck[room.deck.length - 1];
-
-      // Карталарды activePlayers-қа беру
-      room.players.forEach(p => {
-        if (room.round.activePlayers.includes(p.id)) {
-          p.hand = room.deck.splice(0, 3);
-          io.to(p.id).emit("your_cards", {
-            hand: p.hand,
-            trump: room.trump
-          });
-        } else {
-          // Spectator көре алады, бірақ картасы жоқ
-          io.to(p.id).emit("spectator", {
-            message: "Сіз spectator болдыңыз",
-            trump: room.trump
-          });
-        }
-      });
-
-      // ---------- Random first turn ----------
-      const randomIndex = Math.floor(Math.random() * room.round.activePlayers.length);
-      const firstPlayerId = room.round.activePlayers[randomIndex];
-      room.currentTurn = firstPlayerId;
-
-      io.to(firstPlayerId).emit("your_turn", {
-        message: "Сіз бірінші жүресіз"
-      });
-
-      console.log("⚡ First turn:", firstPlayerId);
+    if (totalResponses === room.players.length || room.round.activePlayers.length === room.players.length) {
+      startRound(roomId);
     }
-  }
+  });
+
+  // ---------- PLAY CARD ----------
+  socket.on("play_card", ({ roomId, card }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    if (!room.round.activePlayers.includes(socket.id)) return;
+    if (room.currentTurn !== socket.id) return;
+
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player) return;
+
+    const index = player.hand.indexOf(card);
+    if (index === -1) return;
+
+    if (!isValidMove(card, player.hand, room.turns, room.trump)) {
+      socket.emit("error", "Міндетті масть немесе козырь бұзылды!");
+      return;
+    }
+
+    player.hand.splice(index, 1);
+    room.turns.push({ playerId: socket.id, card });
+    io.to(roomId).emit("card_played", { playerId: socket.id, card });
+
+    if (room.turns.length === room.round.activePlayers.length) {
+      const winnerId = determineTrickWinner(room.turns, room.trump);
+      room.tricksWon[winnerId] = (room.tricksWon[winnerId] || 0) + 1;
+      io.to(roomId).emit("trick_winner", { winnerId, tricksWon: room.tricksWon });
+
+      room.currentTurn = winnerId;
+      room.turns = [];
+      io.to(winnerId).emit("your_turn", { message: "Сіз жүрісті ұттыңыз, қайта жүресіз" });
+
+      if (room.tricksWon[winnerId] >= 2) {
+        const winner = room.players.find(p => p.id === winnerId);
+        winner.balance += room.round.bank;
+
+        io.to(roomId).emit("round_ended", {
+          winnerId,
+          bank: room.round.bank,
+          balances: room.players.map(p => ({ id: p.id, balance: p.balance }))
+        });
+
+        console.log(`🎉 Round over! Winner: ${winnerId}, bank: ${room.round.bank}`);
+
+        // ---------- Раунд жабу ----------
+        room.turns = [];
+        room.tricksWon = {};
+        room.currentTurn = null;
+        room.round = { activePlayers: [], spectators: [], bank: 0 };
+
+        // ---------- Келесі раундқа жаңа сұрақ ----------
+        askRound(roomId);
+      }
+
+    } else {
+      const currentIndex = room.round.activePlayers.indexOf(socket.id);
+      const nextIndex = (currentIndex + 1) % room.round.activePlayers.length;
+      const nextPlayerId = room.round.activePlayers[nextIndex];
+      room.currentTurn = nextPlayerId;
+      io.to(nextPlayerId).emit("your_turn", { message: "Сіздің кезегіңіз" });
+    }
+  });
 });
 
-
- // ================= PLAY CARD =================
-socket.on("play_card", ({ roomId, card }) => {
+// ---------- Раунд сұрағы функциясы ----------
+function askRound(roomId) {
   const room = rooms[roomId];
   if (!room) return;
 
-  // Тек activePlayers картасын ойнай алады
-  if (!room.round.activePlayers.includes(socket.id)) return;
-  if (room.currentTurn !== socket.id) return;
+  room.round.activePlayers = [];
+  room.round.spectators = [];
 
-  const player = room.players.find(p => p.id === socket.id);
-  if (!player) return;
+  io.to(roomId).emit("ask_round", {
+    message: `Раундқа қатысасыз ба?`,
+    players: room.players.map(p => p.id)
+  });
+}
 
-  // Карта қолында бар ма?
-  const index = player.hand.indexOf(card);
-  if (index === -1) return;
+// ---------- Раунд бастау ----------
+// ---------- Раунд бастау ----------
+function startRound(roomId) {
+  const room = rooms[roomId];
+  if (!room) return;
 
-  // Карта ойнау
-  player.hand.splice(index, 1);
-
-  // Жүріске қосу
-  room.turns.push({ playerId: socket.id, card });
-  console.log("🃏 Card played:", socket.id, card);
-
-  // Барлығына көрсету
-  io.to(roomId).emit("card_played", { playerId: socket.id, card });
-
-  // ---------- ALL ACTIVE PLAYERS CARD CHECK ----------
-  if (room.turns.length === room.round.activePlayers.length) {
-    // Жүріс жеңімпазын анықтау
-    const winnerId = determineTrickWinner(room.turns, room.trump);
-    console.log("🏆 Trick winner:", winnerId);
-
-    // Трик санын санау
-    room.tricksWon[winnerId] = (room.tricksWon[winnerId] || 0) + 1;
-
-    io.to(roomId).emit("trick_winner", {
-      winnerId,
-      tricksWon: room.tricksWon
-    });
-
-    // Келесі жүріс — ұтқан ойыншыдан
-    room.currentTurn = winnerId;
-    room.turns = [];
-
-    io.to(winnerId).emit("your_turn", {
-      message: "Сіз жүрісті ұттыңыз, қайта жүресіз"
-    });
-
-    // ---------- CHECK ROUND WINNER ----------
-    if (room.tricksWon[winnerId] >= 2) {
-      const winner = room.players.find(p => p.id === winnerId);
-      winner.balance += room.round.bank;
-
-      io.to(roomId).emit("round_ended", {
-        winnerId,
-        bank: room.round.bank,
-        balances: room.players.map(p => ({ id: p.id, balance: p.balance }))
-      });
-
-      console.log(`🎉 Round over! Winner: ${winnerId}, bank: ${room.round.bank}`);
-
-      // Раунд жабу
-      room.turns = [];
-      room.tricksWon = {};
-      room.currentTurn = null;
-      room.round = { activePlayers: [], spectators: [], bank: 0 };
-    }
-  } else {
-    // ---------- NEXT TURN ----------
-    const currentIndex = room.round.activePlayers.indexOf(socket.id);
-    const nextIndex = (currentIndex + 1) % room.round.activePlayers.length;
-    const nextPlayerId = room.round.activePlayers[nextIndex];
-
-    room.currentTurn = nextPlayerId;
-    io.to(nextPlayerId).emit("your_turn", { message: "Сіздің кезегіңіз" });
+  // Егер deck жоқ болса → жаңа колода жасаймыз
+  if (!room.deck || room.deck.length < room.round.activePlayers.length * 3) {
+    room.deck = createDeck();
+    shuffle(room.deck);
+    // Соңғы картаны козырь ретінде белгілейміз
+    room.trump = room.deck[room.deck.length - 1];
   }
-});
+
+  // Тек activePlayers картасын тарату
+  room.players.forEach(p => {
+    if (room.round.activePlayers.includes(p.id)) {
+      p.hand = dealHand(room.deck, 3); // Әр ойыншыға 3 карта
+    }
+  });
+
+  // Бастапқы жүріс бірінші ойыншыдан
+  room.currentTurn = room.round.activePlayers[0];
+
+  // Клиенттерге хабарлау
+  io.to(roomId).emit("round_started", {
+    message: "Раунд басталды!",
+    bank: room.round.bank,
+    activePlayers: room.round.activePlayers,
+    spectators: room.round.spectators,
+    trump: room.trump // козырь хабарлау
+  });
+
+  console.log(`🎮 Round started in room: ${roomId}, trump: ${room.trump}`);
+}
+
+// ---------- Колодадан картаны тарату функциясы ----------
+function dealHand(deck, handSize = 3) {
+  const hand = [];
+  for (let i = 0; i < handSize; i++) {
+    if (deck.length === 0) break;
+    hand.push(deck.pop());
+  }
+  return hand;
+}
+
 
 
   socket.on("disconnect", () => {
@@ -383,7 +367,7 @@ socket.on("play_card", ({ roomId, card }) => {
     }
   }
 });
-});
+
   
 
 // ================== SERVER START ==================
