@@ -2,32 +2,50 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram Lobby</title>
+  <title>Telegram Game Lobby</title>
 
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
       background: #0f172a;
       color: #e5e7eb;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
     }
 
     .card {
       background: #020617;
-      padding: 20px 30px;
-      border-radius: 12px;
+      border-radius: 14px;
+      padding: 24px;
+      width: 320px;
       text-align: center;
-      width: 280px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      box-shadow: 0 0 25px rgba(0,0,0,0.6);
+    }
+
+    h2 {
+      margin-top: 0;
     }
 
     .status {
-      margin-top: 10px;
-      color: #22c55e;
+      margin-top: 12px;
       font-weight: bold;
+      color: #22c55e;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 12px;
+    }
+
+    li {
+      background: #020617;
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -47,26 +65,54 @@
     const app = document.getElementById("app");
     const socket = io();
 
+    // Telegram WebApp
     const tg = window.Telegram.WebApp;
     tg.ready();
 
-    // Telegram user алу
+    // Telegram user
     const user = tg.initDataUnsafe.user;
 
     if (!user) {
       app.innerHTML = "<h3>❌ Telegram user табылмады</h3>";
     } else {
-      // серверге жіберу
+      // Серверге жібереміз
       socket.emit("telegram_user", user);
+
+      // Lobby UI
+      showLobby(user);
     }
 
-    // серверден жауап
-    socket.on("login_success", (player) => {
+    // ================== UI FUNCTIONS ==================
+
+    function showLobby(user) {
       app.innerHTML = `
-        <h2>Қош келдің, ${player.first_name} 👋</h2>
-        <p>@${player.username || "username жоқ"}</p>
-        <div class="status">🟢 Lobby-де күтудесіз</div>
+        <h2>Қош келдің, ${user.first_name} 👋</h2>
+        <p>@${user.username || "username жоқ"}</p>
+        <div class="status">🟢 Lobby-де күтіп тұрсыз</div>
+        <p style="margin-top:10px;">Қарсылас күтілуде...</p>
       `;
+    }
+
+    function showRoom(data) {
+      app.innerHTML = `
+        <h2>🏠 ${data.roomId}</h2>
+        <p>Ойыншылар:</p>
+        <ul>
+          ${data.players.map(p => `<li>${p.first_name}</li>`).join("")}
+        </ul>
+        <p style="margin-top:12px;">Ойын басталуда...</p>
+      `;
+    }
+
+    // ================== SOCKET EVENTS ==================
+
+    socket.on("login_success", (player) => {
+      console.log("Lobby-де:", player);
+    });
+
+    socket.on("room_joined", (data) => {
+      console.log("Room қосылды:", data);
+      showRoom(data);
     });
 
     socket.on("disconnect", () => {
