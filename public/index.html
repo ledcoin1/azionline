@@ -25,11 +25,8 @@
     }
 
     h2 { margin-top: 0; }
-
     .status { margin-top: 12px; font-weight: bold; color: #22c55e; }
-
     ul { list-style: none; padding: 0; margin-top: 12px; }
-
     li {
       background: #020617;
       margin: 6px 0;
@@ -55,7 +52,9 @@
 </head>
 <body>
 
-<div class="card" id="app"><h2>Қосылуда...</h2></div>
+<div class="card" id="app">
+  <h2>Қосылуда...</h2>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -66,10 +65,15 @@
   tg.ready();
 
   const user = tg.initDataUnsafe.user;
-  if (!user) { app.innerHTML = "<h3>❌ Telegram user табылмады</h3>"; }
 
-  // ================== UI ==================
+  if (!user) {
+    app.innerHTML = "<h3>❌ Telegram user табылмады</h3>";
+  }
+
   let mySocketId = null;
+  let clientRooms = {};
+
+  // ================== UI FUNCTIONS ==================
 
   function showLobby(players) {
     app.innerHTML = `
@@ -85,8 +89,13 @@
       </ul>
       <p>2-5 адам жиналғанда room ашылады...</p>
     `;
+
     const playBtn = document.getElementById("playBtn");
-    if (playBtn) playBtn.addEventListener("click", ()=>socket.emit("join_room"));
+    if (playBtn) {
+      playBtn.addEventListener("click", () => {
+        socket.emit("join_room");
+      });
+    }
   }
 
   function showRoom(data) {
@@ -101,10 +110,16 @@
   }
 
   // ================== SOCKET EVENTS ==================
-  socket.on("login_success", player => { mySocketId = player.socketId; });
 
-  let clientRooms = {};
-  socket.on("room_joined", data => { clientRooms[data.roomId] = data; showRoom(data); });
+  socket.on("login_success", player => { 
+    mySocketId = player.socketId; 
+    console.log("Login success:", player);
+  });
+
+  socket.on("room_joined", data => {
+    clientRooms[data.roomId] = data;
+    showRoom(data);
+  });
 
   socket.on("lobby_update", players => {
     const updatedPlayers = players.map(p => ({
@@ -114,9 +129,13 @@
     showLobby(updatedPlayers);
   });
 
-  socket.on("disconnect", () => { app.innerHTML="<h3>❌ Сервермен байланыс үзілді</h3>"; });
+  socket.on("disconnect", () => {
+    app.innerHTML = "<h3>❌ Сервермен байланыс үзілді</h3>";
+  });
 
-  if(user) socket.emit("telegram_user", user);
+  if (user) {
+    socket.emit("telegram_user", user);
+  }
 </script>
 
 </body>
