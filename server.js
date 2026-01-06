@@ -83,6 +83,9 @@ io.on("connection", (socket) => {
         players: rooms[targetRoomId].players
       });
 
+      // Бар room-дағы ойыншыларға сұрақ жіберу
+      askReady(targetRoomId);
+
     } else if (lobbyIds.length >= 2) {
       // 3️⃣ Жаңа room жасау
       const roomId = "room-" + roomCounter++;
@@ -91,7 +94,8 @@ io.on("connection", (socket) => {
 
       rooms[roomId] = {
         id: roomId,
-        players: [p1, p2]
+        players: [p1, p2],
+        round: 1  // алғашқы раунд
       };
 
       // Lobby-ден өшіру
@@ -109,12 +113,30 @@ io.on("connection", (socket) => {
         players: rooms[roomId].players
       });
 
+      // Жаңа room-дағы ойыншыларға сұрақ жіберу
+      askReady(roomId);
+
       // 3-ші адамға шақыру
       if (socket.id !== p1.socketId && socket.id !== p2.socketId) {
         assignToRoom(socket);
       }
     }
   }
+
+  // ================== 1-РАУНД СҰРАҚ ФУНКЦИЯСЫ ==================
+  function askReady(roomId) {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    io.to(roomId).emit("round_question", {
+      round: room.round,
+      question: "Дайынсың ба?",
+      players: room.players
+    });
+
+    console.log(`🏁 Room ${roomId}: Раунд ${room.round} - "Дайынсың ба?" сұрағы жіберілді`);
+  }
+
 });
 
 // ================== START SERVER ==================
