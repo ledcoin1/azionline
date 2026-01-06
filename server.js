@@ -34,7 +34,6 @@ io.on("connection", (socket) => {
 
     socket.emit("login_success", lobby[socket.id]);
 
-    // Lobby live жаңарту
     broadcastLobby();
   });
 
@@ -63,7 +62,6 @@ io.on("connection", (socket) => {
       }
     }
 
-    // Lobby live жаңарту
     broadcastLobby();
   });
 
@@ -140,7 +138,6 @@ io.on("connection", (socket) => {
       }
     }
   }
-
 });
 
 // ================== START SERVER ==================
