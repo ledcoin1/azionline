@@ -2,38 +2,77 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8" />
-  <title>Telegram Game</title>
+  <title>Telegram Lobby</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: #020617;
+      padding: 20px 30px;
+      border-radius: 12px;
+      text-align: center;
+      width: 280px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .status {
+      margin-top: 10px;
+      color: #22c55e;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <h2>Telegram арқылы кіру...</h2>
 
+  <div class="card" id="app">
+    <h2>Қосылуда...</h2>
+  </div>
+
+  <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
+
+  <!-- Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <script>
+    const app = document.getElementById("app");
     const socket = io();
 
     const tg = window.Telegram.WebApp;
     tg.ready();
 
-    // Telegram пайдаланушысы
+    // Telegram user алу
     const user = tg.initDataUnsafe.user;
 
-    if (user) {
-      console.log("Telegram user:", user);
-
-      // серверге жібереміз
-      socket.emit("telegram_user", user);
+    if (!user) {
+      app.innerHTML = "<h3>❌ Telegram user табылмады</h3>";
     } else {
-      alert("Telegram user табылмады");
+      // серверге жіберу
+      socket.emit("telegram_user", user);
     }
 
+    // серверден жауап
     socket.on("login_success", (player) => {
-      document.body.innerHTML = `
+      app.innerHTML = `
         <h2>Қош келдің, ${player.first_name} 👋</h2>
         <p>@${player.username || "username жоқ"}</p>
+        <div class="status">🟢 Lobby-де күтудесіз</div>
       `;
     });
+
+    socket.on("disconnect", () => {
+      app.innerHTML = "<h3>❌ Сервермен байланыс үзілді</h3>";
+    });
   </script>
+
 </body>
 </html>
