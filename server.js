@@ -11,31 +11,33 @@ const io = new Server(server);
 // public/index.html үшін
 app.use(express.static("public"));
 
-// ================== PLAYERS STORAGE ==================
-const players = {}; 
-// { socketId: { id, username, first_name } }
+// ================== STORAGE ==================
+const lobby = {};   // ойынды күтетіндер
+const rooms = {};   // (кейін) ойын ішіндегілер
 
 // ================== SOCKET.IO ==================
 io.on("connection", (socket) => {
   console.log("🔌 Қосылды:", socket.id);
 
-  // Telegram-нан келген ойыншы деректерін қабылдаймыз
+  // Telegram арқылы кірген ойыншы
   socket.on("telegram_user", (user) => {
-    players[socket.id] = {
+    lobby[socket.id] = {
+      socketId: socket.id,
       id: user.id,
       username: user.username,
       first_name: user.first_name,
+      status: "lobby",
     };
 
-    console.log("👤 Ойыншы кірді:", players[socket.id]);
+    console.log("🟢 Lobby-ге кірді:", lobby[socket.id]);
 
-    // клиентке растау жібереміз
-    socket.emit("login_success", players[socket.id]);
+    socket.emit("login_success", lobby[socket.id]);
   });
 
+  // Ойыншы шықса
   socket.on("disconnect", () => {
     console.log("❌ Шықты:", socket.id);
-    delete players[socket.id];
+    delete lobby[socket.id];
   });
 });
 
