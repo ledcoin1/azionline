@@ -46,17 +46,30 @@
       margin: 6px 0;
       padding: 8px;
       border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    button {
+      background: #38bdf8;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      color: #000;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .player-me {
+      color: #facc15;
+      font-weight: bold;
     }
 
     .lobby-header {
       font-weight: bold;
       margin-top: 10px;
       color: #38bdf8;
-    }
-
-    .player-me {
-      color: #facc15;
-      font-weight: bold;
     }
   </style>
 </head>
@@ -79,69 +92,70 @@
     const tg = window.Telegram.WebApp;
     tg.ready();
 
-    // Telegram user
     const user = tg.initDataUnsafe.user;
 
     if (!user) {
       app.innerHTML = "<h3>❌ Telegram user табылмады</h3>";
     } else {
-      // Серверге жіберу
       socket.emit("telegram_user", user);
-
-      // Lobby UI бастапқы
-      showLobby([user]);
+      mySocketId = null;
+      showLobby([{ ...user, socketId: null }]); // бастапқы
     }
 
-    // ================== UI FUNCTIONS ==================
-
+    // ================== UI ==================
     let mySocketId = null;
 
-    // Lobby көрсету
     function showLobby(players) {
       app.innerHTML = `
         <h2>🟢 Lobby</h2>
         <div class="status">Күтіп тұрған ойыншылар:</div>
         <ul>
-          ${players.map(p => `<li class="${p.id===user.id?'player-me':''}">${p.first_name} ${p.id===user.id?'(сіз)': ''}</li>`).join("")}
+          ${players.map(p => `
+            <li class="${p.id === user.id ? 'player-me' : ''}">
+              ${p.first_name} ${p.id === user.id ? '(сіз)' : ''}
+              ${p.id === user.id ? '<button id="playBtn">Играть</button>' : ''}
+            </li>
+          `).join("")}
         </ul>
         <p>2-5 адам жиналғанда room ашылады...</p>
       `;
+
+      const playBtn = document.getElementById("playBtn");
+      if (playBtn) {
+        playBtn.addEventListener("click", () => {
+          socket.emit("join_room");
+        });
+      }
     }
 
-    // Room UI
     function showRoom(data) {
       app.innerHTML = `
         <h2>🏠 ${data.roomId}</h2>
         <p>Ойыншылар:</p>
         <ul>
-          ${data.players.map(p => `<li class="${p.id===user.id?'player-me':''}">${p.first_name} ${p.id===user.id?'(сіз)': ''}</li>`).join("")}
+          ${data.players.map(p => `<li class="${p.id === user.id ? 'player-me' : ''}">${p.first_name} ${p.id === user.id ? '(сіз)' : ''}</li>`).join("")}
         </ul>
         <p style="margin-top:12px;">Ойын басталуда...</p>
       `;
     }
 
     // ================== SOCKET EVENTS ==================
-
     socket.on("login_success", (player) => {
       console.log("Login success:", player);
       mySocketId = player.socketId;
     });
 
-    // Room-ға қосылу немесе жаңарту
     socket.on("room_joined", (data) => {
       console.log("Room жаңартылды:", data);
       showRoom(data);
     });
 
-    // Disconnect
-    socket.on("disconnect", () => {
-      app.innerHTML = "<h3>❌ Сервермен байланыс үзілді</h3>";
-    });
-
-    // Lobby-дегі өзгерістерді көрсету
-    // (Мысалы кейін, егер сервер lobby-ді broadcast етсе)
     socket.on("lobby_update", (players) => {
       showLobby(players);
+    });
+
+    socket.on("disconnect", () => {
+      app.innerHTML = "<h3>❌ Сервермен байланыс үзілді</h3>";
     });
   </script>
 
