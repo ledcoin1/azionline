@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="kk">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Telegram Game Lobby</title>
-
   <style>
     body {
       margin: 0;
@@ -20,7 +19,7 @@
       background: #020617;
       border-radius: 14px;
       padding: 24px;
-      width: 360px;
+      width: 380px;
       text-align: center;
       box-shadow: 0 0 25px rgba(0,0,0,0.6);
     }
@@ -65,99 +64,115 @@
       color: #facc15;
       font-weight: bold;
     }
-
-    .lobby-header {
-      font-weight: bold;
-      margin-top: 10px;
-      color: #38bdf8;
-    }
   </style>
 </head>
 <body>
 
-  <div class="card" id="app">
-    <h2>Қосылуда...</h2>
-  </div>
+<div class="card" id="app">
+  <h2>Қосылуда...</h2>
+</div>
 
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
+<!-- Socket.IO -->
+<script src="/socket.io/socket.io.js"></script>
 
-  <!-- Telegram WebApp -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Telegram WebApp -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <script>
-    const app = document.getElementById("app");
-    const socket = io();
+<script>
+  const app = document.getElementById("app");
+  const socket = io();
 
-    const tg = window.Telegram.WebApp;
-    tg.ready();
+  const tg = window.Telegram.WebApp;
+  tg.ready();
 
-    const user = tg.initDataUnsafe.user;
+  const user = tg.initDataUnsafe.user;
 
-    if (!user) {
-      app.innerHTML = "<h3>❌ Telegram user табылмады</h3>";
-    } else {
-      socket.emit("telegram_user", user);
-      mySocketId = null;
-      showLobby([{ ...user, socketId: null }]); // бастапқы
+  if (!user) {
+    app.innerHTML = "<h3>❌ Telegram user табылмады</h3>";
+  } else {
+    // Серверге Telegram user жіберу
+    socket.emit("telegram_user", user);
+    mySocketId = null;
+  }
+
+  let mySocketId = null;
+
+  // ================== UI FUNCTIONS ==================
+
+  // Lobby көрсету
+  function showLobby(players) {
+    app.innerHTML = `
+      <h2>🟢 Lobby</h2>
+      <div class="status">Күтіп тұрған ойыншылар:</div>
+      <ul>
+        ${players.map(p => `
+          <li class="${p.id === user.id ? 'player-me' : ''}">
+            ${p.first_name} ${p.id === user.id ? '(сіз)' : ''}
+            ${p.id === user.id && !p.inRoom ? '<button id="playBtn">Играть</button>' : ''}
+          </li>
+        `).join("")}
+      </ul>
+      <p>2-5 адам жиналғанда room ашылады...</p>
+    `;
+
+    const playBtn = document.getElementById("playBtn");
+    if (playBtn) {
+      playBtn.addEventListener("click", () => {
+        socket.emit("join_room");
+      });
     }
+  }
 
-    // ================== UI ==================
-    let mySocketId = null;
+  // Room UI
+  function showRoom(data) {
+    app.innerHTML = `
+      <h2>🏠 ${data.roomId}</h2>
+      <p>Ойыншылар:</p>
+      <ul>
+        ${data.players.map(p => `<li class="${p.id === user.id ? 'player-me' : ''}">${p.first_name} ${p.id === user.id ? '(сіз)' : ''}</li>`).join("")}
+      </ul>
+      <p style="margin-top:12px;">Ойын басталуда...</p>
+    `;
+  }
 
-    function showLobby(players) {
-      app.innerHTML = `
-        <h2>🟢 Lobby</h2>
-        <div class="status">Күтіп тұрған ойыншылар:</div>
-        <ul>
-          ${players.map(p => `
-            <li class="${p.id === user.id ? 'player-me' : ''}">
-              ${p.first_name} ${p.id === user.id ? '(сіз)' : ''}
-              ${p.id === user.id ? '<button id="playBtn">Играть</button>' : ''}
-            </li>
-          `).join("")}
-        </ul>
-        <p>2-5 адам жиналғанда room ашылады...</p>
-      `;
+  // ================== SOCKET EVENTS ==================
 
-      const playBtn = document.getElementById("playBtn");
-      if (playBtn) {
-        playBtn.addEventListener("click", () => {
-          socket.emit("join_room");
-        });
-      }
-    }
+  // Серверден login success
+  socket.on("login_success", (player) => {
+    console.log("Login success:", player);
+    mySocketId = player.socketId;
+  });
 
-    function showRoom(data) {
-      app.innerHTML = `
-        <h2>🏠 ${data.roomId}</h2>
-        <p>Ойыншылар:</p>
-        <ul>
-          ${data.players.map(p => `<li class="${p.id === user.id ? 'player-me' : ''}">${p.first_name} ${p.id === user.id ? '(сіз)' : ''}</li>`).join("")}
-        </ul>
-        <p style="margin-top:12px;">Ойын басталуда...</p>
-      `;
-    }
+  // Room жаңарту
+  socket.on("room_joined", (data) => {
+    console.log("Room жаңартылды:", data);
+    showRoom(data);
+  });
 
-    // ================== SOCKET EVENTS ==================
-    socket.on("login_success", (player) => {
-      console.log("Login success:", player);
-      mySocketId = player.socketId;
-    });
+  // Lobby live жаңарту
+  socket.on("lobby_update", (players) => {
+    // Lobby-де кім room-ға кіргенін көрсету үшін inRoom қосу
+    const updatedPlayers = players.map(p => ({
+      ...p,
+      inRoom: Object.values(dataRooms()).some(r => r.players.some(rp => rp.socketId === p.socketId))
+    }));
+    showLobby(updatedPlayers);
+  });
 
-    socket.on("room_joined", (data) => {
-      console.log("Room жаңартылды:", data);
-      showRoom(data);
-    });
+  // Disconnect
+  socket.on("disconnect", () => {
+    app.innerHTML = "<h3>❌ Сервермен байланыс үзілді</h3>";
+  });
 
-    socket.on("lobby_update", (players) => {
-      showLobby(players);
-    });
+  // ================== HELPER ==================
+  // Клиентте room-дарды сақтау (қысқа кешендік функция)
+  let clientRooms = {};
+  function dataRooms() { return clientRooms; }
+  socket.on("room_joined", (data) => {
+    clientRooms[data.roomId] = data;
+  });
 
-    socket.on("disconnect", () => {
-      app.innerHTML = "<h3>❌ Сервермен байланыс үзілді</h3>";
-    });
-  </script>
+</script>
 
 </body>
 </html>
