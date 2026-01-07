@@ -2,6 +2,8 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const mongoose = require("mongoose");
+require("dotenv").config(); // .env файлын оқиды
 
 // ================== APP / SERVER ==================
 const app = express();
@@ -10,137 +12,77 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// ================== STORAGE ==================
-const lobby = {};
-const rooms = {};
-let roomCounter = 1;
-const ROOM_MAX = 5; // максималды ойыншы саны room-да
+// ================== PORT ==================
+const PORT = process.env.PORT || 3000;
+
+// ================== MONGODB ==================
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("🟢 MongoDB connected"))
+  .catch(err => console.error("🔴 MongoDB connection error:", err));
+
+// ================== PLAYER SCHEMA ==================
+const playerSchema = new mongoose.Schema({
+  telegramId: { type: String, unique: true }, // Telegram ID болашақта қажет
+  username: String,
+  firstName: String,
+  balance: { type: Number, default: 0 }, // Әр ойыншының балансы
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Player = mongoose.model("Player", playerSchema);
 
 // ================== SOCKET.IO ==================
 io.on("connection", (socket) => {
-  console.log("🔌 Қосылды:", socket.id);
+  console.log("🟢 User connected:", socket.id);
 
-  socket.on("telegram_user", (user) => {
-    // Lobby-ге қосу
-    lobby[socket.id] = {
-      socketId: socket.id,
-      id: user.id,
-      username: user.username,
-      first_name: user.first_name,
-      status: "lobby",
-    };
+  // Telegram арқылы auth немесе тест үшін қолмен жіберуге болады
+  socket.on("telegram_auth", async (user) => {
+    /*
+      user = {
+        id,         // Telegram ID
+        username,
+        first_name
+      }
+    */
 
-    console.log("🟢 Lobby:", Object.keys(lobby).length);
+    try {
+      let player = await Player.findOne({ telegramId: user.id });
 
-    socket.emit("login_success", lobby[socket.id]);
+      if (!player) {
+        // 🆕 Жаңа ойыншы жасау
+        player = await Player.create({
+          telegramId: user.id,
+          username: user.username,
+          firstName: user.first_name,
+          balance: 0
+        });
+        console.log("🆕 New player created:", user.id);
+      } else {
+        console.log("♻ Existing player:", user.id);
+      }
 
-    // Room жасау / қосу
-    assignToRoom(socket);
+      // Socket-ке player мәліметін жіберу
+      socket.playerId = player._id;
+      socket.emit("player_data", {
+        id: player._id,
+        balance: player.balance,
+        username: player.username
+      });
+
+    } catch (err) {
+      console.error("🔴 Error handling player:", err);
+    }
   });
 
   socket.on("disconnect", () => {
-    console.log("❌ Шықты:", socket.id);
-    delete lobby[socket.id];
-
-    // room ішінен шығару
-    for (const roomId in rooms) {
-      const room = rooms[roomId];
-      const index = room.players.findIndex(p => p.socketId === socket.id);
-      if (index !== -1) {
-        room.players.splice(index, 1);
-        // room бос болса → өшіру
-        if (room.players.length === 0) delete rooms[roomId];
-        else io.to(roomId).emit("room_joined", { roomId, players: room.players });
-      }
-    }
+    console.log("🔴 User disconnected:", socket.id);
   });
-
-  // ================== FUNCTIONS ==================
-
-  function assignToRoom(socket) {
-    const lobbyIds = Object.keys(lobby);
-
-    // 1️⃣ Ең соңғы ашылған room-ды табамыз
-    let targetRoomId = null;
-    for (const rId in rooms) {
-      if (rooms[rId].players.length < ROOM_MAX) {
-        targetRoomId = rId;
-      }
-    }
-
-    const player = lobby[socket.id];
-
-    if (targetRoomId) {
-      // 2️⃣ Бар room-ға қосу
-      rooms[targetRoomId].players.push(player);
-      delete lobby[socket.id];
-
-      io.sockets.sockets.get(socket.id)?.join(targetRoomId);
-      console.log(`👤 ${player.first_name} қосылды: ${targetRoomId}`);
-
-      io.to(targetRoomId).emit("room_joined", {
-        roomId: targetRoomId,
-        players: rooms[targetRoomId].players
-      });
-
-      // Бар room-дағы ойыншыларға сұрақ жіберу
-      askReady(targetRoomId);
-
-    } else if (lobbyIds.length >= 2) {
-      // 3️⃣ Жаңа room жасау
-      const roomId = "room-" + roomCounter++;
-      const p1 = lobby[lobbyIds[0]];
-      const p2 = lobby[lobbyIds[1]];
-
-      rooms[roomId] = {
-        id: roomId,
-        players: [p1, p2],
-        round: 1  // алғашқы раунд
-      };
-
-      // Lobby-ден өшіру
-      delete lobby[p1.socketId];
-      delete lobby[p2.socketId];
-
-      io.sockets.sockets.get(p1.socketId)?.join(roomId);
-      io.sockets.sockets.get(p2.socketId)?.join(roomId);
-
-      console.log("🏠 Жаңа room жасалды:", roomId);
-
-      // Room-ға хабарлау
-      io.to(roomId).emit("room_joined", {
-        roomId,
-        players: rooms[roomId].players
-      });
-
-      // Жаңа room-дағы ойыншыларға сұрақ жіберу
-      askReady(roomId);
-
-      // 3-ші адамға шақыру
-      if (socket.id !== p1.socketId && socket.id !== p2.socketId) {
-        assignToRoom(socket);
-      }
-    }
-  }
-
-  // ================== 1-РАУНД СҰРАҚ ФУНКЦИЯСЫ ==================
-  function askReady(roomId) {
-    const room = rooms[roomId];
-    if (!room) return;
-
-    io.to(roomId).emit("round_question", {
-      round: room.round,
-      question: "Дайынсың ба?",
-      players: room.players
-    });
-
-    console.log(`🏁 Room ${roomId}: Раунд ${room.round} - "Дайынсың ба?" сұрағы жіберілді`);
-  }
-
 });
 
 // ================== START SERVER ==================
-const PORT = 3000;
 server.listen(PORT, () => {
-  console.log("🚀 Сервер іске қосылды: http://localhost:3000");
+  console.log(`🚀 Server running on port ${PORT}`);
 });
