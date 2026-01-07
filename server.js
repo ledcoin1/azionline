@@ -1,62 +1,29 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const mongoose = require("mongoose");
-require("dotenv").config();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Telegram Login</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>Telegram арқылы кіріңіз</h1>
+  <input id="tgId" placeholder="Telegram ID">
+  <button onclick="login()">Кіру</button>
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+  <h2>Қолданушы деректері:</h2>
+  <pre id="userdata"></pre>
 
-app.use(express.json());
-app.use(express.static("public"));
+  <script>
+    const socket = io();
 
-// ===== DATABASE =====
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log("✅ MongoDB connected!"))
-.catch(err => console.error("🔴 MongoDB connection error:", err));
-
-// ===== USER SCHEMA =====
-const userSchema = new mongoose.Schema({
-  telegramId: { type: String, required: true, unique: true },
-  balance: { type: Number, default: 0 }
-});
-
-const User = mongoose.model("User", userSchema);
-
-// ===== SOCKET.IO =====
-io.on("connection", socket => {
-  console.log("🟢 User connected:", socket.id);
-
-  socket.on("login", async telegramId => {
-    let user = await User.findOne({ telegramId });
-    if (!user) {
-      user = new User({ telegramId });
-      await user.save();
+    function login() {
+      const telegramId = document.getElementById("tgId").value;
+      socket.emit("login", telegramId);
     }
-    socket.emit("user_data", user);
-  });
 
-  socket.on("disconnect", () => {
-    console.log("🔴 User disconnected:", socket.id);
-  });
-});
-
-// ===== ADMIN API =====
-app.get("/api/users", async (req, res) => {
-  const users = await User.find();
-  res.json(users);
-});
-
-app.post("/api/users/:id/balance", async (req, res) => {
-  const { balance } = req.body;
-  const user = await User.findByIdAndUpdate(req.params.id, { balance }, { new: true });
-  res.json(user);
-});
-
-// ===== SERVER =====
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    socket.on("user_data", user => {
+      document.getElementById("userdata").textContent = JSON.stringify(user, null, 2);
+    });
+  </script>
+</body>
+</html>
