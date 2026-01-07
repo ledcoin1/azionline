@@ -1,34 +1,38 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Telegram Mini App Game</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8">
+    <title>Telegram Game</title>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <h1>Welcome to the Game!</h1>
-  <button id="loginBtn">Start</button>
+    <h1>Telegram Game</h1>
+    <div id="login-div">
+        <input type="text" id="telegramId" placeholder="Telegram ID">
+        <input type="text" id="username" placeholder="Username">
+        <button id="login-btn">Login</button>
+    </div>
+    <div id="user-div" style="display:none;">
+        <h2 id="welcome"></h2>
+        <p>Balance: <span id="balance"></span></p>
+    </div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
+    <script>
+        const socket = io();
 
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      const user = tg.initDataUnsafe.user;
-      if (!user) return alert('Telegram user info missing');
+        document.getElementById("login-btn").addEventListener("click", () => {
+            const telegramId = document.getElementById("telegramId").value.trim();
+            const username = document.getElementById("username").value.trim();
+            if (!telegramId || !username) return alert("Fill both fields!");
+            socket.emit("login", { telegramId, username });
+        });
 
-      const response = await fetch('/telegram-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: user.id,
-          username: user.username
-        })
-      });
-      const data = await response.json();
-      console.log(data);
-
-      alert(`Hello ${data.user.username}! Your balance is ${data.user.balance}`);
-    });
-  </script>
+        socket.on("login-success", (data) => {
+            document.getElementById("login-div").style.display = "none";
+            document.getElementById("user-div").style.display = "block";
+            document.getElementById("welcome").textContent = `Welcome, ${data.username}!`;
+            document.getElementById("balance").textContent = data.balance;
+        });
+    </script>
 </body>
 </html>
