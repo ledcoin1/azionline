@@ -1,38 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Telegram Game</title>
-    <script src="/socket.io/socket.io.js"></script>
+  <meta charset="UTF-8">
+  <title>Telegram Game</title>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.1/dist/socket.io.min.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #login-section, #game-section { max-width: 400px; margin: auto; text-align: center; }
+    #game-section { display: none; }
+    button { padding: 10px 20px; margin-top: 10px; }
+  </style>
 </head>
 <body>
-    <h1>Telegram Game</h1>
-    <div id="login-div">
-        <input type="text" id="telegramId" placeholder="Telegram ID">
-        <input type="text" id="username" placeholder="Username">
-        <button id="login-btn">Login</button>
-    </div>
-    <div id="user-div" style="display:none;">
-        <h2 id="welcome"></h2>
-        <p>Balance: <span id="balance"></span></p>
-    </div>
+  <div id="login-section">
+    <h2>Telegram арқылы кіріңіз</h2>
+    <button id="login-btn">Кіру</button>
+    <p id="login-status"></p>
+  </div>
 
-    <script>
-        const socket = io();
+  <div id="game-section">
+    <h2>Сәлем, <span id="username"></span>!</h2>
+    <p>Сіздің балансыңыз: <span id="balance">0</span> ₸</p>
+  </div>
 
-        document.getElementById("login-btn").addEventListener("click", () => {
-            const telegramId = document.getElementById("telegramId").value.trim();
-            const username = document.getElementById("username").value.trim();
-            if (!telegramId || !username) return alert("Fill both fields!");
-            socket.emit("login", { telegramId, username });
-        });
+  <script>
+    const socket = io();
 
-        socket.on("login-success", (data) => {
-            document.getElementById("login-div").style.display = "none";
-            document.getElementById("user-div").style.display = "block";
-            document.getElementById("welcome").textContent = `Welcome, ${data.username}!`;
-            document.getElementById("balance").textContent = data.balance;
-        });
-    </script>
+    const loginBtn = document.getElementById("login-btn");
+    const loginStatus = document.getElementById("login-status");
+    const loginSection = document.getElementById("login-section");
+    const gameSection = document.getElementById("game-section");
+    const usernameEl = document.getElementById("username");
+    const balanceEl = document.getElementById("balance");
+
+    loginBtn.addEventListener("click", () => {
+      // Telegram Web App арқылы логин
+      const tg = window.Telegram.WebApp;
+      const user = tg.initDataUnsafe.user;
+
+      if (!user) {
+        loginStatus.textContent = "Қате: Telegram деректері алынбады!";
+        return;
+      }
+
+      const telegramId = user.id.toString();
+      const username = user.username || user.first_name || "Пайдаланушы";
+
+      socket.emit("login", { telegramId, username });
+      loginStatus.textContent = "Кіру сұралуда...";
+    });
+
+    // Серверден жауап келгенде
+    socket.on("login-success", (data) => {
+      loginSection.style.display = "none";
+      gameSection.style.display = "block";
+      usernameEl.textContent = data.username;
+      balanceEl.textContent = data.balance;
+    });
+
+    socket.on("login-fail", (data) => {
+      loginStatus.textContent = "Қате: " + data.message;
+    });
+  </script>
 </body>
 </html>
