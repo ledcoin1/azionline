@@ -1,56 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Telegram Mini App - Баланс</title>
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f0f0f0; }
-  h1 { color: #333; }
-  .balance { font-size: 2em; margin: 20px 0; color: #2c3e50; }
-  button { padding: 10px 20px; font-size: 1em; cursor: pointer; border: none; background: #4CAF50; color: white; border-radius: 5px; }
-  button:disabled { background: #aaa; cursor: not-allowed; }
-</style>
+  <meta charset="UTF-8">
+  <title>Telegram Login</title>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+  <h1>Телеграм арқылы кіріңіз</h1>
+  <input id="tgId" placeholder="Telegram ID">
+  <button onclick="login()">Кіру</button>
 
-<h1>Telegram Mini App</h1>
-<p>Сіздің балансыңыз:</p>
-<div class="balance" id="balance">0</div>
-<button id="refreshBtn">Жаңарту</button>
+  <h2>Қолданушы деректері:</h2>
+  <pre id="userdata"></pre>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script>
-  // ======== SETTINGS ========
-  const API_BASE = "https://azionline.onrender.com"; // Render серверіңнің URL
-  const socket = io(API_BASE);
+  <script>
+    const socket = io();
 
-  // ======== Telegram WebApp object ========
-  const telegram = window.Telegram.WebApp || { initDataUnsafe: { user: { id: "test123" } } };
-
-  // Telegram ID алу
-  const telegramId = telegram.initDataUnsafe.user.id;
-
-  // ======== SOCKET LOGIN ========
-  socket.emit("login", { telegramId });
-
-  socket.on("loginSuccess", (data) => {
-    document.getElementById("balance").innerText = data.balance;
-  });
-
-  // ======== REFRESH BUTTON ========
-  document.getElementById("refreshBtn").addEventListener("click", async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/users`);
-      const users = await res.json();
-      const user = users.find(u => u.telegramId == telegramId);
-      document.getElementById("balance").innerText = user ? user.balance : 0;
-    } catch (err) {
-      console.error(err);
-      alert("Қате шықты, қайта жүктеп көріңіз.");
+    function login() {
+      const telegramId = document.getElementById("tgId").value;
+      socket.emit("login", telegramId);
     }
-  });
-</script>
 
+    socket.on("user_data", (user) => {
+      document.getElementById("userdata").textContent = JSON.stringify(user, null, 2);
+    });
+  </script>
 </body>
 </html>
