@@ -3,7 +3,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
+require("dotenv").config();
 
 // ================== APP / SERVER ==================
 const app = express();
@@ -11,12 +11,11 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 // ================== MIDDLEWARE ==================
-app.use(bodyParser.json()); // POST JSON үшін
-app.use(express.static("public")); // фронтенд файлы үшін
+app.use(express.json());
+app.use(express.static("public")); // фронтенд үшін
 
-// ================== MONGO DB ==================
+// ================== DATABASE ==================
 const MONGO_URI = process.env.MONGO_URI;
-
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -24,9 +23,9 @@ mongoose.connect(MONGO_URI, {
 .then(() => console.log("✅ MongoDB connected!"))
 .catch((err) => console.error("🔴 MongoDB connection error:", err));
 
-// ================== MONGOOSE MODELS ==================
+// ================== SCHEMAS ==================
 const userSchema = new mongoose.Schema({
-  telegramId: { type: String, unique: true },
+  telegramId: { type: String, required: true, unique: true },
   balance: { type: Number, default: 0 },
 });
 
@@ -36,17 +35,17 @@ const User = mongoose.model("User", userSchema);
 io.on("connection", (socket) => {
   console.log("🟢 User connected:", socket.id);
 
-  // Telegram арқылы тіркелген қолданушыны қосу
-  socket.on("telegramAuth", async ({ telegramId }) => {
+  // Телеграм ID арқылы кірген қолданушыны тіркеу / алу
+  socket.on("login", async (telegramId) => {
     try {
       let user = await User.findOne({ telegramId });
       if (!user) {
-        user = await User.create({ telegramId, balance: 0 });
+        user = new User({ telegramId, balance: 0 });
+        await user.save();
       }
-      socket.emit("authSuccess", user);
+      socket.emit("user_data", user);
     } catch (err) {
       console.error(err);
-      socket.emit("authError", "Сервер қатесі");
     }
   });
 
@@ -55,39 +54,19 @@ io.on("connection", (socket) => {
   });
 });
 
-// ================== ADMIN API ==================
-
-// 1️⃣ Барлық қолданушылар (admin панельге)
+// ================== API (админ панельге) ==================
 app.get("/api/users", async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.json(users);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Сервер қатесі" });
-  }
+  const users = await User.find();
+  res.json(users);
 });
 
-// 2️⃣ Баланс қосу/жаңарту
-app.post("/api/users/update", async (req, res) => {
-  const { telegramId, amount } = req.body;
-
-  try {
-    const user = await User.findOne({ telegramId });
-    if (!user) return res.status(404).json({ error: "Қолданушы табылмады" });
-
-    user.balance += Number(amount);
-    await user.save();
-
-    res.json(user); // жаңартылған қолданушы
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Сервер қатесі" });
-  }
+app.post("/api/users/:id/balance", async (req, res) => {
+  const { id } = req.params;
+  const { balance } = req.body;
+  const user = await User.findByIdAndUpdate(id, { balance }, { new: true });
+  res.json(user);
 });
 
-// ================== START SERVER ==================
+// ================== SERVER ==================
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
