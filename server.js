@@ -1,5 +1,5 @@
 // ================== IMPORTS ==================
-require('dotenv').config();        // .env файлдан MONGO_URI алу
+require('dotenv').config(); // .env оқу үшін
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -10,30 +10,34 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public")); // public қалтасын serve ету
+// ================== MIDDLEWARE ==================
+app.use(express.static("public"));
 
 // ================== MONGODB CONNECTION ==================
-const uri = process.env.MONGO_URI; // .env немесе Render env variable
-console.log('🚀 MONGO_URI =', uri);
+console.log('🚀 MONGO_URI =', process.env.MONGO_URI);
 
-mongoose.connect(uri, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true 
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 })
-.then(() => console.log('✅ MongoDB connected'))
-.catch(err => console.log('🔴 MongoDB connection error:', err));
+.then(() => console.log('✅ MongoDB connected!'))
+.catch(err => console.error('🔴 MongoDB connection error:', err));
 
-// ================== SOCKET.IO ==================
+// ================== SOCKET.IO LOGIC ==================
+const users = {};
+
 io.on("connection", (socket) => {
-    console.log('🟢 User connected:', socket.id);
+  console.log(`🟢 User connected: ${socket.id}`);
+  users[socket.id] = { balance: 0 }; // Әр ойыншыға бастапқы баланс 0
 
-    socket.on("disconnect", () => {
-        console.log('🔴 User disconnected:', socket.id);
-    });
+  socket.on("disconnect", () => {
+    console.log(`🔴 User disconnected: ${socket.id}`);
+    delete users[socket.id];
+  });
 });
 
-// ================== START SERVER ==================
+// ================== SERVER PORT ==================
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
