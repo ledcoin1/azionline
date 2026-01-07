@@ -1,3 +1,5 @@
+console.log("🚀 MONGO_URI =", process.env.MONGO_URI);
+
 // ================== IMPORTS ==================
 const express = require("express");
 const http = require("http");
@@ -52,3 +54,4 @@ io.on("connection", socket => {
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
