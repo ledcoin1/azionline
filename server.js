@@ -3,25 +3,24 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const User = require('./models/User');
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
+app.use(express.static('public'));
 
 // MongoDB қосу
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected!'))
   .catch(err => console.log('🔴 MongoDB connection error:', err));
 
-// Telegram Web App деректерін қабылдау
+// Telegram Login
 app.post('/telegram-login', async (req, res) => {
-  const { id, username } = req.body; // Telegram webhook-тен келетін деректер
-
+  const { id, username } = req.body;
   if (!id) return res.status(400).send('Telegram ID missing');
 
   let user = await User.findOne({ telegramId: id });
-
   if (!user) {
-    // Жаңа қолданушы тіркелді, баланс 0
     user = new User({ telegramId: id, username, balance: 0 });
     await user.save();
   }
@@ -29,10 +28,15 @@ app.post('/telegram-login', async (req, res) => {
   res.json({ success: true, user });
 });
 
-// Админ панелі: баланс қосу
+// Админ панель: барлық қолданушылар тізімі
+app.get('/admin/users', async (req, res) => {
+  const users = await User.find();
+  res.json(users);
+});
+
+// Админ панель: баланс қосу
 app.post('/admin/add-balance', async (req, res) => {
   const { telegramId, amount } = req.body;
-
   if (!telegramId || typeof amount !== 'number') 
     return res.status(400).send('Missing params');
 
@@ -41,13 +45,12 @@ app.post('/admin/add-balance', async (req, res) => {
 
   user.balance += amount;
   await user.save();
-
   res.json({ success: true, user });
 });
 
-// Қарапайым тест
-app.get('/', (req, res) => {
-  res.send('Server is running!');
+// Admin Panel HTML
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
 const PORT = process.env.PORT || 10000;
