@@ -1,87 +1,56 @@
-// ================== IMPORTS ==================
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const mongoose = require("mongoose");
-const cors = require("cors");
-require("dotenv").config();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Mini App - Баланс</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f0f0f0; }
+  h1 { color: #333; }
+  .balance { font-size: 2em; margin: 20px 0; color: #2c3e50; }
+  button { padding: 10px 20px; font-size: 1em; cursor: pointer; border: none; background: #4CAF50; color: white; border-radius: 5px; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+</style>
+</head>
+<body>
 
-// ================== APP / SERVER ==================
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" } // Vercel немесе басқа фронтендке рұқсат
-});
+<h1>Telegram Mini App</h1>
+<p>Сіздің балансыңыз:</p>
+<div class="balance" id="balance">0</div>
+<button id="refreshBtn">Жаңарту</button>
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public")); // телеграм клиент файлы
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  // ======== SETTINGS ========
+  const API_BASE = "https://azionline.onrender.com"; // Render серверіңнің URL
+  const socket = io(API_BASE);
 
-const PORT = process.env.PORT || 10000;
+  // ======== Telegram WebApp object ========
+  const telegram = window.Telegram.WebApp || { initDataUnsafe: { user: { id: "test123" } } };
 
-// ================== MONGO ==================
-console.log("🚀 MONGO_URI =", process.env.MONGO_URI);
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("✅ MongoDB connected!"))
-.catch(err => console.log("🔴 MongoDB connection error:", err));
+  // Telegram ID алу
+  const telegramId = telegram.initDataUnsafe.user.id;
 
-// ================== SCHEMAS ==================
-const userSchema = new mongoose.Schema({
-  telegramId: { type: String, unique: true },
-  balance: { type: Number, default: 0 }
-});
+  // ======== SOCKET LOGIN ========
+  socket.emit("login", { telegramId });
 
-const User = mongoose.model("User", userSchema);
+  socket.on("loginSuccess", (data) => {
+    document.getElementById("balance").innerText = data.balance;
+  });
 
-// ================== SOCKET.IO ==================
-io.on("connection", (socket) => {
-  console.log("🟢 User connected:", socket.id);
-
-  socket.on("login", async ({ telegramId }) => {
-    if(!telegramId) return;
-
-    let user = await User.findOne({ telegramId });
-    if(!user) {
-      user = await User.create({ telegramId, balance: 0 });
-      console.log("➕ New user created:", telegramId);
+  // ======== REFRESH BUTTON ========
+  document.getElementById("refreshBtn").addEventListener("click", async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/users`);
+      const users = await res.json();
+      const user = users.find(u => u.telegramId == telegramId);
+      document.getElementById("balance").innerText = user ? user.balance : 0;
+    } catch (err) {
+      console.error(err);
+      alert("Қате шықты, қайта жүктеп көріңіз.");
     }
-
-    socket.emit("loginSuccess", { telegramId: user.telegramId, balance: user.balance });
   });
+</script>
 
-  socket.on("disconnect", () => {
-    console.log("🔴 User disconnected:", socket.id);
-  });
-});
-
-// ================== ADMIN API ==================
-
-// Get all users
-app.get("/api/users", async (req, res) => {
-  const users = await User.find({}, "-_id telegramId balance").lean();
-  res.json(users);
-});
-
-// Add balance to a user
-app.post("/api/users/:telegramId/add", async (req, res) => {
-  const { telegramId } = req.params;
-  const { amount } = req.body;
-
-  if(!amount || amount <= 0) return res.status(400).json({error: "Invalid amount"});
-
-  const user = await User.findOne({ telegramId });
-  if(!user) return res.status(404).json({error: "User not found"});
-
-  user.balance += amount;
-  await user.save();
-
-  res.json({telegramId: user.telegramId, balance: user.balance});
-});
-
-// ================== START SERVER ==================
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+</body>
+</html>
