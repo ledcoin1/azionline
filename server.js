@@ -1,57 +1,59 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const User = require('./models/User');
-const path = require('path');
+// ================== IMPORTS ==================
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const mongoose = require("mongoose");
+require("dotenv").config(); // .env қолдану
 
+// ================== APP / SERVER ==================
 const app = express();
-app.use(bodyParser.json());
-app.use(express.static('public'));
+const server = http.createServer(app);
+const io = new Server(server);
 
-// MongoDB қосу
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB connected!'))
-  .catch(err => console.log('🔴 MongoDB connection error:', err));
+app.use(express.static("public")); // фронтенд
 
-// Telegram Login
-app.post('/telegram-login', async (req, res) => {
-  const { id, username } = req.body;
-  if (!id) return res.status(400).send('Telegram ID missing');
+// ================== MONGO ==================
+const mongoUri = process.env.MONGO_URI;
+mongoose.connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => console.log("✅ MongoDB connected!"))
+.catch(err => console.error("🔴 MongoDB connection error:", err));
 
-  let user = await User.findOne({ telegramId: id });
-  if (!user) {
-    user = new User({ telegramId: id, username, balance: 0 });
-    await user.save();
-  }
-
-  res.json({ success: true, user });
+// ================== SCHEMA ==================
+const userSchema = new mongoose.Schema({
+    telegramId: { type: String, required: true, unique: true },
+    username: String,
+    balance: { type: Number, default: 0 }
 });
 
-// Админ панель: барлық қолданушылар тізімі
-app.get('/admin/users', async (req, res) => {
-  const users = await User.find();
-  res.json(users);
+const User = mongoose.model("User", userSchema);
+
+// ================== SOCKET.IO ==================
+io.on("connection", (socket) => {
+    console.log("🟢 User connected:", socket.id);
+
+    socket.on("login", async ({ telegramId, username }) => {
+        try {
+            let user = await User.findOne({ telegramId });
+            if (!user) {
+                user = new User({ telegramId, username, balance: 0 });
+                await user.save();
+            }
+            socket.emit("login-success", { username: user.username, balance: user.balance });
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    socket.on("disconnect", () => {
+        console.log("🔴 User disconnected:", socket.id);
+    });
 });
 
-// Админ панель: баланс қосу
-app.post('/admin/add-balance', async (req, res) => {
-  const { telegramId, amount } = req.body;
-  if (!telegramId || typeof amount !== 'number') 
-    return res.status(400).send('Missing params');
-
-  const user = await User.findOne({ telegramId });
-  if (!user) return res.status(404).send('User not found');
-
-  user.balance += amount;
-  await user.save();
-  res.json({ success: true, user });
-});
-
-// Admin Panel HTML
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/admin.html'));
-});
-
+// ================== START SERVER ==================
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+});
