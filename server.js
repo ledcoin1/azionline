@@ -82,53 +82,6 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
-let lobby = [];
-
-io.on("connection", (socket) => {
-  console.log("🔌 New connection:", socket.id);
-
-  // Ойыншы Telegram арқылы кіргенде
-  socket.on("joinLobby", async (telegramId) => {
-    try {
-      // 1️⃣ MongoDB-дан ойыншыны алу
-      let user = await User.findOne({ telegramId });
-
-      // 2️⃣ Егер жаңа ойыншы болса, жасау
-      if (!user) {
-        user = await User.create({ telegramId, balance: 0 });
-      }
-
-      // 3️⃣ Лоббиде жоқ болса қосу
-      if (!lobby.find(p => p.telegramId === telegramId)) {
-        lobby.push({
-          telegramId,
-          socketId: socket.id,
-          balance: user.balance  // 💡 Мұнда лоббиге балансын қоса аламыз
-        });
-      } else {
-        // Бар болса, балансын жаңартып қоямыз
-        lobby = lobby.map(p =>
-          p.telegramId === telegramId ? { ...p, balance: user.balance } : p
-        );
-      }
-
-      console.log("👥 Lobby:", lobby);
-
-      // 4️⃣ Лобби ағымдағы ойыншыларын жіберу (frontend үшін)
-      io.emit("lobbyUpdate", lobby);
-
-    } catch (err) {
-      console.log("Lobby join error:", err);
-    }
-  });
-
-  // Disconnect болса лоббиден шығару
-  socket.on("disconnect", () => {
-    lobby = lobby.filter(p => p.socketId !== socket.id);
-    console.log("❌ Disconnected, lobby:", lobby);
-    io.emit("lobbyUpdate", lobby);
-  });
-});
 
 
 const PORT = process.env.PORT || 10000;
