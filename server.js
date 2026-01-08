@@ -1,9 +1,12 @@
 require("dotenv").config();
+
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors"); // CORS үшін
 const path = require("path");
 
 const app = express();
+app.use(cors()); // 🟢 барлық фронтендтен қосылуға рұқсат
 app.use(express.json());
 
 // ===== STATIC FRONTEND =====
@@ -19,49 +22,61 @@ const UserSchema = new mongoose.Schema({
   telegramId: { type: String, unique: true },
   balance: { type: Number, default: 0 }
 });
+
 const User = mongoose.model("User", UserSchema);
 
-// ===== ADMIN TOKEN =====
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-
-// ===== MIDDLEWARE =====
-function checkAdmin(req, res, next) {
-  const token = req.headers["authorization"] || "";
-  if (token.trim() !== ADMIN_TOKEN) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  next();
-}
-
-// ===== LOGIN (TELEGRAM FRONTEND) =====
-app.post("/api/login", async (req, res) => {
-  try {
+// ===== LOGIN (Telegram арқылы) =====
+app.post("/api/login", async(req,res)=>{
+  try{
     const { telegramId } = req.body;
-    if (!telegramId) return res.json({ error: "No telegramId" });
+    if(!telegramId) return res.json({ error: "No telegram id" });
 
     let user = await User.findOne({ telegramId });
-    if (!user) {
-      user = await User.create({ telegramId, balance: 0 });
+
+    // Жаңа қолданушы
+    if(!user){
+      user = await User.create({
+        telegramId,
+        balance: 0
+      });
     }
 
-    res.json({ telegramId: user.telegramId, balance: user.balance });
-  } catch (err) {
+    res.json({
+      telegramId: user.telegramId,
+      balance: user.balance
+    });
+
+  }catch(err){
+    console.log(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// ===== ADMIN ROUTES =====
-app.get("/api/admin/users", checkAdmin, async (req, res) => {
+// ===== ADMIN AUTH =====
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "admin123";
+
+// ===== GET ALL USERS =====
+app.get("/api/admin/users", async(req,res)=>{
+  const token = req.headers.authorization?.trim(); // 🟢 trim қосылды
+  if(token !== ADMIN_TOKEN) return res.status(401).json({ error: "Unauthorized" });
+
   const users = await User.find().sort({ telegramId: 1 });
   res.json(users);
 });
 
-app.post("/api/admin/balance", checkAdmin, async (req, res) => {
+// ===== UPDATE BALANCE =====
+app.post("/api/admin/balance", async(req,res)=>{
+  const token = req.headers.authorization?.trim();
+  if(token !== ADMIN_TOKEN) return res.status(401).json({ error: "Unauthorized" });
+
   const { telegramId, balance } = req.body;
   await User.updateOne({ telegramId }, { $set: { balance } });
+
   res.json({ success: true });
 });
 
-// ===== START SERVER =====
+// ===== SERVER =====
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=>console.log("🚀 Server running on port", PORT));
+app.listen(PORT, ()=>{
+  console.log("🚀 Server running on port", PORT);
+});
