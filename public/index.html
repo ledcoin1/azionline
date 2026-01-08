@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Telegram MiniApp Game</title>
+<title>Telegram Game</title>
 <style>
 body { font-family: Arial; background: #111; color: #fff; padding: 20px; text-align:center; }
 h1 { color: #0f0; }
@@ -23,7 +23,6 @@ h1 { color: #0f0; }
 (async () => {
   const tg = window.Telegram?.WebApp;
 
-  // Telegram API бар ма тексеру
   if (!tg) {
     document.getElementById("error").innerText = "❌ Telegram MiniApp емес немесе API табылмады";
     return;
