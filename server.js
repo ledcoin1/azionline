@@ -53,39 +53,38 @@ app.post("/api/login", async(req,res)=>{
 });
 
 // ===== ADMIN AUTH (өте қарапайым, кейін күшейтеміз) =====
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "admin123";
+// ===== ADMIN AUTH =====
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 
-// ===== GET ALL USERS =====
-app.get("/api/admin/users", async (req, res) => {
-  if (req.headers.authorization !== ADMIN_TOKEN) {
-    return res.status(401).json({ error: "Unauthorized" });
+// middleware
+function checkAdmin(req,res,next){
+  const token = req.headers["authorization"];
+
+  console.log("🔥 incoming token:", token);
+
+  if(token !== ADMIN_TOKEN){
+    return res.status(401).json({error:"Unauthorized"});
   }
 
-  const users = await User.find().sort({ telegramId: 1 });
+  next();
+}
+
+// ===== GET ALL USERS =====
+app.get("/api/admin/users", checkAdmin, async (req,res)=>{
+  const users = await User.find().sort({ telegramId:1 });
   res.json(users);
 });
 
 // ===== UPDATE BALANCE =====
-app.post("/api/admin/balance", async (req, res) => {
-  if (req.headers.authorization !== ADMIN_TOKEN) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const { telegramId, balance } = req.body;
+app.post("/api/admin/balance", checkAdmin, async(req,res)=>{
+  const {telegramId,balance} = req.body;
 
   await User.updateOne(
     { telegramId },
-    { $set: { balance } }
+    { $set:{ balance } }
   );
 
-  res.json({ success: true });
-});
-
-
-app.get("/api/test", (req,res)=>{
-  res.json({
-    tokenFromEnv: process.env.ADMIN_TOKEN
-  });
+  res.json({success:true});
 });
 
 
@@ -94,5 +93,6 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, ()=>{
   console.log("🚀 Server running on",PORT);
 });
+
 
 
