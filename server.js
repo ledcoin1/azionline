@@ -57,17 +57,19 @@ app.post("/api/login", async(req,res)=>{
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 
 // middleware
+
 function checkAdmin(req,res,next){
   const token = req.headers["authorization"];
-
-  console.log("🔥 incoming token:", token);
+  console.log("🔥 incoming token:", token);  // <-- қосылды
 
   if(token !== ADMIN_TOKEN){
+    console.log("❌ Unauthorized attempt");
     return res.status(401).json({error:"Unauthorized"});
   }
 
   next();
 }
+
 
 // ===== GET ALL USERS =====
 app.get("/api/admin/users", checkAdmin, async (req,res)=>{
@@ -93,6 +95,7 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, ()=>{
   console.log("🚀 Server running on",PORT);
 });
+
 
 
 
