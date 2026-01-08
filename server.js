@@ -82,9 +82,17 @@ app.post("/api/admin/balance", async (req, res) => {
 });
 
 
+app.get("/api/test", (req,res)=>{
+  res.json({
+    tokenFromEnv: process.env.ADMIN_TOKEN
+  });
+});
+
+
 // ===== SERVER =====
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, ()=>{
   console.log("🚀 Server running on",PORT);
 });
+
 
