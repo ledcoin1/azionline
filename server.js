@@ -1,74 +1,115 @@
-<!DOCTYPE html>
-<html lang="kk">
-<head>
-<meta charset="UTF-8">
-<title>Telegram Game Lobby</title>
-<style>
-  body { font-family: Arial; background: #111; color: #fff; padding: 20px; }
-  h2 { margin-bottom: 10px; }
-  #lobby { margin-top: 20px; display:none; }
-  ul { list-style: none; padding: 0; }
-  li { padding: 4px 0; border-bottom: 1px solid #333; }
-  .balance { color: #0f0; font-weight: bold; }
-</style>
-</head>
-<body>
+require("dotenv").config();
 
-<h2>Telegram Game Lobby</h2>
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors"); // CORS үшін
+const path = require("path");
+const http = require("http");       // <- қосамыз
+const { Server } = require("socket.io"); // <- қосамы
 
-<div id="lobby">
-  <h3>Lobby - Live ойыншылар</h3>
-  <ul id="players"></ul>
-  <p>Сіздің баланс: <span id="myBalance" class="balance">0</span></p>
-</div>
+const app = express();
+app.use(cors()); // 🟢 барлық фронтендтен қосылуға рұқсат
+app.use(express.json());
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"
- integrity="sha384-nvM0HuE4y9XwzDEsGJZ3mZ4Pmg2a0UwvKWK5p4QyPsXx9XxHplhJJt5OWpZbtI6A"
- crossorigin="anonymous"></script>
-<script>
-const API = ""; // сервер URL, егер сол серверде болса бос қалдырамыз
-const socket = io(API);
+// ===== STATIC FRONTEND =====
+app.use(express.static("public"));
 
-async function init() {
-  const tg = window.Telegram.WebApp;
-  const telegramId = tg.initDataUnsafe.user.id; // Telegram ID Mini App арқылы
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" } // фронтенд кез келген жерден қосылсын
+});
 
-  // Серверге login
-  try {
-    const res = await fetch(API + "/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ telegramId })
+// ===== MONGO =====
+mongoose.connect(process.env.MONGO_URI)
+.then(()=>console.log("✅ MongoDB connected!"))
+.catch(e=>console.log("❌ Mongo error", e));
+
+// ===== MODEL =====
+const UserSchema = new mongoose.Schema({
+  telegramId: { type: String, unique: true },
+  balance: { type: Number, default: 0 }
+});
+
+const User = mongoose.model("User", UserSchema);
+
+// ===== LOGIN (Telegram арқылы) =====
+app.post("/api/login", async(req,res)=>{
+  try{
+    const { telegramId } = req.body;
+    if(!telegramId) return res.json({ error: "No telegram id" });
+
+    let user = await User.findOne({ telegramId });
+
+    // Жаңа қолданушы
+    if(!user){
+      user = await User.create({
+        telegramId,
+        balance: 0
+      });
+    }
+
+    res.json({
+      telegramId: user.telegramId,
+      balance: user.balance
     });
-    const data = await res.json();
 
-    if(data.error) return alert(data.error);
-
-    document.getElementById("lobby").style.display = "block";
-    document.getElementById("myBalance").textContent = data.balance;
-
-    // Socket.IO арқылы joinLobby
-    socket.emit("joinLobby", telegramId);
-
-  } catch(err) {
+  }catch(err){
     console.log(err);
-    alert("Server error");
+    res.status(500).json({ error: "Server error" });
   }
-}
+});
 
-// Lobby live жаңарту
-socket.on("lobbyUpdate", (players) => {
-  const ul = document.getElementById("players");
-  ul.innerHTML = "";
-  players.forEach(id => {
-    const li = document.createElement("li");
-    li.textContent = id;
-    ul.appendChild(li);
+// ===== ADMIN AUTH =====
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "admin123";
+
+// ===== GET ALL USERS =====
+app.get("/api/admin/users", async(req,res)=>{
+  const token = req.headers.authorization?.trim(); // 🟢 trim қосылды
+  if(token !== ADMIN_TOKEN) return res.status(401).json({ error: "Unauthorized" });
+
+  const users = await User.find().sort({ telegramId: 1 });
+  res.json(users);
+});
+
+// ===== UPDATE BALANCE =====
+app.post("/api/admin/balance", async(req,res)=>{
+  const token = req.headers.authorization?.trim();
+  if(token !== ADMIN_TOKEN) return res.status(401).json({ error: "Unauthorized" });
+
+  const { telegramId, balance } = req.body;
+  await User.updateOne({ telegramId }, { $set: { balance } });
+
+  res.json({ success: true });
+});
+
+let lobby = [];
+
+io.on("connection", (socket) => {
+  console.log("🔌 New connection:", socket.id);
+
+  // Ойыншы Telegram арқылы кіргенде
+  socket.on("joinLobby", async (telegramId) => {
+    // Лоббиде жоқ болса қосу
+    if (!lobby.find(p => p.telegramId === telegramId)) {
+      lobby.push({ telegramId, socketId: socket.id });
+      console.log("👥 Lobby:", lobby);
+    }
+
+    // Лобби ағымдағы ойыншыларын жіберу (frontend үшін)
+    io.emit("lobbyUpdate", lobby.map(p => p.telegramId));
+  });
+
+  // Disconnect болса лоббиден шығару
+  socket.on("disconnect", () => {
+    lobby = lobby.filter(p => p.socketId !== socket.id);
+    console.log("❌ Disconnected, lobby:", lobby);
+    io.emit("lobbyUpdate", lobby.map(p => p.telegramId));
   });
 });
 
-init();
-</script>
-</body>
-</html>
+
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log("🚀 Server running on port", PORT);
+});
