@@ -51,7 +51,7 @@ async function login() {
     });
     const data = await res.json();
 
-    if(data.error) return alert(data.error);
+    if(data.error) return alert(data.error); // MongoDB-де жоқ болса қате шығады
 
     myTelegramId = data.telegramId;
     document.getElementById("login").style.display = "none";
