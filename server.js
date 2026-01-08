@@ -1,29 +1,94 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Telegram Login</title>
-  <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
-  <h1>Telegram арқылы кіріңіз</h1>
-  <input id="tgId" placeholder="Telegram ID">
-  <button onclick="login()">Кіру</button>
+// ================= IMPORTS =================
+const express = require("express");
+const http = require("http");
+const mongoose = require("mongoose");
+require("dotenv").config();
 
-  <h2>Қолданушы деректері:</h2>
-  <pre id="userdata"></pre>
+// ================= APP =================
+const app = express();
+const server = http.createServer(app);
 
-  <script>
-    const socket = io();
+app.use(express.json()); // body оқу үшін
 
-    function login() {
-      const telegramId = document.getElementById("tgId").value;
-      socket.emit("login", telegramId);
+// ================= DB CONNECT =================
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("✅ MongoDB connected!"))
+.catch(err => console.log("❌ Mongo error:", err));
+
+// ================= SCHEMA =================
+const userSchema = new mongoose.Schema({
+  telegramId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  balance: {
+    type: Number,
+    default: 0
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const User = mongoose.model("User", userSchema);
+
+// ================= TELEGRAM LOGIN =================
+// ойыншы кіргенде осы API шақырылады
+app.post("/api/login", async (req, res) => {
+  try {
+    const { telegramId } = req.body;
+
+    if (!telegramId) {
+      return res.status(400).json({ error: "telegramId жоқ" });
     }
 
-    socket.on("user_data", user => {
-      document.getElementById("userdata").textContent = JSON.stringify(user, null, 2);
-    });
-  </script>
-</body>
-</html>
+    let user = await User.findOne({ telegramId });
+
+    // егер бірінші рет кірсе
+    if (!user) {
+      user = new User({ telegramId });
+      await user.save();
+      console.log("🆕 Жаңа ойыншы:", telegramId);
+    }
+
+    // бар болса – сол баланспен қайтарады
+    res.json(user);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================= ADMIN API =================
+
+// барлық ойыншылар
+app.get("/api/admin/users", async (req, res) => {
+  const users = await User.find().sort({ createdAt: -1 });
+  res.json(users);
+});
+
+// баланс өзгерту
+app.post("/api/admin/balance", async (req, res) => {
+  try {
+    const { telegramId, balance } = req.body;
+
+    const user = await User.findOneAndUpdate(
+      { telegramId },
+      { balance },
+      { new: true }
+    );
+
+    res.json(user);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================= SERVER =================
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log("🚀 Server running on port", PORT);
+});
