@@ -52,8 +52,39 @@ app.post("/api/login", async(req,res)=>{
   }
 });
 
+// ===== ADMIN AUTH (өте қарапайым, кейін күшейтеміз) =====
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "admin123";
+
+// ===== GET ALL USERS =====
+app.get("/api/admin/users", async (req, res) => {
+  if (req.headers.authorization !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const users = await User.find().sort({ telegramId: 1 });
+  res.json(users);
+});
+
+// ===== UPDATE BALANCE =====
+app.post("/api/admin/balance", async (req, res) => {
+  if (req.headers.authorization !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const { telegramId, balance } = req.body;
+
+  await User.updateOne(
+    { telegramId },
+    { $set: { balance } }
+  );
+
+  res.json({ success: true });
+});
+
+
 // ===== SERVER =====
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, ()=>{
   console.log("🚀 Server running on",PORT);
 });
+
