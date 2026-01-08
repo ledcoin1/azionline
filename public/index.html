@@ -2,88 +2,68 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Online Game Lobby</title>
+<title>Telegram Mini App Game</title>
+<script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.2/dist/socket.io.min.js"></script>
 <style>
-body { font-family: Arial; background:#111; color:#fff; padding:20px; }
-h2 { color:#0f0; }
-#balance { font-weight:bold; }
-#lobby { margin-top:20px; }
-table { width:100%; border-collapse: collapse; }
-th, td { border:1px solid #333; padding:8px; text-align:center; }
+  body { font-family: Arial; background: #111; color: #fff; padding: 20px; }
+  h2 { margin-bottom: 10px; }
+  #balance { margin: 10px 0; font-size: 18px; }
+  #lobby { margin-top: 20px; }
+  #lobby li { margin-bottom: 5px; }
 </style>
 </head>
 <body>
 
-<h2>Сәлем, ойыншы!</h2>
-<p>Сіздің балансыңыз: <span id="balance">0</span></p>
+<h2>Mini Game Lobby</h2>
+<div id="balance">Баланс: 0</div>
 
-<h3>Лоббидағы ойыншылар</h3>
-<div id="lobby">
-  <table>
-    <thead>
-      <tr>
-        <th>Telegram ID</th>
-        <th>Баланс</th>
-      </tr>
-    </thead>
-    <tbody id="lobbyBody"></tbody>
-  </table>
-</div>
+<h3>Lobby:</h3>
+<ul id="lobby"></ul>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-const API = "";
-const socket = io(API);
-
-// ===================== TELEGRAM LOGIN =====================
-async function telegramLogin() {
-  // Telegram MiniApp арқылы кіретін ID
-  const telegramId = window.Telegram.WebApp.initDataUnsafe?.user?.id;
-  if (!telegramId) {
-    alert("Telegram ID табылмады!");
+(async () => {
+  // Telegram MiniApp арқылы кірген қолданушыны алу
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (!tgUser) {
+    alert("❌ Telegram ID табылмады");
     return;
   }
+  const telegramId = tgUser.id.toString();
 
-  // Серверге логин сұранысы
-  const res = await fetch(API + "/api/login", {
+  // Socket.IO қосылу
+  const socket = io();
+
+  // Серверге login сұранысы
+  const loginRes = await fetch("/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ telegramId })
   });
-  const data = await res.json();
-
-  if (data.error) {
-    alert(data.error);
+  const userData = await loginRes.json();
+  if (userData.error) {
+    alert("❌ Login қатесі: " + userData.error);
     return;
   }
 
-  document.getElementById("balance").textContent = data.balance;
+  // Баланс көрсету
+  const balanceDiv = document.getElementById("balance");
+  balanceDiv.textContent = "Баланс: " + userData.balance;
 
-  // Socket.IO арқылы лоббиге қосу
+  // Лоббиге қосу
   socket.emit("joinLobby", telegramId);
-}
 
-// ===================== SOCKET.IO LOBBY =====================
-socket.on("lobbyUpdate", (players) => {
-  const tbody = document.getElementById("lobbyBody");
-  tbody.innerHTML = "";
-
-  players.forEach(p => {
-    const tr = document.createElement("tr");
-    const tdId = document.createElement("td");
-    tdId.textContent = p.telegramId;
-    const tdBalance = document.createElement("td");
-    tdBalance.textContent = p.balance;
-    tr.appendChild(tdId);
-    tr.appendChild(tdBalance);
-    tbody.appendChild(tr);
+  // Лобби жаңартулары
+  const lobbyUl = document.getElementById("lobby");
+  socket.on("lobbyUpdate", (players) => {
+    lobbyUl.innerHTML = "";
+    players.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = `ID: ${p.telegramId}, Баланс: ${p.balance}`;
+      lobbyUl.appendChild(li);
+    });
   });
-});
 
-// ===================== START =====================
-window.addEventListener("DOMContentLoaded", () => {
-  telegramLogin();
-});
+})();
 </script>
 
 </body>
