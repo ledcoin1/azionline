@@ -1,29 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kk">
 <head>
-  <meta charset="UTF-8">
-  <title>Telegram Login</title>
-  <script src="/socket.io/socket.io.js"></script>
+<meta charset="UTF-8">
+<title>Telegram Game</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+body{
+  background:#111;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
+.card{
+  background:#1f1f1f;
+  padding:20px;
+  margin:50px auto;
+  width:300px;
+  border-radius:10px;
+}
+</style>
 </head>
 <body>
-  <h1>Телеграм арқылы кіріңіз</h1>
-  <input id="tgId" placeholder="Telegram ID">
-  <button onclick="login()">Кіру</button>
 
-  <h2>Қолданушы деректері:</h2>
-  <pre id="userdata"></pre>
+<div class="card">
+  <h2>🎮 Ойын</h2>
+  <p>ID: <span id="uid">...</span></p>
+  <p>Баланс: <b id="balance">0</b> ₸</p>
+</div>
 
-  <script>
-    const socket = io();
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-    function login() {
-      const telegramId = document.getElementById("tgId").value;
-      socket.emit("login", telegramId);
-    }
+// Telegram user
+const user = tg.initDataUnsafe.user;
 
-    socket.on("user_data", (user) => {
-      document.getElementById("userdata").textContent = JSON.stringify(user, null, 2);
-    });
-  </script>
+if(!user){
+  alert("Telegram арқылы ғана кіруге болады!");
+}
+
+// ID аламыз
+const telegramId = user.id;
+document.getElementById("uid").innerText = telegramId;
+
+// серверге жіберу
+fetch("/api/login", {
+  method: "POST",
+  headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({
+    telegramId
+  })
+})
+.then(res => res.json())
+.then(data => {
+  document.getElementById("balance").innerText = data.balance;
+})
+.catch(err=>{
+  alert("Server error");
+});
+</script>
+
 </body>
 </html>
