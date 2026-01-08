@@ -1,61 +1,66 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Telegram MiniApp Game</title>
 <style>
-  body { font-family: Arial; background: #111; color: #fff; padding: 20px; }
-  #info { margin-top: 20px; }
-  #balance { font-weight: bold; }
-  #error { color: red; margin-top: 20px; }
+body { font-family: Arial; background: #111; color: #fff; padding: 20px; text-align:center; }
+h1 { color: #0f0; }
+#error { color: red; margin: 20px 0; }
+#info { margin-top: 20px; }
 </style>
 </head>
 <body>
 
-<h2>Ойынға қош келдіңіз!</h2>
-
+<h1>Ойынға қош келдіңіз!</h1>
+<div id="error"></div>
 <div id="info">
-  Telegram ID: <span id="telegramId">...</span><br>
-  Баланс: <span id="balance">0</span>
+  <p>Telegram ID: <span id="telegramId">...</span></p>
+  <p>Баланс: <span id="balance">0</span></p>
 </div>
 
-<div id="error"></div>
-
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+(async () => {
   const tg = window.Telegram?.WebApp;
 
+  // Telegram API бар ма тексеру
   if (!tg) {
     document.getElementById("error").innerText = "❌ Telegram MiniApp емес немесе API табылмады";
     return;
   }
 
-  tg.ready();
+  // Telegram қолданушыны алу
+  const user = tg.initDataUnsafe?.user;
+  if (!user) {
+    document.getElementById("error").innerText = "❌ Telegram ID табылмады";
+    return;
+  }
 
-  const telegramId = tg.initDataUnsafe.user.id; // Telegram-ның жеке ID
+  const telegramId = user.id.toString();
   document.getElementById("telegramId").innerText = telegramId;
 
-  // Серверге login сұрауы
-  fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if(data.error){
-      document.getElementById("error").innerText = "Login қатесі: " + data.error;
+  try {
+    // Серверге логин жасау
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telegramId })
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById("error").innerText = "❌ " + data.error;
       return;
     }
 
+    // Баланс көрсету
     document.getElementById("balance").innerText = data.balance;
-    console.log("Login сәтті:", data);
-  })
-  .catch(err => {
-    console.error(err);
-    document.getElementById("error").innerText = "Серверге қосылу қатесі";
-  });
-});
+
+  } catch (err) {
+    console.log(err);
+    document.getElementById("error").innerText = "❌ Серверге қосылу қатесі";
+  }
+})();
 </script>
 
 </body>
