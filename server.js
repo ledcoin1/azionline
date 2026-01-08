@@ -58,36 +58,32 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 
 // middleware
 
-function checkAdmin(req,res,next){
+function checkAdmin(req, res, next) {
   const token = req.headers["authorization"];
-  console.log("🔥 incoming token:", token);  // <-- қосылды
+  console.log("🔥 incoming token:", token); // лог
+  console.log("🔥 env ADMIN_TOKEN:", ADMIN_TOKEN);
 
-  if(token !== ADMIN_TOKEN){
+  if (!token || token !== ADMIN_TOKEN) {
     console.log("❌ Unauthorized attempt");
-    return res.status(401).json({error:"Unauthorized"});
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   next();
 }
 
-
-// ===== GET ALL USERS =====
-app.get("/api/admin/users", checkAdmin, async (req,res)=>{
-  const users = await User.find().sort({ telegramId:1 });
+// GET all users
+app.get("/api/admin/users", checkAdmin, async (req, res) => {
+  const users = await User.find().sort({ telegramId: 1 });
   res.json(users);
 });
 
-// ===== UPDATE BALANCE =====
-app.post("/api/admin/balance", checkAdmin, async(req,res)=>{
-  const {telegramId,balance} = req.body;
-
-  await User.updateOne(
-    { telegramId },
-    { $set:{ balance } }
-  );
-
-  res.json({success:true});
+// POST balance
+app.post("/api/admin/balance", checkAdmin, async (req, res) => {
+  const { telegramId, balance } = req.body;
+  await User.updateOne({ telegramId }, { $set: { balance } });
+  res.json({ success: true });
 });
+
 
 
 // ===== SERVER =====
@@ -95,6 +91,7 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, ()=>{
   console.log("🚀 Server running on",PORT);
 });
+
 
 
 
