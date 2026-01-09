@@ -3,6 +3,7 @@
 <head>
   <title>MiniApp</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="/socket.io/socket.io.js"></script> <!-- Socket.IO клиент -->
 </head>
 <body>
 
@@ -10,31 +11,38 @@
 
 <script>
 const tg = window.Telegram.WebApp;
-tg.expand(); // толық экран
+tg.expand();
 
 const user = tg.initDataUnsafe?.user;
 
 if(!user){
-  document.getElementById("info").innerText =
-    "❌ Telegram user табылмады";
+  document.getElementById("info").innerText = "❌ Telegram user табылмады";
 }else{
-
+  // 1️⃣ Алдымен login API
   fetch("/api/login", {
     method: "POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body: JSON.stringify({
-      telegramId: String(user.id)
-    })
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ telegramId: String(user.id) })
   })
-  .then(r=>r.json())
-  .then(data=>{
-    document.getElementById("info").innerText =
-      "🆔 ID: "+data.telegramId+
-      "\n💰 Баланс: "+data.balance;
-  });
+  .then(r => r.json())
+  .then(data => {
 
+    // 2️⃣ Серверден баланс алғаннан кейін Socket қосу
+    const socket = io("/", {
+      auth: { telegramId: String(user.id) }
+    });
+
+    // Серверден жаңа баланс келгенде көрсету
+    socket.on("balance", balance => {
+      document.getElementById("info").innerText =
+        "🆔 ID: " + data.telegramId + "\n💰 Баланс: " + balance;
+    });
+
+    // Алғашқы баланс экранға шығару
+    document.getElementById("info").innerText =
+      "🆔 ID: " + data.telegramId + "\n💰 Баланс: " + data.balance;
+
+  });
 }
 </script>
 
