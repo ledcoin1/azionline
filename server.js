@@ -1,6 +1,6 @@
-require("dotenv").config();
+require("dotenv").config();           //енв файлды оқуға бұл 
 
-const express = require("express");
+const express = require("express");          // кітапханалар
 const mongoose = require("mongoose");
 const cors = require("cors"); // CORS үшін
 const path = require("path");
@@ -9,24 +9,24 @@ const { Server } = require("socket.io"); // <- қосамы
 
 const app = express();
 app.use(cors()); // 🟢 барлық фронтендтен қосылуға рұқсат
-app.use(express.json());
+app.use(express.json());                 // жсон кабыдау үшін кароче фронтендке
 
 // ===== STATIC FRONTEND =====
-app.use(express.static("public"));
+app.use(express.static("public"));            // бұл фронтенд 
 
-const server = http.createServer(app);
-const io = new Server(server, {
+const server = http.createServer(app);       
+const io = new Server(server, {                   
   cors: { origin: "*" } // фронтенд кез келген жерден қосылсын
 });
 
 // ===== MONGO =====
 mongoose.connect(process.env.MONGO_URI)
-.then(()=>console.log("✅ MongoDB connected!"))
+.then(()=>console.log("✅ MongoDB connected!"))        //енв ішіндегі монго арқылы
 .catch(e=>console.log("❌ Mongo error", e));
 
 // ===== MODEL =====
 const UserSchema = new mongoose.Schema({
-  telegramId: { type: String, unique: true },
+  telegramId: { type: String, unique: true },             // монго құжаттары бұл
   balance: { type: Number, default: 0 }
 });
 
@@ -82,6 +82,40 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
+const lobby = {};   // бұл лобби
+
+
+// socket қосу
+io.on("connection", (socket) => {
+  const telegramId = socket.handshake.auth.telegramId;
+
+  if(!telegramId){
+    socket.disconnect();
+    return;
+  }
+
+  // MongoDB-ден баланс алу
+  User.findOne({ telegramId }).then(user => {
+    if(!user) return socket.disconnect();
+
+    // Lobby-ге қосу
+    lobby[telegramId] = {
+      telegramId,
+      socketId: socket.id
+    };
+
+    // Тек осы ойыншыға балансын жіберу
+    socket.emit("balance", user.balance);
+
+    console.log("🟢 Lobby:", Object.keys(lobby));
+  });
+
+  // disconnect кезінде lobby-ден өшіру
+  socket.on("disconnect", () => {
+    delete lobby[telegramId];
+    console.log("❌ Disconnect:", telegramId);
+  });
+});
 
 
 const PORT = process.env.PORT || 10000;
