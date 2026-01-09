@@ -1,67 +1,41 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Telegram MiniApp Game</title>
-<style>
-body{font-family:Arial,sans-serif;background:#111;color:#fff;padding:20px;text-align:center;}
-h2{margin-bottom:20px;}
-#balance{margin-top:10px;font-size:18px;}
-button{padding:6px 12px;margin-top:10px;cursor:pointer;}
-</style>
+  <title>MiniApp</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 
-<h2>Ойынға қош келдіңіз!</h2>
-<div id="status">❌ Telegram MiniApp емес немесе API табылмады</div>
-<div id="user">
-  <div>Telegram ID: <span id="telegramId">...</span></div>
-  <div id="balance">Баланс: 0</div>
-</div>
+<h2 id="info">Жүктелуде...</h2>
 
 <script>
-const API = "https://azionline.onrender.com"; // сіздің сервер URL
+const tg = window.Telegram.WebApp;
+tg.expand(); // толық экран
 
-async function init() {
-  // Telegram MiniApp тексеру
-  if(!window.Telegram?.WebApp) return;
+const user = tg.initDataUnsafe?.user;
 
-  const tg = window.Telegram.WebApp;
-  const userId = tg.initDataUnsafe?.user?.id; // Telegram ID
+if(!user){
+  document.getElementById("info").innerText =
+    "❌ Telegram user табылмады";
+}else{
 
-  if(!userId){
-    document.getElementById("status").innerText = "❌ Telegram ID табылмады";
-    return;
-  }
+  fetch("/api/login", {
+    method: "POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      telegramId: String(user.id)
+    })
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    document.getElementById("info").innerText =
+      "🆔 ID: "+data.telegramId+
+      "\n💰 Баланс: "+data.balance;
+  });
 
-  document.getElementById("telegramId").innerText = userId;
-  document.getElementById("status").innerText = "✅ Telegram MiniApp табылды";
-
-  // Серверге логин жасау
-  try {
-    const res = await fetch(API + "/api/login", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ telegramId: userId })
-    });
-
-    const data = await res.json();
-
-    if(data.error){
-      document.getElementById("status").innerText = "❌ " + data.error;
-      return;
-    }
-
-    document.getElementById("balance").innerText = "Баланс: " + data.balance;
-
-  } catch(err) {
-    console.log(err);
-    document.getElementById("status").innerText = "❌ Серверге қосылу қатесі";
-  }
 }
-
-// Telegram MiniApp дайын болған соң init шақыру
-window.addEventListener("load", init);
 </script>
 
 </body>
