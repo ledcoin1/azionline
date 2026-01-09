@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>MiniApp</title>
+  <title>Telegram MiniApp Lobby & Room</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="/socket.io/socket.io.js"></script> <!-- Socket.IO клиент -->
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+  </style>
 </head>
 <body>
 
-<h2 id="info">Жүктелуде...</h2>
+<h2>MiniApp Lobby & Room</h2>
+<pre id="info">Жүктелуде...</pre>
 
 <script>
 const tg = window.Telegram.WebApp;
@@ -17,8 +22,9 @@ const user = tg.initDataUnsafe?.user;
 
 if(!user){
   document.getElementById("info").innerText = "❌ Telegram user табылмады";
-}else{
-  // 1️⃣ Алдымен login API
+} else {
+
+  // 1️⃣ Алдымен серверге login
   fetch("/api/login", {
     method: "POST",
     headers:{ "Content-Type":"application/json" },
@@ -27,22 +33,43 @@ if(!user){
   .then(r => r.json())
   .then(data => {
 
-    // 2️⃣ Серверден баланс алғаннан кейін Socket қосу
+    // 2️⃣ Ал серверге Socket.IO арқылы қосылу
     const socket = io("/", {
       auth: { telegramId: String(user.id) }
     });
 
-    // Серверден жаңа баланс келгенде көрсету
+    // Серверден баланс келгенде көрсету
     socket.on("balance", balance => {
       document.getElementById("info").innerText =
-        "🆔 ID: " + data.telegramId + "\n💰 Баланс: " + balance;
+        "🆔 ID: " + data.telegramId +
+        "\n💰 Баланс: " + balance;
     });
 
     // Алғашқы баланс экранға шығару
     document.getElementById("info").innerText =
-      "🆔 ID: " + data.telegramId + "\n💰 Баланс: " + data.balance;
+      "🆔 ID: " + data.telegramId +
+      "\n💰 Баланс: " + data.balance;
 
+    // Room-ға қосылғанда хабарлау
+    socket.on("joinedRoom", ({ roomId, players }) => {
+      const info = "🆔 ID: " + data.telegramId +
+                   "\n💰 Баланс: " + data.balance +
+                   "\n🎮 Room: " + roomId +
+                   "\n👥 Players: " + players.join(", ");
+      document.getElementById("info").innerText = info;
+    });
+
+    // Disconnect болғанда хабарлау
+    socket.on("disconnect", () => {
+      document.getElementById("info").innerText += "\n❌ Сіз disconnect болдыңыз";
+    });
+
+  })
+  .catch(err => {
+    document.getElementById("info").innerText = "❌ Server error: " + err.message;
+    console.error(err);
   });
+
 }
 </script>
 
