@@ -83,7 +83,7 @@ app.post("/api/admin/balance", async(req,res)=>{
 });
 
 const lobby = {};   // бұл лобби
-
+const rooms = {};
 
 // socket қосу
 io.on("connection", (socket) => {
@@ -108,7 +108,31 @@ io.on("connection", (socket) => {
     socket.emit("balance", user.balance);
 
     console.log("🟢 Lobby:", Object.keys(lobby));
+  
+
+  // ===================== ROOM ЛОГИКАСЫ =====================
+const lobbyPlayers = Object.keys(lobby);
+if(lobbyPlayers.length >= 2){
+
+  // 2 ойыншыны таңдау
+  const players = lobbyPlayers.slice(0, 2);
+
+  // roomId жасау
+  const roomId = "room-" + Date.now();
+  rooms[roomId] = players;
+
+  // Lobby-ден өшіру
+  players.forEach(id => delete lobby[id]);
+
+  // Ойыншыларға хабарлау
+  players.forEach(id => {
+    const sId = lobby[id]?.socketId || socket.id;
+    io.to(sId).emit("joinedRoom", { roomId, players });
   });
+
+  console.log("🟢 New room:", roomId, players);
+}
+ });
 
   // disconnect кезінде lobby-ден өшіру
   socket.on("disconnect", () => {
