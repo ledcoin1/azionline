@@ -155,7 +155,8 @@ io.on("connection", (socket) => {                        // қосылу
           
         };
 
-        console.log("🟢 New room created:", roomId, playersForRoom);
+        console.log("🟢 New room created:", roomId, rooms[roomId].players);
+
 
         // Lobby-ден өшіру
         playersForRoom.forEach(id => delete lobby[id]);
