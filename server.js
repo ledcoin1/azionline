@@ -83,10 +83,10 @@ app.post("/api/admin/balance", async(req,res)=>{
 });
 
 const lobby = {};   // бұл лобби
-const rooms = {};
+const rooms = {};    // комта бұл
 
 // socket қосу
-io.on("connection", (socket) => {
+io.on("connection", (socket) => {                        // қосылу
   const telegramId = socket.handshake.auth.telegramId;
 
   if(!telegramId){
@@ -110,39 +110,94 @@ io.on("connection", (socket) => {
     console.log("🟢 Lobby:", Object.keys(lobby));
   
 
-  // ===================== ROOM ЛОГИКАСЫ =====================
-const lobbyPlayers = Object.keys(lobby);
-if(lobbyPlayers.length >= 2){
+ let roomToJoin = null;
+    for(const roomId in rooms){
+      const room = rooms[roomId];
+      if(room.players.length < room.maxPlayers){
+        roomToJoin = room;
+        break;
+      }
+    }
 
-  // 2 ойыншыны таңдау
-  const players = lobbyPlayers.slice(0, 2);
+    if(roomToJoin){
+      // Бос орын бар room → жаңа ойыншыны қосу
+      roomToJoin.players.push(telegramId);
+      console.log(`🟢 ${telegramId} joined existing room ${roomToJoin.roomId}`);
 
-  // roomId жасау
-  const roomId = "room-" + Date.now();
-  rooms[roomId] = players;
+      // Барлық room ойыншыларына хабарлау
+      roomToJoin.players.forEach(id => {
+        const sId = lobby[id]?.socketId || io.sockets.sockets.get(id);
+        if(sId) io.to(sId).emit("joinedRoom", {
+          roomId: roomToJoin.roomId,
+          players: roomToJoin.players
+        });
+      });
 
-  // Lobby-ден өшіру
-  players.forEach(id => delete lobby[id]);
+      // Lobby-ден өшіру
+      delete lobby[telegramId];
+    }
+    else {
+      // Егер бос room жоқ және лобби-де 2+ ойыншы болса → жаңа room жасау
+      const lobbyPlayers = Object.keys(lobby);
+      if(lobbyPlayers.length >= 2){
+        const playersForRoom = lobbyPlayers.slice(0, 5); // максимум 5
+        const roomId = "room-" + Date.now();
 
-  // Ойыншыларға хабарлау
-  players.forEach(id => {
-    const sId = lobby[id]?.socketId || socket.id;
-    io.to(sId).emit("joinedRoom", { roomId, players });
+        rooms[roomId] = {
+          roomId,
+          players: playersForRoom,
+          maxPlayers: 5
+        };
+
+        console.log("🟢 New room created:", roomId, playersForRoom);
+
+        // Lobby-ден өшіру
+        playersForRoom.forEach(id => delete lobby[id]);
+
+        // Ойыншыларға хабарлау
+        playersForRoom.forEach(id => {
+          const sId = lobby[id]?.socketId || io.sockets.sockets.get(id);
+          if(sId) io.to(sId).emit("joinedRoom", {
+            roomId,
+            players: playersForRoom
+          });
+        });
+      }
+    }
+
   });
 
-  console.log("🟢 New room:", roomId, players);
-}
- });
-
-  // disconnect кезінде lobby-ден өшіру
+  // ================== DISCONNECT ==================
   socket.on("disconnect", () => {
     delete lobby[telegramId];
+
+    // Room-дан өшіру
+    for(const roomId in rooms){
+      const room = rooms[roomId];
+      const idx = room.players.indexOf(telegramId);
+      if(idx !== -1){
+        room.players.splice(idx,1);
+        // Барлық қалған ойыншыларға жаңарту хабарлау
+        room.players.forEach(id => {
+          const sId = lobby[id]?.socketId || io.sockets.sockets.get(id);
+          if(sId) io.to(sId).emit("joinedRoom", {
+            roomId,
+            players: room.players
+          });
+        });
+
+        // Егер room бос болса → өшіру
+        if(room.players.length === 0){
+          delete rooms[roomId];
+          console.log(`❌ Room ${roomId} deleted (empty)`);
+        }
+      }
+    }
+
     console.log("❌ Disconnect:", telegramId);
   });
 });
 
-
+// ================== SERVER ==================
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
-});
+server.listen(PORT, () => console.log("🚀 Server running on port", PORT));
