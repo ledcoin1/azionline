@@ -121,7 +121,9 @@ io.on("connection", (socket) => {                        // қосылу
 
     if(roomToJoin){
       // Бос орын бар room → жаңа ойыншыны қосу
-      roomToJoin.players.push(telegramId);
+      roomToJoin.players.push({
+        id: telegramId,
+  status: "waiting"});
       console.log(`🟢 ${telegramId} joined existing room ${roomToJoin.roomId}`);
 
       // Барлық room ойыншыларына хабарлау
@@ -145,8 +147,12 @@ io.on("connection", (socket) => {                        // қосылу
 
         rooms[roomId] = {
           roomId,
-          players: playersForRoom,
-          maxPlayers: 5
+          maxPlayers: 5,
+          players: playersForRoom.map(id=> ({
+            id,
+            status: "waiting"   // 👈 БАРЛЫҒЫ WAITING
+          }))
+          
         };
 
         console.log("🟢 New room created:", roomId, playersForRoom);
