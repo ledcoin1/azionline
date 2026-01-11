@@ -104,8 +104,10 @@ function sendBetRequest(roomId) {
     });
   });
 
-  // Клиент жауап беретін оқиға
-  const playerResponseHandler = (socket, data) => {
+  // ---------------------------
+  // Клиент жауап беретін оқиға – тек бір рет тіркеледі
+  // ---------------------------
+  const playerResponseHandler = (data) => {
     const { telegramId, response } = data;
     const player = room.players.find(p => p.id === telegramId);
     if(!player) return;
@@ -116,12 +118,17 @@ function sendBetRequest(roomId) {
     console.log(`✅ ${telegramId} жауап берді: ${player.status}`);
   };
 
-  // Барлық socket-терге тыңдау қосу
+  // Барлық socket-терге бір рет тыңдау қосамыз
   room.players.forEach(p => {
     const sId = lobby[p.id]?.socketId;
     if(!sId) return;
     const socket = io.sockets.sockets.get(sId);
-    if(socket) socket.on("playerResponse", data => playerResponseHandler(socket, data));
+
+    // Тексеру – егер бұрын тіркелген болса қосылмайды
+    if(socket && !socket._playerResponseRegistered) {
+      socket.on("playerResponse", playerResponseHandler);
+      socket._playerResponseRegistered = true; // бір рет тіркелгенін белгілейміз
+    }
   });
 
   // 5 секунд таймер
@@ -140,11 +147,15 @@ function sendBetRequest(roomId) {
       const sId = lobby[p.id]?.socketId;
       if(!sId) return;
       const socket = io.sockets.sockets.get(sId);
-      if(socket) socket.off("playerResponse", playerResponseHandler);
+      if(socket) {
+        socket.off("playerResponse", playerResponseHandler);
+        socket._playerResponseRegistered = false; // қайта тіркеуге рұқсат
+      }
     });
 
   }, 5000);
-}
+
+
 
 // 🔹 Ready ойыншыларға карталарды тарату функциясы
 function dealCardsToRoom(room) {
@@ -179,6 +190,7 @@ function dealCardsToRoom(room) {
 
   console.log("🎴 Ready ойыншыларға карталар таратылды, ортаға карта шықты:", middleCard);
 }
+
 
 
 
