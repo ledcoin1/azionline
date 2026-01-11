@@ -85,6 +85,31 @@ app.post("/api/admin/balance", async(req,res)=>{
 const lobby = {};   // бұл лобби
 const rooms = {};    // комта бұл
 
+function sendBetRequest(roomId){          //сұрақ жіберу функциясы 
+
+  const room = rooms[roomId];
+  if(!room) return;
+
+  room.players.forEach(p => {
+
+    // Тек waiting статус
+    if(p.status !== "waiting") return;
+
+    const sId = lobby[p.id]?.socketId;
+    if(!sId) return;
+
+    io.to(sId).emit("betRequest", {
+      roomId,
+      bet: 500,
+      timer: 5   // секунд
+    });
+
+  });
+
+}
+
+
+
 // socket қосу
 io.on("connection", (socket) => {                        // қосылу
   const telegramId = socket.handshake.auth.telegramId;
@@ -125,6 +150,10 @@ io.on("connection", (socket) => {                        // қосылу
         id: telegramId,
   status: "waiting"});
       console.log(`🟢 ${telegramId} joined existing room ${roomToJoin.roomId}`);
+       sendBetRequest(roomToJoin.roomId); // 👈 ОСЫ ДҰРЫС
+       console.log(`💰 Bet request sent to room: ${roomToJoin.roomId}`);
+
+
 
       // Барлық room ойыншыларына хабарлау
       roomToJoin.players.forEach(id => {
@@ -156,6 +185,8 @@ io.on("connection", (socket) => {                        // қосылу
         };
 
         console.log("🟢 New room created:", roomId, rooms[roomId].players);
+          sendBetRequest(roomId);
+          console.log("💰 Bet request sent to room:", roomId); //сұрақ
 
 
         // Lobby-ден өшіру
@@ -204,6 +235,11 @@ io.on("connection", (socket) => {                        // қосылу
     console.log("❌ Disconnect:", telegramId);
   });
 });
+
+
+
+
+
 
 // ================== SERVER ==================
 const PORT = process.env.PORT || 10000;
