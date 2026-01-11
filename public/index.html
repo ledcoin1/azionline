@@ -10,6 +10,7 @@
     .section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #fff; }
     ul { padding-left: 20px; }
     li { margin-bottom: 5px; }
+    .bet { color: green; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -75,12 +76,23 @@ if(!user){
     socket.on("joinedRoom", ({ roomId, players }) => {
       const roomEl = document.getElementById("roomList");
       roomEl.innerHTML = "";
-      players.forEach(id => {
+      players.forEach(p => {
         const li = document.createElement("li");
-        li.innerText = id === data.telegramId ? id + " (Сіз)" : id;
+        li.innerText = p.id === data.telegramId ? p.id + " (Сіз)" : p.id;
         roomEl.appendChild(li);
       });
       roomEl.insertAdjacentHTML("beforeend", `<li>🎮 Room ID: ${roomId}</li>`);
+    });
+
+    // Bet request (сұрақ) хабарламасын алу
+    socket.on("betRequest", data => {
+      console.log("💰 Сұрақ келді:", data); // терминалда бақылау
+
+      const roomEl = document.getElementById("roomList");
+      const li = document.createElement("li");
+      li.innerText = `💰 Ставка: ${data.bet}, Таймер: ${data.timer} секунд`;
+      li.classList.add("bet");
+      roomEl.appendChild(li);
     });
 
     // Баланс жаңарту
