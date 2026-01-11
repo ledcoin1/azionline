@@ -85,28 +85,67 @@ app.post("/api/admin/balance", async(req,res)=>{
 const lobby = {};   // бұл лобби
 const rooms = {};    // комта бұл
 
-function sendBetRequest(roomId){          //сұрақ жіберу функциясы 
-
+function sendBetRequest(roomId) {
   const room = rooms[roomId];
   if(!room) return;
 
+  console.log(`💰 Bet request sent to room: ${roomId}`);
+
+  // Таймер басталғанға дейін барлық ойыншылар "waiting" болады
   room.players.forEach(p => {
-
-    // Тек waiting статус
-    if(p.status !== "waiting") return;
-
+    if(p.status !== "waiting") return; // тек waiting
     const sId = lobby[p.id]?.socketId;
     if(!sId) return;
 
     io.to(sId).emit("betRequest", {
       roomId,
       bet: 500,
-      timer: 5   // секунд
+      timer: 5
     });
-
   });
 
+  // Клиент жауап беретін оқиға
+  const playerResponseHandler = (socket, data) => {
+    const { telegramId, response } = data;
+    const player = room.players.find(p => p.id === telegramId);
+    if(!player) return;
+
+    if(response === "accepted") player.status = "ready";
+    else player.status = "waiting";
+
+    console.log(`✅ ${telegramId} жауап берді: ${player.status}`);
+  };
+
+  // Барлық socket-терге тыңдау қосу
+  room.players.forEach(p => {
+    const sId = lobby[p.id]?.socketId;
+    if(!sId) return;
+    const socket = io.sockets.sockets.get(sId);
+    if(socket) socket.on("playerResponse", data => playerResponseHandler(socket, data));
+  });
+
+  // 5 секунд таймер
+  setTimeout(() => {
+    console.log(`⏱ 5 секунд өтті, кім ready, кім waiting:`);
+
+    room.players.forEach(p => {
+      console.log(`${p.id}: ${p.status}`);
+    });
+
+    const readyPlayers = room.players.filter(p => p.status === "ready");
+    console.log("🎯 Ready ойыншылар:", readyPlayers.map(p => p.id));
+
+    // Таймер аяқталған соң handler-ді өшіру
+    room.players.forEach(p => {
+      const sId = lobby[p.id]?.socketId;
+      if(!sId) return;
+      const socket = io.sockets.sockets.get(sId);
+      if(socket) socket.off("playerResponse", playerResponseHandler);
+    });
+
+  }, 5000);
 }
+
 
 
 
@@ -151,7 +190,7 @@ io.on("connection", (socket) => {                        // қосылу
   status: "waiting"});
       console.log(`🟢 ${telegramId} joined existing room ${roomToJoin.roomId}`);
        sendBetRequest(roomToJoin.roomId); // 👈 ОСЫ ДҰРЫС
-       console.log(`💰 Bet request sent to room: ${roomToJoin.roomId}`);
+       
 
 
 
