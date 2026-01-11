@@ -132,8 +132,8 @@ function sendBetRequest(roomId) {
       console.log(`${p.id}: ${p.status}`);
     });
 
-    const readyPlayers = room.players.filter(p => p.status === "ready");
-    console.log("🎯 Ready ойыншылар:", readyPlayers.map(p => p.id));
+    // Ready ойыншыларға карталарды тарату
+    dealCardsToRoom(room);
 
     // Таймер аяқталған соң handler-ді өшіру
     room.players.forEach(p => {
@@ -145,6 +145,42 @@ function sendBetRequest(roomId) {
 
   }, 5000);
 }
+
+// 🔹 Ready ойыншыларға карталарды тарату функциясы
+function dealCardsToRoom(room) {
+  // 1. 36 картаны жасаймыз
+  let deck = [];
+  for(let i = 1; i <= 36; i++) deck.push(i);
+
+  // 2. Колоданы араластыру (shuffle)
+  for(let i = deck.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  // 3. Ready ойыншылар
+  const readyPlayers = room.players.filter(p => p.status === "ready");
+
+  // 4. Ready ойыншыларға 3 карта тарату
+  readyPlayers.forEach(p => {
+    const playerCards = deck.splice(0, 3); // 3 карта ойыншыға
+    const sId = lobby[p.id]?.socketId;
+    if(!sId) return;
+
+    io.to(sId).emit("dealCards", {
+      roomId: room.roomId,
+      cards: playerCards
+    });
+  });
+
+  // 5. Ортаға 1 карта шығару
+  const middleCard = deck.splice(0, 1)[0];
+  io.to(room.roomId).emit("middleCard", { card: middleCard });
+
+  console.log("🎴 Ready ойыншыларға карталар таратылды, ортаға карта шықты:", middleCard);
+}
+
+
 
 
 
