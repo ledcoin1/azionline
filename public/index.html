@@ -10,7 +10,8 @@
     .section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #fff; }
     ul { padding-left: 20px; }
     li { margin-bottom: 5px; }
-    .bet { color: green; font-weight: bold; }
+    button { margin-right: 10px; padding: 5px 10px; cursor: pointer; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -30,6 +31,14 @@
 <div class="section">
   <strong>Room:</strong>
   <ul id="roomList"><li>Сіз әлі room-ға қосылмағансыз</li></ul>
+</div>
+
+<div class="section hidden" id="betSection">
+  <strong>Сұрақ:</strong>
+  <div>Ставка: 500</div>
+  <div>Таймер: <span id="betTimer">5</span> секунд</div>
+  <button id="acceptBtn">✅ Accept</button>
+  <button id="declineBtn">❌ Decline</button>
 </div>
 
 <script>
@@ -76,23 +85,12 @@ if(!user){
     socket.on("joinedRoom", ({ roomId, players }) => {
       const roomEl = document.getElementById("roomList");
       roomEl.innerHTML = "";
-      players.forEach(p => {
+      players.forEach(id => {
         const li = document.createElement("li");
-        li.innerText = p.id === data.telegramId ? p.id + " (Сіз)" : p.id;
+        li.innerText = id === data.telegramId ? id + " (Сіз)" : id;
         roomEl.appendChild(li);
       });
       roomEl.insertAdjacentHTML("beforeend", `<li>🎮 Room ID: ${roomId}</li>`);
-    });
-
-    // Bet request (сұрақ) хабарламасын алу
-    socket.on("betRequest", data => {
-      console.log("💰 Сұрақ келді:", data); // терминалда бақылау
-
-      const roomEl = document.getElementById("roomList");
-      const li = document.createElement("li");
-      li.innerText = `💰 Ставка: ${data.bet}, Таймер: ${data.timer} секунд`;
-      li.classList.add("bet");
-      roomEl.appendChild(li);
     });
 
     // Баланс жаңарту
@@ -103,6 +101,42 @@ if(!user){
     // Disconnect хабар
     socket.on("disconnect", () => {
       userInfoEl.innerText += "\n❌ Сіз disconnect болдыңыз";
+    });
+
+    // ================== BET REQUEST ==================
+    const betSection = document.getElementById("betSection");
+    const betTimerEl = document.getElementById("betTimer");
+    const acceptBtn = document.getElementById("acceptBtn");
+    const declineBtn = document.getElementById("declineBtn");
+
+    let betInterval;
+
+    socket.on("betRequest", ({ roomId, bet, timer }) => {
+      betSection.classList.remove("hidden");
+      betTimerEl.innerText = timer;
+
+      let timeLeft = timer;
+      clearInterval(betInterval);
+      betInterval = setInterval(() => {
+        timeLeft--;
+        betTimerEl.innerText = timeLeft;
+        if(timeLeft <= 0){
+          clearInterval(betInterval);
+          betSection.classList.add("hidden");
+        }
+      }, 1000);
+
+      // Accept / Decline
+      acceptBtn.onclick = () => {
+        socket.emit("playerResponse", { roomId, telegramId: data.telegramId, response: "accepted" });
+        betSection.classList.add("hidden");
+        clearInterval(betInterval);
+      };
+      declineBtn.onclick = () => {
+        socket.emit("playerResponse", { roomId, telegramId: data.telegramId, response: "declined" });
+        betSection.classList.add("hidden");
+        clearInterval(betInterval);
+      };
     });
 
     // Алғашқы Lobby көрсету
