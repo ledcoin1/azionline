@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <body>
@@ -7,19 +8,20 @@
 
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-const socket = io(); // Render автоматты URL-ге қосылады
-
+const socket = io();
 const joinBtn = document.getElementById("joinBtn");
 
-let telegramUser = {
-    id: 123456,
-    username: "Ayan"
-};
-
+// Telegram Mini App нақты қолданушы деректері
 joinBtn.addEventListener("click", () => {
+    const telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
+    
     socket.emit("playerJoined", telegramUser);
-    alert("Серверге хабар жіберілді! Консольді Render-де тексеріңіз.");
+    alert(`Серверге ${telegramUser.first_name} хабар жіберілді! Консольді тексеріңіз.`);
 });
 </script>
+
+<!-- Telegram WebApp SDK автоматты қосылады, бірақ кейде botfather параметрлері арқылы керек -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 </body>
 </html>
