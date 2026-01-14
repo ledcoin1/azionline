@@ -1,45 +1,32 @@
 const express = require("express");
-
-const app = express();            //kitaphanalar
-
+const app = express();
 const http = require("http").createServer(app);
-
 const io = require("socket.io")(http);
 
 const PORT = process.env.PORT || 3000;
-;
-//frontend papka
+
+// public ішін serve ету
 app.use(express.static("public"));
 
-// massiv
-let players={};
+let players = {}; // socket.id: telegramUser
 
-//miniapp ashkanda
-io.on("connection",socket=>{
-  console.log("ал кірді: ",socket.id);
+io.on("connection", socket => {
+    console.log("Жаңа ойыншы қосылды:", socket.id);
 
-  socket.on("playerJoined",players=>{
-    players[socket.id]=players;
+    // Telegram Mini App ойыншысы қосылды
+    socket.on("playerJoined", player => {
+        players[socket.id] = player;
+        console.log("Ойыншы Telegram арқылы кірді:", player);
+        console.log("Қазіргі ойыншылар:", players);
+    });
 
-    console.log("осындай ойыншы кірді ",player);
-    console.log("қазіргі ойыншылар ",players);
-  })
-  socket.on("disconnect", () => {
+    socket.on("disconnect", () => {
         delete players[socket.id];
         console.log("Ойыншы шықты:", socket.id);
         console.log("Қалған ойыншылар:", players);
     });
-})
-
-
-
+});
 
 http.listen(PORT, () => {
     console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
-
-
-
-
