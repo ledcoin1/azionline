@@ -22,7 +22,7 @@ io.on("connection",socket=>{
     players[socket.id]=players;
 
     console.log("осындай ойыншы кірді ",player);
-    console.log("қазіргі ойыншылар "players);
+    console.log("қазіргі ойыншылар ",players);
   })
 })
 
@@ -32,6 +32,7 @@ io.on("connection",socket=>{
 http.listen(PORT, () => {
     console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
