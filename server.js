@@ -14,7 +14,7 @@ io.on("connection", socket => {
     console.log("Жаңа ойыншы қосылды:", socket.id);
 
     // Telegram Mini App ойыншысы қосылды
-    socket.on("playerJoined", player => {
+    socket.on("playerJoine", player => {
         players[socket.id] = player;
         console.log("Ойыншы Telegram арқылы кірді:", player);
         console.log("Қазіргі ойыншылар:", players);
@@ -30,3 +30,4 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
     console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
