@@ -7,14 +7,14 @@
 
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-const socket = io("http://localhost:3000");
+const socket = io();
 
+// Батырма арқылы Telegram Mini App ойыншысы қосылады
 const joinBtn = document.getElementById("joinBtn");
 
-// Telegram Mini App ойыншысы
 let telegramUser = {
-    id: 123456,
-    username: "Ayan"
+    id: 123456,       // Мұнда нақты Telegram ID қосуға болады
+    username: "Ayan"  // Telegram username
 };
 
 joinBtn.addEventListener("click", () => {
