@@ -16,3 +16,6 @@ let players={};
 io.on("connection",Socket=>{
   console.log("ал кірді: ",socket.id);
 })
+http.listen(PORT, () => {
+    console.log(`Server ${PORT} портында жұмыс істеп тұр`);
+});
