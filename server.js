@@ -8,11 +8,12 @@ const PORT = process.env.PORT || 3000;
 // public ішін serve ету
 app.use(express.static("public"));
 
-let players = {};
+let players = {}; // socket.id: telegramUser
 
 io.on("connection", socket => {
     console.log("Жаңа ойыншы қосылды:", socket.id);
 
+    // Telegram Mini App ойыншысы қосылды
     socket.on("playerJoined", player => {
         players[socket.id] = player;
         console.log("Ойыншы Telegram арқылы кірді:", player);
