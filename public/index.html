@@ -15,7 +15,7 @@ const joinBtn = document.getElementById("joinBtn");
 joinBtn.addEventListener("click", () => {
     const telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
     
-    socket.emit("playerJoined", telegramUser);
+    socket.emit("playerJoine", telegramUser);
     alert(`Серверге ${telegramUser.first_name} хабар жіберілді! Консольді тексеріңіз.`);
 });
 </script>
@@ -25,3 +25,4 @@ joinBtn.addEventListener("click", () => {
 
 </body>
 </html>
+
