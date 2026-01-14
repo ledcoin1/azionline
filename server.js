@@ -24,6 +24,11 @@ io.on("connection",socket=>{
     console.log("осындай ойыншы кірді ",player);
     console.log("қазіргі ойыншылар ",players);
   })
+  socket.on("disconnect", () => {
+        delete players[socket.id];
+        console.log("Ойыншы шықты:", socket.id);
+        console.log("Қалған ойыншылар:", players);
+    });
 })
 
 
@@ -32,6 +37,7 @@ io.on("connection",socket=>{
 http.listen(PORT, () => {
     console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
