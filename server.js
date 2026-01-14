@@ -1,20 +1,20 @@
-const express = require("express");
-const app = express();
+const express = require(express);
+const app = express();            //kitaphanalar
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
+const PORT = procecess.env.PORT || 3000;
 
-const PORT = process.env.PORT || 3000;
-
-// public ішін serve ету
+//frontend papka
 app.use(express.static("public"));
 
-let players = {}; // socket.id: telegramUser
+// massiv
+let players={};
 
-io.on("connection", socket => {
-    console.log("Жаңа ойыншы қосылды:", socket.id);
-
+//miniapp ashkanda
+io.on("connection",Socket=>{
+  console.log("ал кірді: ",socket.id);
 })
+
 http.listen(PORT, () => {
     console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
