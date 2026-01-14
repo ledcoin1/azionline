@@ -1,137 +1,26 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Telegram MiniApp Lobby & Room</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
-    h2 { margin-bottom: 10px; }
-    .section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #fff; }
-    ul { padding-left: 20px; }
-    li { margin-bottom: 5px; }
-    .cards { display: flex; gap: 10px; margin-top: 10px; }
-    .card { width: 40px; height: 60px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 5px; }
-    .middle { margin-top: 10px; font-weight: bold; }
-  </style>
-</head>
 <body>
 
-<h2>MiniApp Lobby & Room</h2>
+<h2>Telegram Mini App Онлайн Ойын</h2>
+<button id="joinBtn">Ойынға қосыл</button>
 
-<div class="section">
-  <strong>Сіздің мәліметіңіз:</strong>
-  <div id="userInfo">Жүктелуде...</div>
-</div>
-
-<div class="section">
-  <strong>Lobby:</strong>
-  <ul id="lobbyList"><li>Жүктелуде...</li></ul>
-</div>
-
-<div class="section">
-  <strong>Room:</strong>
-  <ul id="roomList"><li>Сіз әлі room-ға қосылмағансыз</li></ul>
-</div>
-
-<div class="section">
-  <strong>Сіздің карталарыңыз:</strong>
-  <div id="playerCards" class="cards"></div>
-  <div id="middleCard" class="middle"></div>
-</div>
-
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-const tg = window.Telegram.WebApp;
-tg.expand();
-const user = tg.initDataUnsafe?.user;
+const socket = io("http://localhost:3000");
 
-if(!user){
-  document.getElementById("userInfo").innerText = "❌ Telegram user табылмады";
-} else {
-  fetch("/api/login", {
-    method: "POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ telegramId: String(user.id) })
-  })
-  .then(r => r.json())
-  .then(data => {
-    const userInfoEl = document.getElementById("userInfo");
-    userInfoEl.innerText = `🆔 ID: ${data.telegramId}\n💰 Баланс: ${data.balance}`;
+const joinBtn = document.getElementById("joinBtn");
 
-    const socket = io("/", { auth: { telegramId: String(user.id) } });
+// Telegram Mini App ойыншысы
+let telegramUser = {
+    id: 123456,
+    username: "Ayan"
+};
 
-    // Lobby жаңарту
-    socket.on("lobbyUpdate", lobbyPlayers => {
-      const lobbyEl = document.getElementById("lobbyList");
-      if(lobbyPlayers.length === 0){
-        lobbyEl.innerHTML = "<li>Lobby бос</li>";
-      } else {
-        lobbyEl.innerHTML = "";
-        lobbyPlayers.forEach(id => {
-          const li = document.createElement("li");
-          li.innerText = id;
-          lobbyEl.appendChild(li);
-        });
-      }
-    });
-
-    // Room жаңарту
-    socket.on("joinedRoom", ({ roomId, players }) => {
-      const roomEl = document.getElementById("roomList");
-      roomEl.innerHTML = "";
-      players.forEach(id => {
-        const li = document.createElement("li");
-        li.innerText = id === data.telegramId ? id + " (Сіз)" : id;
-        roomEl.appendChild(li);
-      });
-      roomEl.insertAdjacentHTML("beforeend", `<li>🎮 Room ID: ${roomId}</li>`);
-    });
-
-    // Баланс жаңарту
-    socket.on("balance", balance => {
-      userInfoEl.innerText = `🆔 ID: ${data.telegramId}\n💰 Баланс: ${balance}`;
-    });
-
-    // Disconnect хабар
-    socket.on("disconnect", () => {
-      userInfoEl.innerText += "\n❌ Сіз disconnect болдыңыз";
-    });
-
-    // Bet request келсе
-    socket.on("betRequest", ({ roomId, bet, timer }) => {
-      console.log(`💰 Bet request: ${bet}, таймер ${timer}s`);
-      // Автоматты қабылдау (мысалы тест үшін)
-      setTimeout(() => {
-        socket.emit("playerResponse", { telegramId: data.telegramId, response: "accepted" });
-      }, 1000);
-    });
-
-    // Карталарды алу
-    socket.on("dealCards", ({ roomId, cards }) => {
-      const playerCardsEl = document.getElementById("playerCards");
-      playerCardsEl.innerHTML = "";
-      cards.forEach(c => {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerText = c;
-        playerCardsEl.appendChild(div);
-      });
-    });
-
-    // Орта картасын көрсету
-    socket.on("middleCard", ({ card }) => {
-      document.getElementById("middleCard").innerText = `🂠 Ортаға карта: ${card}`;
-    });
-
-    // Алғашқы Lobby көрсету
-    socket.emit("requestLobby");
-  })
-  .catch(err => {
-    document.getElementById("userInfo").innerText = "❌ Server error: " + err.message;
-    console.error(err);
-  });
-}
+joinBtn.addEventListener("click", () => {
+    socket.emit("playerJoined", telegramUser);
+    alert("Серверге хабар жіберілді! Консольді тексеріңіз.");
+});
 </script>
-
 </body>
 </html>
