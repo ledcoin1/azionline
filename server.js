@@ -1,13 +1,11 @@
-// Порт автоматты түрде беріледі немесе 3000
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;  // Render автоматты PORT береді
 const io = require("socket.io")(PORT);
 
-let players = {}; // Қосылған ойыншылар
+let players = {};
 
 io.on("connection", socket => {
     console.log("Жаңа ойыншы қосылды:", socket.id);
 
-    // Клиент қосылған кезде Telegram Mini App арқылы хабар
     socket.on("playerJoined", player => {
         players[socket.id] = player;
         console.log("Ойыншы Telegram арқылы кірді:", player);
