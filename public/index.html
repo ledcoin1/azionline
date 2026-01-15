@@ -1,85 +1,83 @@
 <!DOCTYPE html>
 <html lang="kk">
 <head>
-  <meta charset="UTF-8">
-  <title>Онлайн ойын бөлме</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #1e1e2f;
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      flex-direction: column;
-    }
+<meta charset="UTF-8">
+<title>Онлайн ойын бөлме</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #1e1e2f;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
 
-    #room {
-      width: 400px;
-      height: 300px;
-      background: linear-gradient(145deg, #2c2c3c, #1a1a2b);
-      border-radius: 20px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-      box-sizing: border-box;
-      position: relative;
-      flex-direction: column;
-    }
+  #room {
+    width: 450px;
+    height: 350px;
+    background: linear-gradient(145deg, #2c2c3c, #1a1a2b);
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+    flex-direction: column;
+  }
 
-    .player {
-      width: 150px;
-      height: 80px;
-      background: #4e9af1;
-      border-radius: 15px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: bold;
-      font-size: 18px;
-      color: #fff;
-      text-align: center;
-      transition: transform 0.3s;
-    }
+  .player {
+    width: 160px;
+    height: 90px;
+    background: #4e9af1;
+    border-radius: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #fff;
+    text-align: center;
+    transition: transform 0.3s;
+  }
 
-    .topPlayer {
-      transform: rotate(180deg);
-      margin-bottom: auto;
-    }
+  .topPlayer {
+    transform: rotate(180deg);
+    margin-bottom: auto;
+  }
 
-    .bottomPlayer {
-      margin-top: auto;
-    }
+  .bottomPlayer {
+    margin-top: auto;
+  }
 
-    #roomTitle {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-weight: bold;
-      font-size: 20px;
-      color: #fff;
-    }
-  </style>
+  #roomTitle {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: bold;
+    font-size: 20px;
+    color: #fff;
+  }
+</style>
 </head>
 <body>
 
 <div id="room" style="display:none;">
   <div id="roomTitle"></div>
-  <div class="player topPlayer" id="player1"></div>
-  <div class="player bottomPlayer" id="player2"></div>
+  <div class="player topPlayer" id="player1">Қарсылас</div>
+  <div class="player bottomPlayer" id="player2">Сіз</div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
 
-// Telegram ID немесе серверде анықталған ойыншы объектін жібереміз
-// Мысалы, server Telegram ID-ді socket.id ретінде сақтайды
+// Серверге автоматты түрде қосылу
 socket.emit("playerJoined", { telegramId: socket.id });
 
 const roomDiv = document.getElementById("room");
@@ -91,10 +89,10 @@ socket.on("roomCreated", (data) => {
   roomDiv.style.display = "flex";
   roomTitle.textContent = `Бөлме ID: ${data.roomId}`;
 
-  // кім кім екенін анықтау
   const myId = socket.id;
   let mePlayer, otherPlayer;
 
+  // кім кім екенін анықтау
   if(data.players[0].socketId === myId){
     mePlayer = data.players[0].player.name || "Сіз";
     otherPlayer = data.players[1].player.name || "Қарсылас";
