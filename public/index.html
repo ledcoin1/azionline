@@ -4,62 +4,12 @@
 <meta charset="UTF-8">
 <title>Ойын бөлме</title>
 <style>
-  body {
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:#1e1e2f;
-    color:#fff;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-  }
-
-  #room {
-    width:450px;
-    height:350px;
-    background:linear-gradient(145deg,#2c2c3c,#1a1a2b);
-    border-radius:20px;
-    box-shadow:0 5px 20px rgba(0,0,0,0.5);
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    align-items:center;
-    padding:20px;
-    position:relative;
-  }
-
-  .player {
-    width:160px;
-    height:90px;
-    background:#4e9af1;
-    border-radius:15px;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-weight:bold;
-    font-size:18px;
-    text-align:center;
-    transition: transform 0.3s;
-  }
-
-  .topPlayer {
-    transform:rotate(180deg);
-    margin-bottom:auto;
-  }
-
-  .bottomPlayer {
-    margin-top:auto;
-  }
-
-  #roomTitle {
-    position:absolute;
-    top:10px;
-    left:50%;
-    transform:translateX(-50%);
-    font-weight:bold;
-    font-size:20px;
-  }
+  body { margin:0; font-family:Arial,sans-serif; background:#1e1e2f; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
+  #room { width:450px; height:350px; background:linear-gradient(145deg,#2c2c3c,#1a1a2b); border-radius:20px; box-shadow:0 5px 20px rgba(0,0,0,0.5); display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:20px; position:relative; }
+  .player { width:160px; height:90px; background:#4e9af1; border-radius:15px; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; text-align:center; transition: transform 0.3s; }
+  .topPlayer { transform:rotate(180deg); margin-bottom:auto; }
+  .bottomPlayer { margin-top:auto; }
+  #roomTitle { position:absolute; top:10px; left:50%; transform:translateX(-50%); font-weight:bold; font-size:20px; }
 </style>
 </head>
 <body>
@@ -73,12 +23,16 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  const tg = window.Telegram.WebApp;
+  tg.expand(); // iframe кеңейту
+
+  const user = tg.initDataUnsafe.user;
+  const myId = user?.id;
+  const myName = user?.first_name || "Сіз";
+
   const socket = io(); // серверге қосылу
 
-  // Telegram Mini App жоқ болса, жай автоматты қосылу (тест үшін)
-  const myId = socket.id;
-  const myName = "Сіз";
-
+  // Серверге қосылу
   socket.emit("playerJoined", { name: myName, telegramId: myId });
 
   const roomDiv = document.getElementById("room");
@@ -93,16 +47,16 @@ document.addEventListener("DOMContentLoaded", () => {
     let mePlayer, otherPlayer;
 
     // кім кім екенін анықтау
-    if(data.players[0].socketId === myId || data.players[0].player.telegramId === myId){
-      mePlayer = data.players[0].player.name || "Сіз";
-      otherPlayer = data.players[1].player.name || "Қарсылас";
+    if(data.players[0].player.telegramId === myId){
+      mePlayer = data.players[0].player.name;
+      otherPlayer = data.players[1].player.name;
     } else {
-      mePlayer = data.players[1].player.name || "Сіз";
-      otherPlayer = data.players[0].player.name || "Қарсылас";
+      mePlayer = data.players[1].player.name;
+      otherPlayer = data.players[0].player.name;
     }
 
-    player1Div.textContent = otherPlayer;
-    player2Div.textContent = mePlayer;
+    player1Div.textContent = otherPlayer || "Қарсылас";
+    player2Div.textContent = mePlayer || "Сіз";
   });
 });
 </script>
