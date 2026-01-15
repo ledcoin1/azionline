@@ -2,7 +2,7 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Telegram Mini App Ойын бөлме</title>
+<title>Ойын бөлме</title>
 <style>
   body {
     margin:0;
@@ -40,6 +40,7 @@
     font-weight:bold;
     font-size:18px;
     text-align:center;
+    transition: transform 0.3s;
   }
 
   .topPlayer {
@@ -72,17 +73,12 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  // Telegram WebApp инициализациясы
-  const tg = window.Telegram.WebApp;
-  tg.expand();
-
-  const user = tg.initDataUnsafe.user;
-  const myId = user?.id;
-  const myName = user?.first_name || "Сіз";
-
   const socket = io(); // серверге қосылу
 
-  // Серверге Telegram ID арқылы қосылу
+  // Telegram Mini App жоқ болса, жай автоматты қосылу (тест үшін)
+  const myId = socket.id;
+  const myName = "Сіз";
+
   socket.emit("playerJoined", { name: myName, telegramId: myId });
 
   const roomDiv = document.getElementById("room");
@@ -97,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let mePlayer, otherPlayer;
 
     // кім кім екенін анықтау
-    if(data.players[0].telegramId === myId || data.players[0].player.telegramId === myId){
+    if(data.players[0].socketId === myId || data.players[0].player.telegramId === myId){
       mePlayer = data.players[0].player.name || "Сіз";
       otherPlayer = data.players[1].player.name || "Қарсылас";
     } else {
