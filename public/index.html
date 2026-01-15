@@ -1,68 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Telegram Mini App Game</title>
+  <title>Лобби & Бөлме</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-    #lobby, #room {
-      display: flex;
-      justify-content: space-around;
-      width: 100%;
-      max-width: 500px;
-      margin: 20px 0;
-      border: 2px solid #ccc;
-      border-radius: 10px;
-      padding: 20px;
-      background: white;
-    }
-    .player {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: #4a90e2;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: bold;
-      font-size: 16px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-    }
-    #joinBtn {
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      background: #27ae60;
-      color: white;
-      cursor: pointer;
-    }
-    #joinBtn:hover {
-      background: #2ecc71;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+    h2 { margin-top: 20px; }
+    #lobby, #room { background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    .player { margin: 5px 0; }
+    button { padding: 5px 10px; font-size: 14px; margin-top: 10px; cursor: pointer; }
   </style>
 </head>
 <body>
+  <h1>Онлайн ойын лобби</h1>
 
-  <h1>Лобби</h1>
+  <div>
+    <input type="text" id="playerName" placeholder="Аты-жөніңіз">
+    <button id="joinBtn">Лоббиге қосылу</button>
+  </div>
+
+  <h2>Лоббидағы ойыншылар:</h2>
   <div id="lobby"></div>
 
-  <button id="joinBtn">Ойынға қосыл</button>
-
-  <h1>Бөлме (Комта)</h1>
+  <h2>Сіздің бөлмеңіз:</h2>
   <div id="room"></div>
 
-  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-  <script src="script.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
 
+    const lobbyDiv = document.getElementById("lobby");
+    const roomDiv = document.getElementById("room");
+    const joinBtn = document.getElementById("joinBtn");
+    const playerNameInput = document.getElementById("playerName");
+
+    let myRoomId = null;
+
+    // Лоббиге қосылу
+    joinBtn.addEventListener("click", () => {
+      const name = playerNameInput.value.trim();
+      if(!name) return alert("Атыңызды енгізіңіз");
+
+      socket.emit("playerJoined", { name });
+      joinBtn.disabled = true;
+      playerNameInput.disabled = true;
+    });
+
+    // Лобби жаңарту
+    socket.on("lobbyUpdate", (lobby) => {
+      lobbyDiv.innerHTML = "";
+      if(lobby.length === 0) {
+        lobbyDiv.innerHTML = "<i>Лобби бос</i>";
+        return;
+      }
+      lobby.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "player";
+        div.textContent = p.player.name;
+        lobbyDiv.appendChild(div);
+      });
+    });
+
+    // Бөлме жасалды
+    socket.on("roomCreated", (data) => {
+      myRoomId = data.roomId;
+      roomDiv.innerHTML = "";
+      const title = document.createElement("div");
+      title.textContent = `Бөлме ID: ${data.roomId}`;
+      roomDiv.appendChild(title);
+
+      data.players.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "player";
+        div.textContent = p.player.name + (p.player.name === playerNameInput.value ? " (Сіз)" : "");
+        roomDiv.appendChild(div);
+      });
+    });
+  </script>
 </body>
 </html>
