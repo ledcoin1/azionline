@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http, {
-  cors: { origin: "*", methods: ["GET","POST"] } // Telegram iframe үшін
+  cors: { origin: "*", methods: ["GET","POST"] } // iframe үшін
 });
 
 const PORT = process.env.PORT || 3000;
@@ -17,11 +17,9 @@ io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
   socket.on("playerJoined", player => {
-    // Ойыншыны сақтау
     players[socket.id] = player;
     lobby.push({ socketId: socket.id, player });
 
-    // Егер лоббида 2 адам болса → бөлме жасау
     if(lobby.length >= 2){
       const roomId = `room_${Date.now()}`;
       const p1 = lobby.shift();
@@ -29,7 +27,6 @@ io.on("connection", socket => {
 
       rooms[roomId] = [p1, p2];
 
-      // бөлмедегі ойыншыларға хабар жіберу
       io.to(p1.socketId).emit("roomCreated", { roomId, players: rooms[roomId] });
       io.to(p2.socketId).emit("roomCreated", { roomId, players: rooms[roomId] });
     }
