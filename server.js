@@ -2,7 +2,14 @@ const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http, {
-  cors: { origin: "*", methods: ["GET","POST"] } // iframe үшін
+  cors: { origin: "*", methods: ["GET","POST"] }
+});
+
+// iframe ішінде жұмыс істеу үшін Headers
+app.use((req, res, next) => {
+  res.setHeader("X-Frame-Options", "ALLOWALL");
+  res.setHeader("Content-Security-Policy", "frame-ancestors *");
+  next();
 });
 
 const PORT = process.env.PORT || 3000;
