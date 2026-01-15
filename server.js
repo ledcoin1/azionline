@@ -5,7 +5,7 @@ const io = require("socket.io")(http, {
   cors: { origin: "*", methods: ["GET","POST"] }
 });
 
-// iframe ішінде жұмыс істеу үшін Headers
+// iframe рұқсат
 app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "ALLOWALL");
   res.setHeader("Content-Security-Policy", "frame-ancestors *");
