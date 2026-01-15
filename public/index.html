@@ -2,80 +2,111 @@
 <html lang="kk">
 <head>
   <meta charset="UTF-8">
-  <title>Лобби & Бөлме</title>
+  <title>Онлайн ойын бөлме</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
-    h2 { margin-top: 20px; }
-    #lobby, #room { background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
-    .player { margin: 5px 0; }
-    button { padding: 5px 10px; font-size: 14px; margin-top: 10px; cursor: pointer; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1e1e2f;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    #room {
+      width: 400px;
+      height: 300px;
+      background: linear-gradient(145deg, #2c2c3c, #1a1a2b);
+      border-radius: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      position: relative;
+      flex-direction: column;
+    }
+
+    .player {
+      width: 150px;
+      height: 80px;
+      background: #4e9af1;
+      border-radius: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 18px;
+      color: #fff;
+      text-align: center;
+      transition: transform 0.3s;
+    }
+
+    .topPlayer {
+      transform: rotate(180deg);
+      margin-bottom: auto;
+    }
+
+    .bottomPlayer {
+      margin-top: auto;
+    }
+
+    #roomTitle {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-weight: bold;
+      font-size: 20px;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
-  <h1>Онлайн ойын лобби</h1>
 
-  <div>
-    <input type="text" id="playerName" placeholder="Аты-жөніңіз">
-    <button id="joinBtn">Лоббиге қосылу</button>
-  </div>
+<div id="room" style="display:none;">
+  <div id="roomTitle"></div>
+  <div class="player topPlayer" id="player1"></div>
+  <div class="player bottomPlayer" id="player2"></div>
+</div>
 
-  <h2>Лоббидағы ойыншылар:</h2>
-  <div id="lobby"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
 
-  <h2>Сіздің бөлмеңіз:</h2>
-  <div id="room"></div>
+// Telegram ID немесе серверде анықталған ойыншы объектін жібереміз
+// Мысалы, server Telegram ID-ді socket.id ретінде сақтайды
+socket.emit("playerJoined", { telegramId: socket.id });
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+const roomDiv = document.getElementById("room");
+const roomTitle = document.getElementById("roomTitle");
+const player1Div = document.getElementById("player1");
+const player2Div = document.getElementById("player2");
 
-    const lobbyDiv = document.getElementById("lobby");
-    const roomDiv = document.getElementById("room");
-    const joinBtn = document.getElementById("joinBtn");
-    const playerNameInput = document.getElementById("playerName");
+socket.on("roomCreated", (data) => {
+  roomDiv.style.display = "flex";
+  roomTitle.textContent = `Бөлме ID: ${data.roomId}`;
 
-    let myRoomId = null;
+  // кім кім екенін анықтау
+  const myId = socket.id;
+  let mePlayer, otherPlayer;
 
-    // Лоббиге қосылу
-    joinBtn.addEventListener("click", () => {
-      const name = playerNameInput.value.trim();
-      if(!name) return alert("Атыңызды енгізіңіз");
+  if(data.players[0].socketId === myId){
+    mePlayer = data.players[0].player.name || "Сіз";
+    otherPlayer = data.players[1].player.name || "Қарсылас";
+  } else {
+    mePlayer = data.players[1].player.name || "Сіз";
+    otherPlayer = data.players[0].player.name || "Қарсылас";
+  }
 
-      socket.emit("playerJoined", { name });
-      joinBtn.disabled = true;
-      playerNameInput.disabled = true;
-    });
+  player1Div.textContent = otherPlayer;
+  player2Div.textContent = mePlayer;
+});
+</script>
 
-    // Лобби жаңарту
-    socket.on("lobbyUpdate", (lobby) => {
-      lobbyDiv.innerHTML = "";
-      if(lobby.length === 0) {
-        lobbyDiv.innerHTML = "<i>Лобби бос</i>";
-        return;
-      }
-      lobby.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "player";
-        div.textContent = p.player.name;
-        lobbyDiv.appendChild(div);
-      });
-    });
-
-    // Бөлме жасалды
-    socket.on("roomCreated", (data) => {
-      myRoomId = data.roomId;
-      roomDiv.innerHTML = "";
-      const title = document.createElement("div");
-      title.textContent = `Бөлме ID: ${data.roomId}`;
-      roomDiv.appendChild(title);
-
-      data.players.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "player";
-        div.textContent = p.player.name + (p.player.name === playerNameInput.value ? " (Сіз)" : "");
-        roomDiv.appendChild(div);
-      });
-    });
-  </script>
 </body>
 </html>
