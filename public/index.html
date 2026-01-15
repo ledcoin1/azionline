@@ -2,14 +2,63 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Telegram Mini App Ойын</title>
+<title>Telegram Mini App Ойын бөлме</title>
 <style>
-  body { margin:0; font-family:Arial,sans-serif; background:#1e1e2f; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
-  #room { width:450px; height:350px; background:linear-gradient(145deg,#2c2c3c,#1a1a2b); border-radius:20px; box-shadow:0 5px 20px rgba(0,0,0,0.5); display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:20px; position:relative; }
-  .player { width:160px; height:90px; background:#4e9af1; border-radius:15px; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; text-align:center; }
-  .topPlayer { transform:rotate(180deg); margin-bottom:auto; }
-  .bottomPlayer { margin-top:auto; }
-  #roomTitle { position:absolute; top:10px; left:50%; transform:translateX(-50%); font-weight:bold; font-size:20px; }
+  body {
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#1e1e2f;
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+  }
+
+  #room {
+    width:450px;
+    height:350px;
+    background:linear-gradient(145deg,#2c2c3c,#1a1a2b);
+    border-radius:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.5);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px;
+    position:relative;
+  }
+
+  .player {
+    width:160px;
+    height:90px;
+    background:#4e9af1;
+    border-radius:15px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-weight:bold;
+    font-size:18px;
+    text-align:center;
+  }
+
+  .topPlayer {
+    transform:rotate(180deg);
+    margin-bottom:auto;
+  }
+
+  .bottomPlayer {
+    margin-top:auto;
+  }
+
+  #roomTitle {
+    position:absolute;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    font-weight:bold;
+    font-size:20px;
+  }
 </style>
 </head>
 <body>
@@ -22,15 +71,14 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-(async () => {
+document.addEventListener("DOMContentLoaded", () => {
   // Telegram WebApp инициализациясы
   const tg = window.Telegram.WebApp;
-  tg.expand(); // iframe кеңейту
+  tg.expand();
 
-  // Пайдаланушы деректері
-  const user = tg.initDataUnsafe.user; 
+  const user = tg.initDataUnsafe.user;
+  const myId = user?.id;
   const myName = user?.first_name || "Сіз";
-  const myId = user?.id || tg.initData; // id жоқ болса fallback
 
   const socket = io(); // серверге қосылу
 
@@ -47,6 +95,8 @@
     roomTitle.textContent = `Бөлме ID: ${data.roomId}`;
 
     let mePlayer, otherPlayer;
+
+    // кім кім екенін анықтау
     if(data.players[0].telegramId === myId || data.players[0].player.telegramId === myId){
       mePlayer = data.players[0].player.name || "Сіз";
       otherPlayer = data.players[1].player.name || "Қарсылас";
@@ -58,7 +108,7 @@
     player1Div.textContent = otherPlayer;
     player2Div.textContent = mePlayer;
   });
-})();
+});
 </script>
 
 </body>
