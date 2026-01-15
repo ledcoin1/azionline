@@ -1,13 +1,15 @@
 const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const io = require("socket.io")(http, {
+  cors: { origin: "*", methods: ["GET","POST"] } // Telegram iframe үшін
+});
 
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
 
-let players = {};  // socket.id: player
+let players = {};
 let lobby = [];
 let rooms = {};
 
@@ -15,11 +17,9 @@ io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
   socket.on("playerJoined", player => {
+    // Ойыншыны сақтау
     players[socket.id] = player;
-    lobby.push({socketId: socket.id, player});
-
-    // Лобби жаңарту
-    io.emit("lobbyUpdate", lobby);
+    lobby.push({ socketId: socket.id, player });
 
     // Егер лоббида 2 адам болса → бөлме жасау
     if(lobby.length >= 2){
@@ -30,8 +30,8 @@ io.on("connection", socket => {
       rooms[roomId] = [p1, p2];
 
       // бөлмедегі ойыншыларға хабар жіберу
-      io.to(p1.socketId).emit("roomCreated", {roomId, players: rooms[roomId]});
-      io.to(p2.socketId).emit("roomCreated", {roomId, players: rooms[roomId]});
+      io.to(p1.socketId).emit("roomCreated", { roomId, players: rooms[roomId] });
+      io.to(p2.socketId).emit("roomCreated", { roomId, players: rooms[roomId] });
     }
   });
 
@@ -43,9 +43,6 @@ io.on("connection", socket => {
       rooms[roomId] = rooms[roomId].filter(p => p.socketId !== socket.id);
       if(rooms[roomId].length === 0) delete rooms[roomId];
     }
-
-    // Лобби жаңарту
-    io.emit("lobbyUpdate", lobby);
   });
 });
 
