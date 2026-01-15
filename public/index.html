@@ -2,32 +2,24 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Telegram Mini App Тест</title>
-<style>
-  body { margin:0; font-family:Arial,sans-serif; background:#1e1e2f; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
-  h1 { text-align:center; }
-</style>
+<title>Telegram WebApp Тест</title>
 </head>
 <body>
-
-<h1>Telegram Mini App ашылды! 🎉</h1>
-<p id="userInfo"></p>
+<h1>Telegram Mini App тесті</h1>
+<p id="info">Жүктелуде...</p>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const tg = window.Telegram?.WebApp;
-
-  if(tg){
-    tg.expand();
-    const user = tg.initDataUnsafe.user;
-    document.getElementById("userInfo").textContent = user 
+  const info = document.getElementById("info");
+  if(window.Telegram?.WebApp){
+    const user = window.Telegram.WebApp.initDataUnsafe.user;
+    info.textContent = user 
       ? `Сәлем, ${user.first_name} (ID: ${user.id})` 
-      : "Пайдаланушы деректері алынбады";
+      : "WebApp ашылды, бірақ пайдаланушы жоқ";
   } else {
-    document.getElementById("userInfo").textContent = "Telegram WebApp анықталмады";
+    info.textContent = "Telegram WebApp анықталмады. И frame дұрыс ашылған жоқ.";
   }
 });
 </script>
-
 </body>
 </html>
