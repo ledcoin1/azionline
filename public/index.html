@@ -2,7 +2,7 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Telegram Mini App Тест</title>
+<title>Telegram Mini App</title>
 <style>
 body { margin:0; font-family:Arial,sans-serif; background:#1e1e2f; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
 #room { width:400px; height:300px; background:#2c2c3c; border-radius:20px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:20px; position:relative; }
@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const socket = io();
 
+  // Серверге қосылу
   socket.emit("playerJoined", { name: myName, telegramId: myId });
 
   const roomDiv = document.getElementById("room");
