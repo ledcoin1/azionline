@@ -22,7 +22,16 @@ let rooms = {};
 
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
+
+    socket.on("playerJoined", player => {
+    // player = { name, telegramId }
+    console.log(`Ойыншы қосылды: ${player.name} (Telegram ID: ${player.telegramId})`);
+    
+    // Кейін лоббиға қосуға немесе бөлме жасауға болады
+
+  });
    });
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
