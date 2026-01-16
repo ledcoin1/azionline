@@ -95,6 +95,11 @@ myButton.addEventListener("click", () => {
 });
 
 // Серверден кім кімге қосылды хабар келгенде
+socket.on("roomData", data => {
+  players = data.map(p => p.name);
+  renderPlayers();
+});
+  
 socket.on("playerJoinedRoom", data => {
     players.push(data.name);
     renderPlayers();
@@ -113,5 +118,6 @@ function renderPlayers(){
 
 </body>
 </html>
+
 
 
