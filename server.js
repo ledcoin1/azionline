@@ -56,6 +56,32 @@ io.on("connection", socket => {
        });
   });
 
+  socket.on("betResponse", ({ answer }) => {
+    const roomId = "room_1";
+
+    if (!rooms[roomId]) return;
+
+    const player = rooms[roomId].find(
+      p => p.socketId === socket.id
+    );
+
+    if (!player) return;
+
+    // 👉 жауапты сақтау
+    player.betAnswer = answer; // true / false
+
+    console.log(
+      "Жауап сақталды:",
+      player.name,
+      "->",
+      answer ? "ҚАБЫЛДАДЫ" : "БАС ТАРТТЫ"
+    );
+
+    console.log("ROOM күйі:", rooms[roomId]);
+  });
+
+});
+
   // disconnect тыңдағышы да осы жерде
   socket.on("disconnect", () => {
     console.log("Ойыншы disconnect:", socket.id);
@@ -71,6 +97,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
