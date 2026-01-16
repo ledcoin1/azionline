@@ -105,6 +105,13 @@ socket.on("playerJoinedRoom", data => {
   renderPlayers();
 });
 
+  // Серверден сұрақ келгенде көрсету
+socket.on("askBet", data => {
+  alert(`Сізге сұрақ келді: ${data.question} (${data.amount})`);
+  // Немесе өзің қалаған әдемі UI блокта көрсетуге болады
+});
+
+
 function renderPlayers() {
   playersList.innerHTML = "";
   players.forEach(p => {
@@ -118,6 +125,7 @@ function renderPlayers() {
 
 </body>
 </html>
+
 
 
 
