@@ -69,26 +69,49 @@ button:hover {
 
 
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+ <script src="/socket.io/socket.io.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-   const socket = io(); // серверге қосылу
-  const myButton = document.getElementById("myButton");
+const socket = io();
+const myButton = document.getElementById("myButton");
+const roomScreen = document.getElementById("roomScreen");
+const playersList = document.getElementById("playersList");
 
-   const tgUser = window.Telegram.WebApp.initDataUnsafe?.user || {};
+const tgUser = window.Telegram.WebApp.initDataUnsafe?.user || {};
+let players = [];
 
-  myButton.addEventListener("click", () => {
-    const playerName = tgUser.first_name || "Ойыншы";  // Telegram аты
-    const telegramId = tgUser.id || null;              // Telegram ID
+// Батырма басылғанда серверге хабар жіберу
+myButton.addEventListener("click", () => {
+    const playerName = tgUser.first_name || "Ойыншы";
+    const telegramId = tgUser.id || null;
 
-    socket.emit("playerJoined", { name: playerName, telegramId: telegramId });
+    socket.emit("playerJoined", { name: playerName, telegramId });
 
-  
-  });
+    // Батырманы жасыру (міндетті емес)
+    myButton.style.display = "none";
 
+    // Комната экранын көрсету
+    roomScreen.style.display = "block";
+});
 
+// Серверден кім кімге қосылды хабар келгенде
+socket.on("playerJoinedRoom", data => {
+    players.push(data.name);
+    renderPlayers();
+});
 
+// Қатысушылар тізімін экранға шығару
+function renderPlayers(){
+    playersList.innerHTML = "";
+    players.forEach(name => {
+        const li = document.createElement("li");
+        li.textContent = "👤 " + name;
+        playersList.appendChild(li);
+    });
+}
 </script>
+
 </body>
 </html>
+
 
