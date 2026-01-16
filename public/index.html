@@ -23,8 +23,11 @@
     border-radius: 15px;
     display: inline-block;
   }
+      
 
-  .button-container {
+            
+
+  .button-container {        
   display: flex;             /* flexbox қолданамыз */
   justify-content: center;   /* көлденең орталыққа шығару */
   align-items: center;       /* тік орталыққа шығару */
@@ -55,9 +58,17 @@ button:hover {
 <h1>Карта</h1>
 
 <div class="button-container">
-  <button id="myButton">Играть</button>
-</div>
+  <button id="myButton">Играть</button>    
 
+
+
+  <script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const playersList = document.getElementById("players");
+
+  
+</script>
 </body>
 </html>
 
