@@ -49,6 +49,11 @@ io.on("connection", socket => {
 
     // Басқа ойыншыларға хабар
     socket.to(roomId).emit("playerJoinedRoom", player);
+
+    io.to(socket.id).emit("askBet", {
+      question: "Ставка 500",
+      amount: 500
+       });
   });
 
   // disconnect тыңдағышы да осы жерде
@@ -66,6 +71,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
