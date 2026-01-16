@@ -22,6 +22,33 @@ let rooms = {};
 
 
 
+function dealCards(roomId){
+
+  const acceptedPlayers = rooms[roomId].filter(
+    p => p.betAnswer === true
+  );
+
+  const deck = [
+   "6♠","7♠","8♠","9♠","10♠","J♠","Q♠","K♠","A♠",
+   "6♥","7♥","8♥","9♥","10♥","J♥","Q♥","K♥","A♥",
+   "6♦","7♦","8♦","9♦","10♦","J♦","Q♦","K♦","A♦",
+   "6♣","7♣","8♣","9♣","10♣","J♣","Q♣","K♣","A♣"
+  ];
+
+  deck.sort(() => Math.random() - 0.5);
+
+  acceptedPlayers.forEach(player => {
+    player.cards = deck.splice(0,3);
+
+    io.to(player.socketId).emit("yourCards", {
+      cards: player.cards
+    });
+  });
+}
+
+
+
+
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
@@ -77,7 +104,18 @@ io.on("connection", socket => {
     accepted ? "ҚАБЫЛДАДЫ" : "БАС ТАРТТЫ"
   );
 
+// 🔥 БАРЛЫҒЫ ЖАУАП БЕРДІ МЕ?
+    const allAnswered = rooms[roomId].every(
+      p => p.betAnswer !== undefined
+    );
+
+    if(allAnswered){
+      dealCards(roomId); // 👈 МІНЕ ДҰРЫС ОРНЫ
+    }
+  });
+
 });
+
 
 
 
@@ -96,6 +134,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
