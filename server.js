@@ -108,7 +108,7 @@ io.on("connection", socket => {
     }
   });
 
-});
+
 
 
 
@@ -129,6 +129,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
