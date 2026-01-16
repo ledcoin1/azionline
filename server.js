@@ -27,15 +27,17 @@ io.on("connection", socket => {
     players[socket.id] = player;
     lobby.push({ socketId: socket.id, player });
 
-    if(lobby.length >= 2){
-      const roomId = `room_${Date.now()}`;
-      const p1 = lobby.shift();
-      const p2 = lobby.shift();
+    // Лоббиде кемінде 2 адам болса, бөлме жасау
+    while (lobby.length >= 2) {
+      const roomSize = Math.min(lobby.length, 5); // бөлмеге максимум 5 адам
+      const roomPlayers = lobby.splice(0, roomSize);
+      const roomId = `room_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+      rooms[roomId] = roomPlayers;
 
-      rooms[roomId] = [p1, p2];
-
-      io.to(p1.socketId).emit("roomCreated", { roomId, players: rooms[roomId] });
-      io.to(p2.socketId).emit("roomCreated", { roomId, players: rooms[roomId] });
+      // Барлық бөлмедегі ойыншыларға хабарлау
+      roomPlayers.forEach(p => {
+        io.to(p.socketId).emit("roomCreated", { roomId, players: rooms[roomId] });
+      });
     }
   });
 
@@ -43,9 +45,9 @@ io.on("connection", socket => {
     delete players[socket.id];
     lobby = lobby.filter(p => p.socketId !== socket.id);
 
-    for(const roomId in rooms){
+    for (const roomId in rooms) {
       rooms[roomId] = rooms[roomId].filter(p => p.socketId !== socket.id);
-      if(rooms[roomId].length === 0) delete rooms[roomId];
+      if (rooms[roomId].length === 0) delete rooms[roomId];
     }
   });
 });
