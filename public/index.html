@@ -51,6 +51,28 @@ button:hover {
   box-shadow: 0 8px 15px rgba(0,0,0,0.2); /* көлеңке қосу */
 }
 
+#roomScreen {
+  margin-top: 30px;
+  background: rgba(255,255,255,0.9);
+  padding: 20px 40px;
+  border-radius: 15px;
+  display: inline-block;
+}
+
+#playersList {
+  list-style: none;
+  padding: 0;
+}
+
+#playersList li {
+  background: #1c92d2;
+  color: white;
+  margin: 8px 0;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
 </style>
 </head>
 <body>
@@ -59,6 +81,12 @@ button:hover {
 
 <div class="button-container">
   <button id="myButton">Играть</button>    
+
+  <div id="roomScreen" style="display:none;">
+  <h2>🎮 Комната</h2>
+  <p>Қатысушылар:</p>
+  <ul id="playersList"></ul>
+</div>
 
 
 
@@ -76,8 +104,36 @@ button:hover {
 
     socket.emit("playerJoined", { name: playerName, telegramId: telegramId });
 
-    alert(`Серверге жіберілді: ${playerName} (ID: ${telegramId})`);
+  
   });
+
+  const roomScreen = document.getElementById("roomScreen");
+const playersList = document.getElementById("playersList");
+
+let players = [];
+
+// Серверден room хабар келсе
+socket.on("playerJoinedRoom", data => {
+
+  // Экранды көрсету
+  roomScreen.style.display = "block";
+
+  // Тізімге қосу
+  players.push(data.name);
+
+  renderPlayers();
+});
+
+function renderPlayers(){
+  playersList.innerHTML = "";
+
+  players.forEach(name => {
+    const li = document.createElement("li");
+    li.textContent = name;
+    playersList.appendChild(li);
+  });
+}
+
 </script>
 </body>
 </html>
