@@ -26,12 +26,15 @@ io.on("connection", socket => {
     socket.on("playerJoined", player => {
     // player = { name, telegramId }
     console.log(`Ойыншы қосылды: ${player.name} (Telegram ID: ${player.telegramId})`);
-    
-    // Кейін лоббиға қосуға немесе бөлме жасауға болады
+
+      players[socket.id] = player;
+      console.log("Қазіргі лобби:", Object.values(players));
+
 
   });
    });
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
