@@ -1,79 +1,26 @@
 <!DOCTYPE html>
 <html lang="kk">
 <head>
-  <meta charset="UTF-8">
-  <title>Lobby & Rooms</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 30px; }
-    #lobby, #room { margin-top: 20px; }
-    .player { padding: 5px; border: 1px solid #ccc; margin-bottom: 5px; }
-    #room { display: none; }
-  </style>
+<meta charset="UTF-8">
+<title>Сервер қосылғандар</title>
 </head>
 <body>
-  <h1>Ойын лоббиі</h1>
-  
-  <div>
-    <input type="text" id="name" placeholder="Атыңыз" />
-    <button id="joinBtn">Қосылу</button>
-  </div>
-  
-  <div id="lobby">
-    <h2>Лобби</h2>
-    <ul id="lobbyList"></ul>
-  </div>
+<h1>Жаңа ойыншылар</h1>
+<ul id="players"></ul>
 
-  <div id="room">
-    <h2>Бөлме</h2>
-    <p id="roomId"></p>
-    <ul id="roomList"></ul>
-  </div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const playersList = document.getElementById("players");
 
-  <script>
-    const socket = io();
+  socket.on("connect", () => {
+    const li = document.createElement("li");
+    li.textContent = `Сіз қосылдыңыз: ${socket.id}`;
+    playersList.appendChild(li);
+  });
 
-    const joinBtn = document.getElementById("joinBtn");
-    const nameInput = document.getElementById("name");
-    const lobbyList = document.getElementById("lobbyList");
-    const roomDiv = document.getElementById("room");
-    const roomIdP = document.getElementById("roomId");
-    const roomList = document.getElementById("roomList");
-
-    let myName = "";
-
-    joinBtn.addEventListener("click", () => {
-      myName = nameInput.value.trim();
-      if(!myName) return alert("Атыңызды енгізіңіз");
-
-      socket.emit("playerJoined", { name: myName });
-    });
-
-    // Лоббиде кімдер бар
-    socket.on("lobbyUpdate", lobby => {
-      lobbyList.innerHTML = "";
-      lobby.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent = p.player.name;
-        li.className = "player";
-        lobbyList.appendChild(li);
-      });
-    });
-
-    // Бөлме жасалғанда
-    socket.on("roomCreated", ({ roomId, players }) => {
-      document.getElementById("lobby").style.display = "none";
-      roomDiv.style.display = "block";
-      roomIdP.textContent = `Бөлме ID: ${roomId}`;
-
-      roomList.innerHTML = "";
-      players.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent = p.player.name + (p.player.name === myName ? " (Сіз)" : "");
-        li.className = "player";
-        roomList.appendChild(li);
-      });
-    });
-  </script>
+  // Серверге жаңа ойыншы қосылғанда консольға шығару
+  // Сенің кодта хабарлама тек console.log
+</script>
 </body>
 </html>
