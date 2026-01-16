@@ -20,7 +20,7 @@ let players = {};
 let lobby = [];
 let rooms = {};
 
-let rooms = {};
+
 
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
@@ -63,6 +63,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
