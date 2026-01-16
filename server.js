@@ -32,7 +32,14 @@ io.on("connection", socket => {
     socket.join(roomId);
 
     if (!rooms[roomId]) rooms[roomId] = [];
-    rooms[roomId].push({ socketId: socket.id, ...player });
+    
+    const playerData = {
+      socketId: socket.id,
+      ...player,
+      status: "waiting"
+    };
+
+    rooms[roomId].push(playerData);
 
     console.log(`"${roomId}" бөлмесіне кірді:`, player.name);
     console.log("Room ішіндегілер:", rooms[roomId]);
@@ -59,7 +66,6 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
