@@ -1,70 +1,79 @@
 <!DOCTYPE html>
 <html lang="kk">
 <head>
-<meta charset="UTF-8">
-<title>Telegram Mini App</title>
-<style>
-body { margin:0; font-family:Arial,sans-serif; background:#1e1e2f; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
-#room { width:400px; height:300px; background:#2c2c3c; border-radius:20px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:20px; position:relative; }
-.player { width:150px; height:80px; background:#4e9af1; border-radius:15px; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:18px; }
-.topPlayer { transform:rotate(180deg); margin-bottom:auto; }
-.bottomPlayer { margin-top:auto; }
-#roomTitle { position:absolute; top:10px; left:50%; transform:translateX(-50%); font-weight:bold; font-size:20px; }
-</style>
+  <meta charset="UTF-8">
+  <title>Lobby & Rooms</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; }
+    #lobby, #room { margin-top: 20px; }
+    .player { padding: 5px; border: 1px solid #ccc; margin-bottom: 5px; }
+    #room { display: none; }
+  </style>
 </head>
 <body>
+  <h1>Ойын лоббиі</h1>
+  
+  <div>
+    <input type="text" id="name" placeholder="Атыңыз" />
+    <button id="joinBtn">Қосылу</button>
+  </div>
+  
+  <div id="lobby">
+    <h2>Лобби</h2>
+    <ul id="lobbyList"></ul>
+  </div>
 
-<div id="room" style="display:none;">
-  <div id="roomTitle"></div>
-  <div class="player topPlayer" id="player1">Қарсылас</div>
-  <div class="player bottomPlayer" id="player2">Сіз</div>
-</div>
+  <div id="room">
+    <h2>Бөлме</h2>
+    <p id="roomId"></p>
+    <ul id="roomList"></ul>
+  </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const tg = window.Telegram?.WebApp;
+  <script>
+    const socket = io();
 
-  if(!tg){
-    alert("Бұл тек Telegram ішінде жұмыс істейді!");
-    return;
-  }
+    const joinBtn = document.getElementById("joinBtn");
+    const nameInput = document.getElementById("name");
+    const lobbyList = document.getElementById("lobbyList");
+    const roomDiv = document.getElementById("room");
+    const roomIdP = document.getElementById("roomId");
+    const roomList = document.getElementById("roomList");
 
-  tg.expand();
+    let myName = "";
 
-  const user = tg.initDataUnsafe.user;
-  const myId = user?.id;
-  const myName = user?.first_name || "Сіз";
+    joinBtn.addEventListener("click", () => {
+      myName = nameInput.value.trim();
+      if(!myName) return alert("Атыңызды енгізіңіз");
 
-  const socket = io();
+      socket.emit("playerJoined", { name: myName });
+    });
 
-  // Серверге қосылу
-  socket.emit("playerJoined", { name: myName, telegramId: myId });
+    // Лоббиде кімдер бар
+    socket.on("lobbyUpdate", lobby => {
+      lobbyList.innerHTML = "";
+      lobby.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = p.player.name;
+        li.className = "player";
+        lobbyList.appendChild(li);
+      });
+    });
 
-  const roomDiv = document.getElementById("room");
-  const roomTitle = document.getElementById("roomTitle");
-  const player1Div = document.getElementById("player1");
-  const player2Div = document.getElementById("player2");
+    // Бөлме жасалғанда
+    socket.on("roomCreated", ({ roomId, players }) => {
+      document.getElementById("lobby").style.display = "none";
+      roomDiv.style.display = "block";
+      roomIdP.textContent = `Бөлме ID: ${roomId}`;
 
-  socket.on("roomCreated", (data) => {
-    roomDiv.style.display = "flex";
-    roomTitle.textContent = `Бөлме ID: ${data.roomId}`;
-
-    let mePlayer, otherPlayer;
-
-    if(data.players[0].player.telegramId === myId){
-      mePlayer = data.players[0].player.name;
-      otherPlayer = data.players[1].player.name;
-    } else {
-      mePlayer = data.players[1].player.name;
-      otherPlayer = data.players[0].player.name;
-    }
-
-    player1Div.textContent = otherPlayer || "Қарсылас";
-    player2Div.textContent = mePlayer || "Сіз";
-  });
-});
-</script>
-
+      roomList.innerHTML = "";
+      players.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = p.player.name + (p.player.name === myName ? " (Сіз)" : "");
+        li.className = "player";
+        roomList.appendChild(li);
+      });
+    });
+  </script>
 </body>
 </html>
