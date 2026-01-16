@@ -56,29 +56,28 @@ io.on("connection", socket => {
        });
   });
 
-  socket.on("betResponse", ({ answer }) => {
-    const roomId = "room_1";
+  socket.on("betResponse", ({ accepted }) => {
 
-    if (!rooms[roomId]) return;
+  const roomId = "room_1";
+  if (!rooms[roomId]) return;
 
-    const player = rooms[roomId].find(
-      p => p.socketId === socket.id
-    );
+  const player = rooms[roomId].find(
+    p => p.socketId === socket.id
+  );
 
-    if (!player) return;
+  if (!player) return;
 
-    // 👉 жауапты сақтау
-    player.betAnswer = answer; // true / false
+  // жауапты сақтау
+  player.betAnswer = accepted;
 
-    console.log(
-      "Жауап сақталды:",
-      player.name,
-      "->",
-      answer ? "ҚАБЫЛДАДЫ" : "БАС ТАРТТЫ"
-    );
+  console.log(
+    "Жауап сақталды:",
+    player.name,
+    "->",
+    accepted ? "ҚАБЫЛДАДЫ" : "БАС ТАРТТЫ"
+  );
 
-    console.log("ROOM күйі:", rooms[roomId]);
-  });
+});
 
 
 
@@ -97,6 +96,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
