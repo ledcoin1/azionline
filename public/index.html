@@ -2,25 +2,33 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Сервер қосылғандар</title>
+<title>Ойын Лобби</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to right, #1c92d2, #f2fcfe);
+    color: #333;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  h1 {
+    margin-top: 50px;
+    font-size: 3em;
+  }
+  #info {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 15px;
+    display: inline-block;
+  }
+</style>
 </head>
 <body>
-<h1>Жаңа ойыншылар</h1>
-<ul id="players"></ul>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io();
-  const playersList = document.getElementById("players");
+<h1>Ойын Лобби</h1>
 
-  socket.on("connect", () => {
-    const li = document.createElement("li");
-    li.textContent = `Сіз қосылдыңыз: ${socket.id}`;
-    playersList.appendChild(li);
-  });
 
-  // Серверге жаңа ойыншы қосылғанда консольға шығару
-  // Сенің кодта хабарлама тек console.log
-</script>
 </body>
 </html>
