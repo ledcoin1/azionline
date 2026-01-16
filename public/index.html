@@ -23,12 +23,41 @@
     border-radius: 15px;
     display: inline-block;
   }
+
+  .button-container {
+  display: flex;             /* flexbox қолданамыз */
+  justify-content: center;   /* көлденең орталыққа шығару */
+  align-items: center;       /* тік орталыққа шығару */
+  height: 300px;             /* батырма орналасатын блок биіктігі */
+}
+
+button {
+  padding: 15px 40px;           /* батырманың өлшемі */
+  font-size: 1.2em;             /* мәтін көлемі */
+  font-weight: bold;
+  border-radius: 12px;          /* бұрышты сәл дөңгелету */
+  border: none;                 /* шет сызықсыз */
+  background: linear-gradient(to right, #ff7e5f, #feb47b); /* градиент фоны */
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s; /* анимация */
+}
+
+button:hover {
+  transform: scale(1.05);       /* hover кезінде сәл үлкейту */
+  box-shadow: 0 8px 15px rgba(0,0,0,0.2); /* көлеңке қосу */
+}
+
 </style>
 </head>
 <body>
 
-<h1>Ойын Лобби</h1>
+<h1>Карта</h1>
 
+<div class="button-container">
+  <button id="myButton">Играть</button>
+</div>
 
 </body>
 </html>
+
