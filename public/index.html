@@ -67,6 +67,17 @@ button:hover {
   <ul id="playersList"></ul>
 </div>
 
+<div id="betScreen" style="display:none; 
+    position: fixed; top:50%; left:50%; transform: translate(-50%, -50%);
+    background: white; padding: 30px; border-radius: 15px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3); text-align: center; z-index:100;">
+  <h2>🎲 Ставка</h2>
+  <p id="betQuestion">Ставка 500</p>
+  <div style="margin-top: 20px;">
+    <button id="acceptBet" style="margin-right:15px; padding:10px 25px; font-weight:bold; border-radius:8px; background: #4CAF50; color:white; border:none; cursor:pointer;">Қабылдаймын</button>
+    <button id="declineBet" style="padding:10px 25px; font-weight:bold; border-radius:8px; background: #f44336; color:white; border:none; cursor:pointer;">Бас тартамын</button>
+  </div>
+</div>
 
 
  <script src="/socket.io/socket.io.js"></script>
@@ -77,6 +88,13 @@ const myButton = document.getElementById("myButton");
 const roomScreen = document.getElementById("roomScreen");
 const playersList = document.getElementById("playersList");
 
+const betScreen = document.getElementById("betScreen");
+const betQuestion = document.getElementById("betQuestion");
+const acceptBet = document.getElementById("acceptBet");
+const declineBet = document.getElementById("declineBet");
+
+  
+  
 const tgUser = window.Telegram.WebApp.initDataUnsafe?.user || {};
 let players = [];
 
@@ -105,12 +123,23 @@ socket.on("playerJoinedRoom", data => {
   renderPlayers();
 });
 
-  // Серверден сұрақ келгенде көрсету
+// Серверден сұрақ келгенде
 socket.on("askBet", data => {
-  alert(`Сізге сұрақ келді: ${data.question} (${data.amount})`);
-  // Немесе өзің қалаған әдемі UI блокта көрсетуге болады
+  betQuestion.textContent = data.question + " (" + data.amount + ")";
+  betScreen.style.display = "block"; // блокты көрсету
 });
 
+// Қабылдау батырмасы
+acceptBet.addEventListener("click", () => {
+  socket.emit("betResponse", { accepted: true, amount: 500 });
+  betScreen.style.display = "none"; // блокты жасыру
+});
+
+// Бас тарту батырмасы
+declineBet.addEventListener("click", () => {
+  socket.emit("betResponse", { accepted: false, amount: 500 });
+  betScreen.style.display = "none"; // блокты жасыру
+});
 
 function renderPlayers() {
   playersList.innerHTML = "";
@@ -125,6 +154,7 @@ function renderPlayers() {
 
 </body>
 </html>
+
 
 
 
