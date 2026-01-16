@@ -41,10 +41,13 @@ io.on("connection", socket => {
     console.log(`"${roomId}" бөлмесіне кірді:`, player.name);
     console.log("Room ішіндегілер:", rooms[roomId]);
 
-    // Room ішіндегі БАСҚАЛАРҒА хабар
-    socket.to(roomId).emit("playerJoinedRoom", {
-      name: player.name
-    });
+     // 1️⃣ жаңа қосылған ойыншыға бар тізімді жіберу
+    io.to(socket.id).emit("roomData", rooms[roomId]);
+
+    // 2️⃣ басқа ойыншыларға жаңа ойыншы қосылды деп хабарлау
+    socket.to(roomId).emit("playerJoinedRoom", player);
+  });
+    
   });
 
   socket.on("disconnect", () => {
@@ -63,6 +66,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
