@@ -27,14 +27,18 @@ io.on("connection", socket => {
     // player = { name, telegramId }
     console.log(`Ойыншы қосылды: ${player.name} (Telegram ID: ${player.telegramId})`);
 
-      players[socket.id] = player;
-      console.log("Қазіргі лобби:", Object.values(players));
+   const roomId = "room_1"; // мысалы бір бөлме
+    if (!rooms[roomId]) rooms[roomId] = [];
 
+    rooms[roomId].push(player);
 
+    // Бөлмедегі барлық ойыншыларды көрсету
+    console.log(`Бөлме "${roomId}" ойыншылары:`, rooms[roomId]);
   });
    });
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
