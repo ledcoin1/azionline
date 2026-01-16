@@ -25,47 +25,41 @@ let rooms = {};
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
+  // playerJoined тыңдағышы
   socket.on("playerJoined", player => {
-    const roomId = "room_1"; // әзірге бір бөлме
+    const roomId = "room_1";
 
-    // Socket.IO room-ға кіргізу
     socket.join(roomId);
 
-    // Серверлік тізім
     if (!rooms[roomId]) rooms[roomId] = [];
-    rooms[roomId].push({
-      socketId: socket.id,
-      ...player
-    });
+    rooms[roomId].push({ socketId: socket.id, ...player });
 
     console.log(`"${roomId}" бөлмесіне кірді:`, player.name);
     console.log("Room ішіндегілер:", rooms[roomId]);
 
-     // 1️⃣ жаңа қосылған ойыншыға бар тізімді жіберу
+    // Жаңа қосылғанға толық тізімді жіберу
     io.to(socket.id).emit("roomData", rooms[roomId]);
 
-    // 2️⃣ басқа ойыншыларға жаңа ойыншы қосылды деп хабарлау
+    // Басқа ойыншыларға хабар
     socket.to(roomId).emit("playerJoinedRoom", player);
   });
-    
-  });
 
+  // disconnect тыңдағышы да осы жерде
   socket.on("disconnect", () => {
+    console.log("Ойыншы disconnect:", socket.id);
     for (const roomId in rooms) {
-      rooms[roomId] = rooms[roomId].filter(
-        p => p.socketId !== socket.id
-      );
-
-      if (rooms[roomId].length === 0) {
-        delete rooms[roomId];
-      }
+      rooms[roomId] = rooms[roomId].filter(p => p.socketId !== socket.id);
+      if (rooms[roomId].length === 0) delete rooms[roomId];
     }
   });
-});
+
+}); // <-- io.on("connection") жабылды
+
 
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
