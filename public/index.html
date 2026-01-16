@@ -63,11 +63,21 @@ button:hover {
 
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-  const socket = io();
-  const playersList = document.getElementById("players");
+   const socket = io(); // серверге қосылу
+  const myButton = document.getElementById("myButton");
 
-  
+   const tgUser = window.Telegram.WebApp.initDataUnsafe?.user || {};
+
+  myButton.addEventListener("click", () => {
+    const playerName = tgUser.first_name || "Ойыншы";  // Telegram аты
+    const telegramId = tgUser.id || null;              // Telegram ID
+
+    socket.emit("playerJoined", { name: playerName, telegramId: telegramId });
+
+    alert(`Серверге жіберілді: ${playerName} (ID: ${telegramId})`);
+  });
 </script>
 </body>
 </html>
