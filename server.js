@@ -20,25 +20,50 @@ let players = {};
 let lobby = [];
 let rooms = {};
 
+let rooms = {};
+
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
-    socket.on("playerJoined", player => {
-    // player = { name, telegramId }
-    console.log(`Ойыншы қосылды: ${player.name} (Telegram ID: ${player.telegramId})`);
+  socket.on("playerJoined", player => {
+    const roomId = "room_1"; // әзірге бір бөлме
 
-   const roomId = "room_1"; // мысалы бір бөлме
+    // Socket.IO room-ға кіргізу
+    socket.join(roomId);
+
+    // Серверлік тізім
     if (!rooms[roomId]) rooms[roomId] = [];
+    rooms[roomId].push({
+      socketId: socket.id,
+      ...player
+    });
 
-    rooms[roomId].push(player);
+    console.log(`"${roomId}" бөлмесіне кірді:`, player.name);
+    console.log("Room ішіндегілер:", rooms[roomId]);
 
-    // Бөлмедегі барлық ойыншыларды көрсету
-    console.log(`Бөлме "${roomId}" ойыншылары:`, rooms[roomId]);
+    // Room ішіндегі БАСҚАЛАРҒА хабар
+    socket.to(roomId).emit("playerJoinedRoom", {
+      name: player.name
+    });
   });
-   });
+
+  socket.on("disconnect", () => {
+    for (const roomId in rooms) {
+      rooms[roomId] = rooms[roomId].filter(
+        p => p.socketId !== socket.id
+      );
+
+      if (rooms[roomId].length === 0) {
+        delete rooms[roomId];
+      }
+    }
+  });
+});
+
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
