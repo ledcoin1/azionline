@@ -52,14 +52,13 @@ function dealCards(roomId){
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
-  // playerJoined тыңдағышы
   socket.on("playerJoined", player => {
     const roomId = "room_1";
 
     socket.join(roomId);
 
     if (!rooms[roomId]) rooms[roomId] = [];
-    
+
     const playerData = {
       socketId: socket.id,
       ...player,
@@ -68,43 +67,38 @@ io.on("connection", socket => {
 
     rooms[roomId].push(playerData);
 
-    console.log(`"${roomId}" бөлмесіне кірді:`, player.name);
-    console.log("Room ішіндегілер:", rooms[roomId]);
-
-    // Жаңа қосылғанға толық тізімді жіберу
     io.to(socket.id).emit("roomData", rooms[roomId]);
-
-    // Басқа ойыншыларға хабар
     socket.to(roomId).emit("playerJoinedRoom", player);
 
     io.to(socket.id).emit("askBet", {
       question: "Ставка 500",
       amount: 500
-       });
+    });
   });
+
 
   socket.on("betResponse", ({ accepted }) => {
 
-  const roomId = "room_1";
-  if (!rooms[roomId]) return;
+    const roomId = "room_1";
+    if (!rooms[roomId]) return;
 
-  const player = rooms[roomId].find(
-    p => p.socketId === socket.id
-  );
+    const player = rooms[roomId].find(
+      p => p.socketId === socket.id
+    );
 
-  if (!player) return;
+    if (!player) return;
 
-  // жауапты сақтау
-  player.betAnswer = accepted;
+    // жауапты сақтау
+    player.betAnswer = accepted;
 
-  console.log(
-    "Жауап сақталды:",
-    player.name,
-    "->",
-    accepted ? "ҚАБЫЛДАДЫ" : "БАС ТАРТТЫ"
-  );
+    console.log(
+      "Жауап сақталды:",
+      player.name,
+      "->",
+      accepted ? "ҚАБЫЛДАДЫ" : "БАС ТАРТТЫ"
+    );
 
-// 🔥 БАРЛЫҒЫ ЖАУАП БЕРДІ МЕ?
+    // 🔥 БАРЛЫҒЫ ЖАУАП БЕРДІ МЕ?
     const allAnswered = rooms[roomId].every(
       p => p.betAnswer !== undefined
     );
@@ -115,6 +109,7 @@ io.on("connection", socket => {
   });
 
 });
+
 
 
 
@@ -134,6 +129,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
