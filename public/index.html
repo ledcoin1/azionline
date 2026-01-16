@@ -80,6 +80,12 @@ button:hover {
 </div>
 
 
+<div id="cardsScreen" style="display:none; margin-top:20px;">
+  <h3>Сенің карталарың:</h3>
+  <ul id="myCards" style="list-style:none; padding:0; display:flex; justify-content:center; gap:10px;"></ul>
+</div>
+
+  
  <script src="/socket.io/socket.io.js"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
@@ -93,6 +99,9 @@ const betQuestion = document.getElementById("betQuestion");
 const acceptBet = document.getElementById("acceptBet");
 const declineBet = document.getElementById("declineBet");
 
+
+  const cardsScreen = document.getElementById("cardsScreen");
+const myCards = document.getElementById("myCards");
   
   
 const tgUser = window.Telegram.WebApp.initDataUnsafe?.user || {};
@@ -141,6 +150,22 @@ declineBet.addEventListener("click", () => {
   betScreen.style.display = "none"; // блокты жасыру
 });
 
+  socket.on("yourCards", ({ cards }) => {
+  cardsScreen.style.display = "block";
+  myCards.innerHTML = "";
+  cards.forEach(c => {
+    const li = document.createElement("li");
+    li.textContent = c;
+    li.style.padding = "15px";
+    li.style.border = "2px solid #333";
+    li.style.borderRadius = "10px";
+    li.style.background = "#fff";
+    li.style.fontSize = "1.5em";
+    li.style.boxShadow = "0 4px 10px rgba(0,0,0,0.2)";
+    myCards.appendChild(li);
+  });
+});
+
 function renderPlayers() {
   playersList.innerHTML = "";
   players.forEach(p => {
@@ -154,6 +179,7 @@ function renderPlayers() {
 
 </body>
 </html>
+
 
 
 
