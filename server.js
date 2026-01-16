@@ -80,7 +80,7 @@ io.on("connection", socket => {
     console.log("ROOM күйі:", rooms[roomId]);
   });
 
-});
+
 
   // disconnect тыңдағышы да осы жерде
   socket.on("disconnect", () => {
@@ -97,6 +97,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
