@@ -96,28 +96,29 @@ myButton.addEventListener("click", () => {
 
 // Серверден кім кімге қосылды хабар келгенде
 socket.on("roomData", data => {
-  players = data.map(p => p.name);
+  players = data; // енді әр ойыншы объект болады {name, telegramId, status}
   renderPlayers();
 });
-  
+
 socket.on("playerJoinedRoom", data => {
-    players.push(data.name);
-    renderPlayers();
+  players.push(data);
+  renderPlayers();
 });
 
-// Қатысушылар тізімін экранға шығару
-function renderPlayers(){
-    playersList.innerHTML = "";
-    players.forEach(name => {
-        const li = document.createElement("li");
-        li.textContent = "👤 " + name;
-        playersList.appendChild(li);
-    });
+function renderPlayers() {
+  playersList.innerHTML = "";
+  players.forEach(p => {
+    const li = document.createElement("li");
+    li.textContent = `👤 ${p.name} [${p.status}]`; // статус көрсетіледі
+    playersList.appendChild(li);
+  });
 }
+
 </script>
 
 </body>
 </html>
+
 
 
 
