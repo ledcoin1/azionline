@@ -1,4 +1,4 @@
-
+const cors = require("cors");
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -8,6 +8,7 @@ const io = require("socket.io")(http, {
 });
 
 // iframe рұқсат
+app.use(cors());
 app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "ALLOWALL");
   res.setHeader("Content-Security-Policy", "frame-ancestors *");
@@ -179,6 +180,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
