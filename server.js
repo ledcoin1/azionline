@@ -1,5 +1,7 @@
+
 const express = require("express");
 const app = express();
+const mongoose = require("mongoose");
 const http = require("http").createServer(app);
 const io = require("socket.io")(http, {
   cors: { origin: "*", methods: ["GET","POST"] }
@@ -14,7 +16,55 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
 app.use(express.static("public"));
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(()=>console.log("✅ MongoDB connected!"))
+  .catch(e=>console.log("❌ Mongo error", e));
+
+// ===== MODEL =====
+const UserSchema = new mongoose.Schema({
+  telegramId: { type: String, unique: true },
+  balance: { type: Number, default: 0 }
+});
+const User = mongoose.model("User", UserSchema);
+
+// ===== LOGIN =====
+app.post("/api/login", async(req,res)=>{
+  try{
+    const { telegramId } = req.body;
+    if(!telegramId) return res.json({ error: "No telegram id" });
+
+    let user = await User.findOne({ telegramId });
+    if(!user){
+      user = await User.create({ telegramId, balance: 0 });
+    }
+
+    res.json({ telegramId: user.telegramId, balance: user.balance });
+  }catch(err){
+    console.log(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ===== ADMIN =====
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "admin123";
+app.get("/api/admin/users", async(req,res)=>{
+  const token = req.headers.authorization?.trim();
+  if(token !== ADMIN_TOKEN) return res.status(401).json({ error: "Unauthorized" });
+
+  const users = await User.find().sort({ telegramId: 1 });
+  res.json(users);
+});
+app.post("/api/admin/balance", async(req,res)=>{
+  const token = req.headers.authorization?.trim();
+  if(token !== ADMIN_TOKEN) return res.status(401).json({ error: "Unauthorized" });
+
+  const { telegramId, balance } = req.body;
+  await User.updateOne({ telegramId }, { $set: { balance } });
+  res.json({ success: true });
+});
 
 let players = {};
 let lobby = [];
@@ -129,6 +179,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
