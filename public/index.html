@@ -2,151 +2,21 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Ойын Лобби</title>
-<style>
-  body { font-family: Arial; background: linear-gradient(to right, #1c92d2, #f2fcfe); color: #333; text-align:center; margin:0; padding:0; }
-  h1 { margin-top:50px; font-size:3em; }
-  #info { margin-top:20px; padding:20px; background: rgba(255,255,255,0.8); border-radius:15px; display:inline-block; }
-  .button-container { display:flex; justify-content:center; align-items:center; height:300px; }
-  button { padding:15px 40px; font-size:1.2em; font-weight:bold; border-radius:12px; border:none; background: linear-gradient(to right, #ff7e5f, #feb47b); color:#fff; cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; }
-  button:hover { transform: scale(1.05); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
-  #betScreen { display:none; position: fixed; top:50%; left:50%; transform: translate(-50%, -50%); background:white; padding:30px; border-radius:15px; box-shadow:0 10px 20px rgba(0,0,0,0.3); text-align:center; z-index:100; }
-  #cardsScreen { display:none; margin-top:20px; }
-</style>
+<title>Ойын Миниап</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>Карта</h1>
-<p>Баланс: <span id="balance">0</span>₸</p> <!-- 🔥 Баланс осында көрсетіледі -->
+<div id="header">
+  <div>Telegram ID: <span id="tgId">---</span></div>
+  <div>Баланс: <span id="balance">0</span>₸</div>
+</div>
 
 <div class="button-container">
-  <button id="myButton">Играть</button>
+  <button id="playButton">Играть</button>
 </div>
 
-<div id="roomScreen" style="display:none;">
-  <h2>🎮 Комната</h2>
-  <p>Қатысушылар:</p>
-  <ul id="playersList"></ul>
-</div>
-
-<div id="betScreen">
-  <h2>🎲 Ставка</h2>
-  <p id="betQuestion">Ставка 500</p>
-  <div style="margin-top:20px;">
-    <button id="acceptBet" style="margin-right:15px; padding:10px 25px; font-weight:bold; border-radius:8px; background:#4CAF50; color:white; border:none; cursor:pointer;">Қабылдаймын</button>
-    <button id="declineBet" style="padding:10px 25px; font-weight:bold; border-radius:8px; background:#f44336; color:white; border:none; cursor:pointer;">Бас тартамын</button>
-  </div>
-</div>
-
-<div id="cardsScreen">
-  <h3>Сенің карталарың:</h3>
-  <ul id="myCards" style="list-style:none; padding:0; display:flex; justify-content:center; gap:10px;"></ul>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-const socket = io();
-const myButton = document.getElementById("myButton");
-const roomScreen = document.getElementById("roomScreen");
-const playersList = document.getElementById("playersList");
-const betScreen = document.getElementById("betScreen");
-const betQuestion = document.getElementById("betQuestion");
-const acceptBet = document.getElementById("acceptBet");
-const declineBet = document.getElementById("declineBet");
-const cardsScreen = document.getElementById("cardsScreen");
-const myCards = document.getElementById("myCards");
-const balanceElem = document.getElementById("balance");
-
-const tgUser = window.Telegram.WebApp.initDataUnsafe?.user || {};
-const telegramId = tgUser.id;
-const playerName = tgUser.first_name || "Ойыншы";
-let players = [];
-
-// 🔥 Миниап ашылғанда баланс алу
-async function loadBalance() {
-  if(!telegramId) return;
-  try {
-    const res = await fetch("https://azionline.onrender.com/api/login", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ telegramId })
-    });
-    const data = await res.json();
-    if(data.balance !== undefined){
-      balanceElem.textContent = data.balance;
-    }
-  } catch(e){
-    console.log("Серверге қосыла алмады", e);
-  }
-}
-
-// Миниап жүктелген кезде шақыру
-window.addEventListener("load", () => {
-  loadBalance();
-});
-
-// Батырма басылғанда серверге хабар жіберу
-myButton.addEventListener("click", () => {
-    socket.emit("playerJoined", { name: playerName, telegramId });
-    myButton.style.display = "none";
-    roomScreen.style.display = "block";
-});
-
-// Серверден кім кімге қосылды хабар келгенде
-socket.on("roomData", data => {
-  players = data;
-  renderPlayers();
-});
-socket.on("playerJoinedRoom", data => {
-  players.push(data);
-  renderPlayers();
-});
-
-// Ставка сұрау
-socket.on("askBet", data => {
-  betQuestion.textContent = data.question + " (" + data.amount + ")";
-  betScreen.style.display = "block";
-});
-acceptBet.addEventListener("click", () => {
-  socket.emit("betResponse", { accepted:true, amount:500 });
-  betScreen.style.display = "none";
-});
-declineBet.addEventListener("click", () => {
-  socket.emit("betResponse", { accepted:false, amount:500 });
-  betScreen.style.display = "none";
-});
-
-// Карталарды көрсету
-socket.on("yourCards", ({ cards }) => {
-  cardsScreen.style.display = "block";
-  myCards.innerHTML = "";
-  cards.forEach(c=>{
-    const li = document.createElement("li");
-    li.textContent = c;
-    li.style.padding = "15px";
-    li.style.border = "2px solid #333";
-    li.style.borderRadius = "10px";
-    li.style.background = "#fff";
-    li.style.fontSize = "1.5em";
-    li.style.boxShadow = "0 4px 10px rgba(0,0,0,0.2)";
-    myCards.appendChild(li);
-  });
-});
-
-function renderPlayers() {
-  playersList.innerHTML = "";
-  players.forEach(p=>{
-    const li = document.createElement("li");
-    li.textContent = `👤 ${p.name} [${p.status}]`;
-    playersList.appendChild(li);
-  });
-}
-
-// 🔥 Сервер баланс өзгергенде жаңарту
-socket.on("updateBalance", data => {
-  balanceElem.textContent = data.balance;
-});
-</script>
+<script src="app.js"></script>
 </body>
 </html>
