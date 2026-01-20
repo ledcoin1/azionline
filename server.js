@@ -86,7 +86,8 @@ io.on("connection", socket => {
 });
 
 
-
+socket.on("play_click", (data) => {
+    console.log("Играть батырмасы басылды:", data);
 
 
 
@@ -131,6 +132,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
