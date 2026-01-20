@@ -24,8 +24,18 @@ fetch("/api/login",{
 });
 
 
+// Socket қосылғанын тексердік
 const socket = io();
 
 socket.on("connect", ()=>{
   console.log("Socket қосылды:", socket.id);
 });
+
+// Играть батырмасына listener қосамыз
+document.getElementById("igrat").onclick = () => {
+  // серверге сигнал жібереміз
+  socket.emit("play_click", { telegramId: uid.innerText });
+
+  console.log("Играть батырмасы басылды, сигнал жіберілді");
+};
+
