@@ -72,29 +72,24 @@ app.post("/api/admin/balance", async(req,res)=>{
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
-
-
-
-socket.on("play_click", (data) => {
+  // Играть батырмасы басылғанда
+  socket.on("play_click", (data) => {
     console.log("Играть батырмасы басылды:", data);
 
-
-
-  
-   socket.on("disconnect", ()=>{
-    console.log("Ойыншы шықты:", socket.id);});
+    // Мысалы жауап беру
+    socket.emit("play_response", { message: "Ойын басталды!" });
   });
 
+  // Қосылған ойыншы шықса
+  socket.on("disconnect", ()=>{
+    console.log("Ойыншы шықты:", socket.id);
+  });
+});
 
+// Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
-
-
-
-
 
 
 
