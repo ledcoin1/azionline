@@ -75,63 +75,21 @@ io.on("connection", socket => {
 
 
 
-
-
-
-
-  
-  socket.on("disconnect", ()=>{
-    console.log("Ойыншы шықты:", socket.id);});
-
-});
-
-
 socket.on("play_click", (data) => {
     console.log("Играть батырмасы басылды:", data);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  
+   socket.on("disconnect", ()=>{
+    console.log("Ойыншы шықты:", socket.id);});
+  });
 
 
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
