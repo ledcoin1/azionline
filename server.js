@@ -73,12 +73,30 @@ io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
 
   // Играть батырмасы басылғанда
-  socket.on("play_click", (data) => {
-    console.log("Играть батырмасы басылды:", data);
+  socket.on("play_click", async (data) => {
+  console.log("Играть батырмасы басылды:", data);
 
-    // Мысалы жауап беру
-    socket.emit("play_response", { message: "Ойын басталды!" });
-  });
+  const telegramId = data.telegramId;
+
+  // MongoDB-дан ойыншыны іздеу
+  const user = await User.findOne({ telegramId });
+
+  if(!user){
+    console.log("Пайдаланушы табылмады:", telegramId);
+    return;
+  }
+
+  // Балансты консольге шығару
+  console.log(`Ойыншы ${telegramId} баланс: ${user.balance}`);
+
+  // Баланс ≥ 500 ме тексеру
+  if(user.balance >= 500){
+    console.log("Баланс жеткілікті: ойыншы room-ға қосыла алады");
+  } else {
+    console.log("Баланс жеткіліксіз: room-ға қоспаймыз");
+  }
+});
+
 
   // Қосылған ойыншы шықса
   socket.on("disconnect", ()=>{
@@ -90,6 +108,7 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
