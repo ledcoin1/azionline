@@ -2,21 +2,59 @@
 <html lang="kk">
 <head>
 <meta charset="UTF-8">
-<title>Ойын Миниап</title>
-<link rel="stylesheet" href="style.css">
+<title>Mini App</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+body{
+  background:#0f172a;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
+.card{
+  background:#1e293b;
+  width:320px;
+  margin:50px auto;
+  padding:20px;
+  border-radius:12px;
+}
+</style>
 </head>
 <body>
 
-<div id="header">
-  <div>Telegram ID: <span id="tgId">---</span></div>
-  <div>Баланс: <span id="balance">0</span>₸</div>
+<div class="card">
+  <h2>Профиль</h2>
+  <p>ID: <span id="uid"></span></p>
+  <p>Баланс: <b id="bal">0</b> ₸</p>
 </div>
 
-<div class="button-container">
-  <button id="playButton">Играть</button>
-</div>
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="app.js"></script>
+// Telegram user
+const user = tg.initDataUnsafe.user;
+
+if(!user){
+  alert("Telegram арқылы кір!");
+}
+
+const telegramId = user.id;
+
+uid.innerText = telegramId;
+
+// backend login
+fetch("/api/login",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body:JSON.stringify({ telegramId })
+})
+.then(r=>r.json())
+.then(data=>{
+  bal.innerText = data.balance;
+});
+</script>
+
 </body>
 </html>
