@@ -69,10 +69,68 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+io.on("connection", socket => {
+  console.log("Жаңа ойыншы қосылды:", socket.id);
+
+
+
+
+
+
+
+
+  
+  socket.on("disconnect", ()=>{
+    console.log("Ойыншы шықты:", socket.id);});
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
