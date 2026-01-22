@@ -39,3 +39,27 @@ document.getElementById("igrat").onclick = () => {
   console.log("Играть батырмасы басылды, сигнал жіберілді");
 };
 
+socket.on("joined_room", (data) => {
+  const roomId = data.roomId;
+  const players = data.players;
+
+  // Егер room бұрын жасалмаған болса — контейнер жасау
+  let roomDiv = document.getElementById(roomId);
+  if(!roomDiv){
+    roomDiv = document.createElement("div");
+    roomDiv.id = roomId;
+    roomDiv.className = "room";
+    roomDiv.innerHTML = `<h3>Room: ${roomId}</h3><ul class="players"></ul>`;
+    document.body.appendChild(roomDiv);
+  }
+
+  // Players тізімін шығару
+  const playersUl = roomDiv.querySelector(".players");
+  playersUl.innerHTML = ""; // ескі тізімді тазалау
+  players.forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = `${p.telegramId} — ${p.status}`;
+    playersUl.appendChild(li);
+  });
+});
+
