@@ -67,7 +67,7 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
-
+let  rooms = {};
 
 io.on("connection", socket => {
   console.log("Жаңа ойыншы қосылды:", socket.id);
@@ -89,12 +89,31 @@ io.on("connection", socket => {
   // Балансты консольге шығару
   console.log(`Ойыншы ${telegramId} баланс: ${user.balance}`);
 
-  // Баланс ≥ 500 ме тексеру
-  if(user.balance >= 500){
-    console.log("Баланс жеткілікті: ойыншы room-ға қосыла алады");
-  } else {
-    console.log("Баланс жеткіліксіз: room-ға қоспаймыз");
+if (user.balance >= 500) {
+
+  // room жоқ болса — ашамыз
+  if (!rooms["lobby"]) {
+    rooms["lobby"] = [];
   }
+
+  // ойыншыны room массивіне қосамыз
+  rooms["lobby"].push({
+    socketId: socket.id,
+    telegramId: user.telegramId,
+    status: "waiting" 
+  });
+
+  // socket.io room-ға қосу
+  socket.join("lobby");
+
+  console.log("✅ Ойыншы lobby room-ға қосылды:", telegramId);
+  console.log("Lobby ішіндегілер:", rooms["lobby"]);
+
+} else {
+  console.log("❌ Баланс жеткіліксіз: room-ға қоспаймыз");
+}
+
+
 });
 
 
@@ -108,7 +127,6 @@ io.on("connection", socket => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
