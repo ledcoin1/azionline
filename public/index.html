@@ -1,36 +1,70 @@
 <!DOCTYPE html>
-<html lang="kk">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Mini App</title>
-
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Card Game</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    .box {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+  </style>
 </head>
-
 <body>
 
-<div class="card">
-  <h2>Профиль</h2>
-  <p>ID: <span id="uid"></span></p>
-  <p>Баланс: <b id="bal">0</b> ₸</p>
-</div>
+  <h2>🃏 Card Game</h2>
 
-<button id="igrat">Играть</button>
+  <div class="box">
+    <p><b>Your Telegram ID:</b></p>
+    <p id="tgId">Loading...</p>
+  </div>
 
-<div id="lobby" class="room">
-  <h3>Room: lobby</h3>
-  <ul class="players">
-    <li>12345 — waiting</li>
-    <li>67890 — waiting</li>
-  </ul>
-</div>
+  <div class="box">
+    <p><b>Your Balance:</b></p>
+    <p id="balance">Loading...</p>
+  </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
 
+  const user = tg.initDataUnsafe?.user;
 
+  if (!user) {
+    document.getElementById("tgId").innerText = "Not opened in Telegram";
+  } else {
+
+    const telegramId = user.id;
+    document.getElementById("tgId").innerText = telegramId;
+
+    // LOGIN API-ға сұрау
+    fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ telegramId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("balance").innerText = data.balance;
+    })
+    .catch(err => {
+      document.getElementById("balance").innerText = "Error";
+    });
+
+  }
+</script>
 
 </body>
 </html>
-
