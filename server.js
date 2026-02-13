@@ -71,10 +71,34 @@ let  rooms = {};
 
 
 
+
+io.on("connection",(socket)=>{
+  console.log("адам кірді");
+
+  socket.on("play",(data)=>{
+    console.log("play basyldi", socket.id);
+    console.log("telegram:",data.telegramId);
+  });
+});
+
+
+
+io.on("connection",(socket)=>{
+  console.log("адам кірді");
+
+  socket.on("play",(data)=>{
+    console.log("play basyldi", socket.id);
+    console.log("telegram:",data.telegramId);
+  });
+});
+
+
+
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
