@@ -67,46 +67,41 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
-let  rooms = {};
+let rooms = {}; // бөлмелер
 
+io.on("connection", (socket) => {
+  console.log("Адам кірді:", socket.id);
 
+  socket.on("play", (data) => {
+    const telegramId = data.telegramId;
 
+    // User тексеру
+    User.findOne({ telegramId }, (err, user) => {
+      if(err) return console.log("Mongo error:", err);
+      if(!user) return console.log("User табылмады:", telegramId);
 
-io.on("connection",(socket)=>{
-  console.log("адам кірді");
+      // Ойыншы бұрыннан қосылған ба?
+      const alreadyPlaying = Object.values(rooms).some(room => 
+        room.players && room.players.find(p => p.telegramId === telegramId)
+      );
 
-  socket.on("play",(data)=>{
-    console.log("play basyldi", socket.id);
-    console.log("telegram:",data.telegramId);
+      if(alreadyPlaying){
+        console.log("Ойыншы бұрыннан бар:", telegramId);
+      } else {
+        console.log("Жаңа ойыншы:", telegramId);
+      }
+    });
+
   });
+
 });
-
-
-
-io.on("connection",(socket)=>{
-  console.log("адам кірді");
-
-  socket.on("play",(data)=>{
-    console.log("play basyldi", socket.id);
-    console.log("telegram:",data.telegramId);
-  });
-
-
-
-
-  socket.on("disconnect",()=>{
-
-    console.log("щығып кетті");
-  });
-  
-});
-
 
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
