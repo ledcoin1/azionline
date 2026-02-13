@@ -90,6 +90,15 @@ io.on("connection",(socket)=>{
     console.log("play basyldi", socket.id);
     console.log("telegram:",data.telegramId);
   });
+
+
+
+
+  socket.on("disconnect",()=>{
+
+    console.log("щығып кетті");
+  });
+  
 });
 
 
@@ -98,6 +107,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
