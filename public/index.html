@@ -49,6 +49,8 @@
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
+
+  let telegramId;
   const tg = window.Telegram.WebApp;
   tg.expand();
 
@@ -58,7 +60,9 @@
     document.getElementById("tgId").innerText = "Not opened in Telegram";
   } else {
 
-    const telegramId = user.id;
+       telegramId = user.id;
+
+    telegramId = user.id;
     document.getElementById("tgId").innerText = telegramId;
 
     // LOGIN API-ға сұрау
