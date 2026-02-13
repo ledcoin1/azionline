@@ -99,12 +99,20 @@ io.on("connection", (socket) => {
     }
   });
 
+  });
+
+
+socket.on("disconnect",()=>{
+
+    console.log("щығып кетті");
+  });
 });
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
