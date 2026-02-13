@@ -67,6 +67,32 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
+
+
+
+
+
+function createDeck() {
+  const suits = ["♠","♥","♦","♣"];
+  const values = ["6","7","8","9","10","J","Q","K","A"];
+  let deck = [];
+  for (let suit of suits) {
+    for (let value of values) {
+      deck.push(value + suit);
+    }
+  }
+  return deck;
+}
+
+function shuffle(deck) {
+  return deck.sort(() => Math.random() - 0.5);
+}
+
+
+
+
+
+
 let rooms = {};       // Room объектілері
 let waiting = [];     // Play басқан ойыншыларды сақтаймыз
 
@@ -96,22 +122,32 @@ io.on("connection", (socket) => {
       console.log("Waiting саны:", waiting.length);
 
       // Егер екі ойыншы болса → room жасаймыз
-      if (waiting.length >= 2) {
-        const player1 = waiting.shift();
-        const player2 = waiting.shift();
+     if (waiting.length >= 2) {
+  const player1 = waiting.shift();
+  const player2 = waiting.shift();
 
-        const roomId = "room_" + Date.now();
-        rooms[roomId] = {
-          players: [player1, player2],
-        };
+  const roomId = "room_" + Date.now();
 
-        console.log("🔥 Room жасалды:", roomId);
-        console.log("Ойыншылар:", player1.telegramId, "және", player2.telegramId);
-      }
+  // Колода жасау + shuffle
+  const deck = shuffle(createDeck());
 
-    } catch (err) {
-      console.log("Mongo error:", err);
-    }
+  // Әр ойыншыға 6 карта беру
+  player1.hand = deck.splice(0,6);
+  player2.hand = deck.splice(0,6);
+
+  rooms[roomId] = {
+    players: [player1, player2],
+    deck: deck,             // қалған колода
+    turn: player1.socketId  // бірінші ойыншының ходы
+  };
+
+  console.log("🔥 Room жасалды:", roomId);
+  console.log("Ойыншылар:", player1.telegramId, "және", player2.telegramId);
+  console.log("player1 карталары:", player1.hand);
+  console.log("player2 карталары:", player2.hand);
+  console.log("Ход:", rooms[roomId].turn);
+}
+
   });
 
 });
@@ -121,6 +157,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
