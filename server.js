@@ -69,64 +69,13 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 let  rooms = {};
 
-io.on("connection", socket => {
-  console.log("Жаңа ойыншы қосылды:", socket.id);
 
-  // Играть батырмасы басылғанда
-  socket.on("play_click", async (data) => {
-  console.log("Играть батырмасы басылды:", data);
-
-  const telegramId = data.telegramId;
-
-  // MongoDB-дан ойыншыны іздеу
-  const user = await User.findOne({ telegramId });
-
-  if(!user){
-    console.log("Пайдаланушы табылмады:", telegramId);
-    return;
-  }
-
-  // Балансты консольге шығару
-  console.log(`Ойыншы ${telegramId} баланс: ${user.balance}`);
-
-if (user.balance >= 500) {
-
-  // room жоқ болса — ашамыз
-  if (!rooms["lobby"]) {
-    rooms["lobby"] = [];
-  }
-
-  // ойыншыны room массивіне қосамыз
-  rooms["lobby"].push({
-    socketId: socket.id,
-    telegramId: user.telegramId,
-    status: "waiting" 
-  });
-
-  // socket.io room-ға қосу
-  socket.join("lobby");
-
-  console.log("✅ Ойыншы lobby room-ға қосылды:", telegramId);
-  console.log("Lobby ішіндегілер:", rooms["lobby"]);
-
-} else {
-  console.log("❌ Баланс жеткіліксіз: room-ға қоспаймыз");
-}
-
-
-});
-
-
-  // Қосылған ойыншы шықса
-  socket.on("disconnect", ()=>{
-    console.log("Ойыншы шықты:", socket.id);
-  });
-});
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
