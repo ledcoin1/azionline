@@ -72,35 +72,40 @@ let rooms = {}; // бөлмелер
 io.on("connection", (socket) => {
   console.log("Адам кірді:", socket.id);
 
-  socket.on("play", (data) => {
+  socket.on("play", async (data) => {  // async керек
     const telegramId = data.telegramId;
 
-    // User тексеру
-    User.findOne({ telegramId }, (err, user) => {
-      if(err) return console.log("Mongo error:", err);
-      if(!user) return console.log("User табылмады:", telegramId);
+    try {
+      const user = await User.findOne({ telegramId }); // await қолданамыз
+
+      if (!user) {
+        console.log("User табылмады:", telegramId);
+        return;
+      }
 
       // Ойыншы бұрыннан қосылған ба?
-      const alreadyPlaying = Object.values(rooms).some(room => 
+      const alreadyPlaying = Object.values(rooms).some(room =>
         room.players && room.players.find(p => p.telegramId === telegramId)
       );
 
-      if(alreadyPlaying){
+      if (alreadyPlaying) {
         console.log("Ойыншы бұрыннан бар:", telegramId);
       } else {
         console.log("Жаңа ойыншы:", telegramId);
       }
-    });
 
+    } catch (err) {
+      console.log("Mongo error:", err);
+    }
   });
 
 });
-
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
