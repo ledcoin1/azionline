@@ -18,6 +18,13 @@
       border-radius: 10px;
       margin-top: 20px;
     }
+
+    .play{
+      background-color: chartreuse;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -33,6 +40,13 @@
     <p><b>Your Balance:</b></p>
     <p id="balance">Loading...</p>
   </div>
+
+
+
+  <button id="play">play</button>
+
+
+<script src="/socket.io/socket.io.js"></script>
 
 <script>
   const tg = window.Telegram.WebApp;
@@ -64,6 +78,22 @@
     });
 
   }
+
+
+  
+
+
+  const socket = io();
+
+  document.getElementById("play").addEventListener("click",()=>{
+    socket.emit("play",{telegramId});
+  });
+
+
+
+
+
+
 </script>
 
 </body>
