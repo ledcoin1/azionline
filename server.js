@@ -67,31 +67,46 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
-let rooms = {}; // бөлмелер
+let rooms = {};       // Room объектілері
+let waiting = [];     // Play басқан ойыншыларды сақтаймыз
 
 io.on("connection", (socket) => {
   console.log("Адам кірді:", socket.id);
 
-  socket.on("play", async (data) => {  // async керек
+  socket.on("play", async (data) => {
     const telegramId = data.telegramId;
 
     try {
-      const user = await User.findOne({ telegramId }); // await қолданамыз
-
+      const user = await User.findOne({ telegramId });
       if (!user) {
         console.log("User табылмады:", telegramId);
         return;
       }
 
-      // Ойыншы бұрыннан қосылған ба?
-      const alreadyPlaying = Object.values(rooms).some(room =>
-        room.players && room.players.find(p => p.telegramId === telegramId)
-      );
-
+      // Бөлмеге бұрыннан қосылған ба?
+      const alreadyPlaying = waiting.find(p => p.telegramId === telegramId);
       if (alreadyPlaying) {
-        console.log("Ойыншы бұрыннан бар:", telegramId);
-      } else {
-        console.log("Жаңа ойыншы:", telegramId);
+        console.log("Ойыншы бұрыннан waiting-де:", telegramId);
+        return;
+      }
+
+      // Ойыншыны waiting-ке қосу
+      waiting.push({ socketId: socket.id, telegramId });
+      console.log("Waiting-де жаңа ойыншы қосылды:", telegramId);
+      console.log("Waiting саны:", waiting.length);
+
+      // Егер екі ойыншы болса → room жасаймыз
+      if (waiting.length >= 2) {
+        const player1 = waiting.shift();
+        const player2 = waiting.shift();
+
+        const roomId = "room_" + Date.now();
+        rooms[roomId] = {
+          players: [player1, player2],
+        };
+
+        console.log("🔥 Room жасалды:", roomId);
+        console.log("Ойыншылар:", player1.telegramId, "және", player2.telegramId);
       }
 
     } catch (err) {
@@ -99,19 +114,14 @@ io.on("connection", (socket) => {
     }
   });
 
-  });
-
-
-socket.on("disconnect",()=>{
-
-    console.log("щығып кетті");
-  });
 });
+
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
