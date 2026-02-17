@@ -45,6 +45,12 @@
 
   <button id="play">play</button>
 
+  <div id="gameArea" style="display:none;" class="box">
+  <h3>🎮 Ойын басталды!</h3>
+  <p id="players"></p>
+</div>
+
+
 
 <script src="/socket.io/socket.io.js"></script>
 
@@ -94,6 +100,24 @@
   });
 
 
+
+  socket.on("bastaldy", (komta) => {
+
+  // Егер мен осы ойында болсам ғана көрсетеміз
+  if (komta.player1 === telegramId || komta.player2 === telegramId) {
+
+    // Play кнопкасын жасырамыз
+    document.getElementById("play").style.display = "none";
+
+    // Ойын алаңын көрсетеміз
+    document.getElementById("gameArea").style.display = "block";
+
+    // Қарсыласты шығару
+    document.getElementById("players").innerText =
+      "Ойыншылар: " + komta.player1 + " vs " + komta.player2;
+  }
+
+});
 
 
 
