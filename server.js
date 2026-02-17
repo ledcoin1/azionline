@@ -68,6 +68,46 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
+
+function createDeck() {
+  const suits = ["♠", "♥", "♦", "♣"];
+  const values = ["6","7","8","9","10","J","Q","K","A"];
+
+  let deck = [];
+
+  for (let suit of suits) {
+    for (let value of values) {
+      deck.push(value + suit);
+    }
+  }
+
+  return deck;
+}
+
+function shuffle(deck) {
+  return deck.sort(() => Math.random() - 0.5);
+}
+
+
+function startGame() {
+
+  let deck = createDeck();
+  deck = shuffle(deck);
+
+  // 3 картадан бөлеміз
+  let player1Cards = deck.splice(0, 3);
+  let player2Cards = deck.splice(0, 3);
+
+  // Әр ойыншыға тек өз картасын жібереміз
+  io.to(komta.player1.socketId).emit("cards", player1Cards);
+  io.to(komta.player2.socketId).emit("cards", player2Cards);
+
+}
+
+
+
+
+
 let  kirgen = [];
 let komta={};
 
@@ -88,10 +128,10 @@ io.on("connection", (socket) => {
       komta.player1 = kirgen[0];
       komta.player2 = kirgen[1];
 
-      console.log("Команда құрылды:", komta);
+        io.to(komta.player1.socketId).emit("bastaldy");
+    io.to(komta.player2.socketId).emit("bastaldy");
 
-      io.emit("bastaldy",komta);
-      // кейін массивті тазалауға болады
+    startGame();
       kirgen = [];
     }
   });
