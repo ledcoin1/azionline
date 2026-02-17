@@ -79,7 +79,11 @@ console.log("ойыншы кірді ойынға");
 
 
 socket.on("play",()=>{
+
+  kirgen.push(45);
   console.log("play basti");
+
+  console.log(kirgrn);
 });
 
 socket.on("disconnect",()=>{
