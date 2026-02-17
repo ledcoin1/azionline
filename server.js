@@ -69,18 +69,20 @@ app.post("/api/admin/balance", async(req,res)=>{
 });
 
 let  kirgen = [];
+let komta={
+  name: "balabi",
+  age: 3200
+};
+
 
 io.on("connection",(socket)=>{
 
-  
+  console.log("ойыншы кірді ойынға");
 
 
-console.log("ойыншы кірді ойынға");
+socket.on("play",(data)=>{
 
-
-socket.on("play",(sasak)=>{
-
-  const telegram = sasak.telegramId
+  const telegram = data.telegramId
 
   kirgen.push(telegram);
   
@@ -88,6 +90,14 @@ socket.on("play",(sasak)=>{
   console.log("play basti");
 
   console.log(kirgen);
+
+  if(kirgen ===2){
+    komta.player1 = kirgen[0];
+    komta.player2 = kirgen[1];
+
+    console.log("komta kuryldu:", komta);
+  
+  kirgen=[];}
 });
 
 socket.on("disconnect",()=>{
