@@ -78,15 +78,12 @@ io.on("connection",(socket)=>{
 console.log("ойыншы кірді ойынға");
 
 
-socket.on("play",()=>{
+socket.on("play",(data)=>{
 
-  kirgen.push(45);
-  kirgen.push(46);
+  const telegram = data.telegramId
 
-    kirgen.push(47);
-  kirgen.push(48);
-  kirgen.push(49);
-  kirgen.push(50);
+  kirgen.push(telegram);
+  
 
   console.log("play basti");
 
