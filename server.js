@@ -69,10 +69,7 @@ app.post("/api/admin/balance", async(req,res)=>{
 });
 
 let  kirgen = [];
-let komta={
-  name: "balabi",
-  age: 3200
-};
+let komta={};
 
 
 io.on("connection", (socket) => {
@@ -97,6 +94,11 @@ io.on("connection", (socket) => {
       kirgen = [];
     }
 
+  });
+
+
+  socket.on("disconnect",()=>{
+    console.log("ойыншы шығып кетті");
   });
 
 });
