@@ -75,40 +75,31 @@ let komta={
 };
 
 
-io.on("connection",(socket)=>{
+io.on("connection", (socket) => {
 
-  console.log("ойыншы кірді ойынға");
+  socket.on("play", (data) => {
 
+    if (!kirgen.includes(data.telegramId)) {
+      kirgen.push(data.telegramId);
+    }
 
-socket.on("play",(data)=>{
+    console.log("Қазір массив:", kirgen);
 
-  const telegram = data.telegramId
+    // 👇 ДӘЛ ОСЫ ЖЕРГЕ жазылады
+    if (kirgen.length === 2) {
 
-  kirgen.push(telegram);
-  
+      komta.player1 = kirgen[0];
+      komta.player2 = kirgen[1];
 
-  console.log("play basti");
+      console.log("Команда құрылды:", komta);
 
-  console.log(kirgen);
+      // кейін массивті тазалауға болады
+      kirgen = [];
+    }
 
-  if(kirgen ===2){
-    komta.player1 = kirgen[0];
-    komta.player2 = kirgen[1];
+  });
 
-    console.log("komta kuryldu:", komta);
-  
-  kirgen=[];}
 });
-
-socket.on("disconnect",()=>{
-  console.log("ойыншы шығып кетті");
-});
-
-
-
-
-
-})
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
