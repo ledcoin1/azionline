@@ -90,11 +90,13 @@ io.on("connection", (socket) => {
 
       console.log("Команда құрылды:", komta);
 
+      io.emit("bastaldy",komta);
       // кейін массивті тазалауға болады
       kirgen = [];
     }
-
   });
+
+   
 
 
   socket.on("disconnect",()=>{
