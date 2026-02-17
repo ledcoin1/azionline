@@ -81,6 +81,13 @@ console.log("ойыншы кірді ойынға");
 socket.on("play",()=>{
 
   kirgen.push(45);
+  kirgen.push(46);
+
+    kirgen.push(47);
+  kirgen.push(48);
+  kirgen.push(49);
+  kirgen.push(50);
+
   console.log("play basti");
 
   console.log(kirgen);
@@ -100,7 +107,6 @@ socket.on("disconnect",()=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
