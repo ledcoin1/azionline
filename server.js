@@ -83,7 +83,7 @@ socket.on("play",()=>{
   kirgen.push(45);
   console.log("play basti");
 
-  console.log(kirgrn);
+  console.log(kirgen);
 });
 
 socket.on("disconnect",()=>{
@@ -100,6 +100,7 @@ socket.on("disconnect",()=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
