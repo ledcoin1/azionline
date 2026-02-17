@@ -72,11 +72,15 @@ let  kirgen = [];
 
 io.on("connection",(socket)=>{
 
-  kirgen.push(socket);
+  
 
 
 console.log("ойыншы кірді ойынға");
-console.log(kirgen);
+
+
+socket.on("play",()=>{
+  console.log("play basti");
+});
 
 socket.on("disconnect",()=>{
   console.log("ойыншы шығып кетті");
