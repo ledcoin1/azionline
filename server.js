@@ -78,9 +78,9 @@ io.on("connection",(socket)=>{
 console.log("ойыншы кірді ойынға");
 
 
-socket.on("play",(data)=>{
+socket.on("play",(sasak)=>{
 
-  const telegram = data.telegramId
+  const telegram = sasak.telegramId
 
   kirgen.push(telegram);
   
