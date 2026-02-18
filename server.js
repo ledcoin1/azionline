@@ -69,6 +69,7 @@ app.post("/api/admin/balance", async(req,res)=>{
 });
 
 
+
 let komta ={
   id: null,
   status: null,
@@ -87,15 +88,11 @@ io.on("connection",(socket)=>{
     console.log(komta);
   });
 
-  console.log(komta);
+  
 
   socket.on("disconnect",()=>{
    console.log("ойыншы шығып кетті")  });
 });
-
-
-
-console.log(komta);
 
 
 
@@ -104,6 +101,7 @@ console.log(komta);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
