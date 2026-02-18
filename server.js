@@ -87,10 +87,13 @@ io.on("connection",(socket)=>{
 
     console.log("қосылған ойынщы:",komta[socket.id]);
 
+     socket.emit("komta", "комтадасындар!");
+  
     
     console.log(komta);
   });
 
+   
   
 
   socket.on("disconnect",()=>{
@@ -104,6 +107,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
