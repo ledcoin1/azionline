@@ -92,7 +92,24 @@ io.on("connection",(socket)=>{
     console.log(komta);
 
     if(Object.keys(komta).length === 2){
-        io.emit("komta", "комтадасындар!");
+        
+
+      let deck = createDeck();
+  shuffle(deck);
+
+  let players = Object.keys(komta);
+
+  let player1 = players[0];
+  let player2 = players[1];
+
+  let cards1 = deck.splice(0, 6);
+  let cards2 = deck.splice(0, 6);
+
+  io.to(player1).emit("cards", cards1);
+  io.to(player2).emit("cards", cards2);
+
+  console.log("1 ойыншы картасы:", cards1);
+  console.log("2 ойыншы картасы:", cards2);
   
     }
   });
@@ -101,10 +118,35 @@ io.on("connection",(socket)=>{
   
 
   socket.on("disconnect",()=>{
-  delete komta[socket.id];
+    delete komta[socket.id];
    console.log("ойыншы шығып кетті");
   console.log("комтағы ойыншылар:",komta);  });
 });
+
+
+
+function createDeck() {
+  const suits = ["♠", "♥", "♦", "♣"];
+  const values = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+
+  let deck = [];
+
+  for (let suit of suits) {
+    for (let value of values) {
+      deck.push(value + suit);
+    }
+  }
+
+  return deck;
+}
+
+function shuffle(deck) {
+  for (let i = deck.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
 
 
 
@@ -115,8 +157,6 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
