@@ -80,6 +80,9 @@ io.on("connection",(socket)=>{
    socket.on("play",(data)=>{
     const telegramId = data.telegramId;
     console.log("осы кірді",telegramId);
+
+     komta.id = telegramId;
+    console.log(komta);
   });
 
   socket.on("disconnect",()=>{
@@ -98,6 +101,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
