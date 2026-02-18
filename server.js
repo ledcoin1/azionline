@@ -128,6 +128,8 @@ io.on("connection", (socket) => {
       komta.player1 = kirgen[0];
       komta.player2 = kirgen[1];
 
+      console.log(komta);
+
         io.to(komta.player1.socketId).emit("bastaldy");
     io.to(komta.player2.socketId).emit("bastaldy");
 
@@ -149,6 +151,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
