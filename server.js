@@ -90,10 +90,10 @@ io.on("connection",(socket)=>{
 
      console.log(komta);
     
-     if(komta.lenght === 2){
+     
         socket.emit("komta", "комтадасындар!");
   
-    }
+    
   
     
     
@@ -113,6 +113,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
