@@ -71,17 +71,19 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 let komta ={
   id: null,
-  status: null
+  status: null,
+  money: 500
 }
 
 io.on("connection",(socket)=>{
   console.log("ойыншы кірді");
 
-   socket.on("play",(data)=>{
+  socket.on("play",(data)=>{
     const telegramId = data.telegramId;
     console.log("осы кірді",telegramId);
 
-     komta.id = telegramId;
+    komta.id = telegramId;
+    komta.status = "zhai";
     console.log(komta);
   });
 
@@ -95,12 +97,12 @@ io.on("connection",(socket)=>{
 
 
 
-
  
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
