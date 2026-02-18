@@ -108,21 +108,25 @@
     const container = document.getElementById("myCards");
     container.innerHTML = "";
 
-    cards.forEach(card => {
-      const div = document.createElement("div");
-      div.textContent = card;
-      div.style.display = "inline-block";
-      div.style.margin = "5px";
-      div.style.padding = "10px";
-      div.style.border = "1px solid black";
+   cards.forEach(card => {
+  const div = document.createElement("div");
+  div.textContent = card;
+  div.style.display = "inline-block";
+  div.style.margin = "5px";
+  div.style.padding = "10px";
+  div.style.border = "1px solid black";
 
-      div.onclick = function() {
-   socket.emit("throwCard", card);
-};
+  div.onclick = function() {
+    // 1️⃣ Өзіңнің қолыңнан карта өшіру
+    div.remove();
 
+    // 2️⃣ Серверге хабар жіберу
+    socket.emit("throwCard", card);
+  };
 
-      container.appendChild(div);
-    });
+  container.appendChild(div);
+});
+
   });
 
 
@@ -131,5 +135,6 @@
 
 </body>
 </html>
+
 
 
