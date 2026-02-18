@@ -116,6 +116,11 @@
       div.style.padding = "10px";
       div.style.border = "1px solid black";
 
+      div.onclick = function() {
+   socket.emit("throwCard", card);
+};
+
+
       container.appendChild(div);
     });
   });
@@ -126,4 +131,5 @@
 
 </body>
 </html>
+
 
