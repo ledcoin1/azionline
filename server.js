@@ -114,6 +114,11 @@ io.on("connection",(socket)=>{
     }
   });
 
+
+  socket.on("throwCard", (card) => {
+  console.log("Ойыншы карта тастады:", card);
+});
+
   
   
 
@@ -157,6 +162,7 @@ function shuffle(deck) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
