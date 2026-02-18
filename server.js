@@ -101,7 +101,9 @@ io.on("connection",(socket)=>{
   
 
   socket.on("disconnect",()=>{
-   console.log("ойыншы шығып кетті")  });
+  delete komta[socket.id];
+   console.log("ойыншы шығып кетті");
+  console.log("комтағы ойыншылар:",komta);  });
 });
 
 
@@ -113,6 +115,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
