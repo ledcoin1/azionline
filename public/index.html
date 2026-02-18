@@ -47,6 +47,8 @@
 
   <div id="komta"></div>
 
+  <div id="myCards"></div>
+
 
 <script src="/socket.io/socket.io.js"></script>
 
@@ -99,7 +101,24 @@
   socket.on("komta",(msg)=>{
     document.getElementById("komta").innerText = msg;
   });
-  
+
+
+
+   socket.on("cards", (cards) => {
+    const container = document.getElementById("myCards");
+    container.innerHTML = "";
+
+    cards.forEach(card => {
+      const div = document.createElement("div");
+      div.textContent = card;
+      div.style.display = "inline-block";
+      div.style.margin = "5px";
+      div.style.padding = "10px";
+      div.style.border = "1px solid black";
+
+      container.appendChild(div);
+    });
+  });
 
 
 
@@ -107,3 +126,4 @@
 
 </body>
 </html>
+
