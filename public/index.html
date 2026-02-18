@@ -45,15 +45,7 @@
 
   <button id="play">play</button>
 
-  <div id="gameArea" style="display:none;" class="box">
-  <h3>🎮 Ойын басталды!</h3>
-  <p id="players"></p>
-
-   <h4>Менің карталарым:</h4>
-  <div id="myCards" style="margin-top:15px;"></div>
-
-</div>
-
+  
 
 
 <script src="/socket.io/socket.io.js"></script>
@@ -105,46 +97,7 @@
 
 
 
-  socket.on("bastaldy", (komta) => {
-
-  // Егер мен осы ойында болсам ғана көрсетеміз
-  if (komta.player1 === telegramId || komta.player2 === telegramId) {
-
-    // Play кнопкасын жасырамыз
-    document.getElementById("play").style.display = "none";
-
-    // Ойын алаңын көрсетеміз
-    document.getElementById("gameArea").style.display = "block";
-
-    // Қарсыласты шығару
-    document.getElementById("players").innerText =
-      "Ойыншылар: " + komta.player1 + " vs " + komta.player2;
-  }
-
-});
-
-socket.on("cards", (cards) => {
-
-  const cardsDiv = document.getElementById("myCards");
-  cardsDiv.innerHTML = ""; // ескі карталарды тазалау
-
-  cards.forEach(card => {
-
-    const cardElement = document.createElement("div");
-    cardElement.textContent = card;
-
-    cardElement.style.display = "inline-block";
-    cardElement.style.padding = "10px";
-    cardElement.style.margin = "5px";
-    cardElement.style.background = "white";
-    cardElement.style.color = "black";
-    cardElement.style.borderRadius = "8px";
-    cardElement.style.fontWeight = "bold";
-
-    cardsDiv.appendChild(cardElement);
-  });
-
-});
+  
 
 
 
