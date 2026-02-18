@@ -45,7 +45,7 @@
 
   <button id="play">play</button>
 
-  
+  <div id="komta"></div>
 
 
 <script src="/socket.io/socket.io.js"></script>
@@ -96,7 +96,9 @@
   });
 
 
-
+  socket.on("komta",(msg)=>{
+    document.getElementById("komta").innerText = msg;
+  });
   
 
 
