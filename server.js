@@ -69,94 +69,18 @@ app.post("/api/admin/balance", async(req,res)=>{
 });
 
 
-function createDeck() {
-  const suits = ["♠", "♥", "♦", "♣"];
-  const values = ["6","7","8","9","10","J","Q","K","A"];
-
-  let deck = [];
-
-  for (let suit of suits) {
-    for (let value of values) {
-      deck.push(value + suit);
-    }
-  }
-
-  return deck;
-}
-
-function shuffle(deck) {
-  return deck.sort(() => Math.random() - 0.5);
-}
-
-
-function startGame() {
-
-  let deck = createDeck();
-  deck = shuffle(deck);
-
-  // 3 картадан бөлеміз
-  let player1Cards = deck.splice(0, 3);
-  let player2Cards = deck.splice(0, 3);
-
-  // Әр ойыншыға тек өз картасын жібереміз
-  io.to(komta.player1.socketId).emit("cards", player1Cards);
-  io.to(komta.player2.socketId).emit("cards", player2Cards);
-
-}
 
 
 
 
 
-let kirgen = [];
 
-io.on("connection", (socket) => {
 
-  socket.on("play", (data) => {
-
-    // Бірдей telegramId қайталанбасын
-    if (!kirgen.find(u => u.telegramId === data.telegramId)) {
-
-      kirgen.push({
-        telegramId: data.telegramId,
-        socketId: socket.id
-      });
-
-    }
-
-    console.log("Қазір массив:", kirgen);
-
-    if (kirgen.length === 2) {
-
-      const player1 = kirgen[0];
-      const player2 = kirgen[1];
-
-      console.log({ player1, player2 });
-
-      // ЕКЕУІНЕ ДЕ жібереміз
-      io.to(player1.socketId).emit("bastaldy");
-      io.to(player2.socketId).emit("bastaldy");
-
-      startGame();
-
-      kirgen = [];
-    }
-
-  });
-
-  socket.on("disconnect", () => {
-    kirgen = kirgen.filter(u => u.socketId !== socket.id);
-    console.log("Ойыншы шықты");
-  });
-
-});
-
+ 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
