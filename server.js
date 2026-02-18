@@ -77,6 +77,11 @@ let komta ={
 io.on("connection",(socket)=>{
   console.log("ойыншы кірді");
 
+   socket.on("play",(data)=>{
+    const telegramId = data.telegramId;
+    console.log("осы кірді",telegramId);
+  });
+
   socket.on("disconnect",()=>{
    console.log("ойыншы шығып кетті")  });
 });
@@ -93,6 +98,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
