@@ -70,6 +70,7 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+
 let komta ={};
 
 io.on("connection",(socket)=>{
@@ -77,7 +78,7 @@ io.on("connection",(socket)=>{
 
   socket.on("play",(data)=>{
     const telegramId = data.telegramId;
-    console.log("осы кірді",telegramId);
+    console.log("осы плей басты",telegramId);
 
     komta[socket.id]={
       id: telegramId,
@@ -87,19 +88,16 @@ io.on("connection",(socket)=>{
 
     console.log("қосылған ойынщы:",komta[socket.id]);
 
-
-     console.log(komta);
     
-     
+    console.log(komta);
+
+    if(Object.keys(komta).length === 2){
         socket.emit("komta", "комтадасындар!");
   
-    
-  
-    
-    
+    }
   });
 
-   
+  
   
 
   socket.on("disconnect",()=>{
@@ -108,23 +106,13 @@ io.on("connection",(socket)=>{
 
 
 
+
+
  
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
