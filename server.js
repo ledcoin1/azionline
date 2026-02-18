@@ -93,7 +93,7 @@ io.on("connection",(socket)=>{
 
 
 
-
+console.log(komta);
 
 
 
@@ -102,6 +102,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
