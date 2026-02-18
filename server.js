@@ -108,41 +108,45 @@ function startGame() {
 
 
 
-let  kirgen = [];
-let komta={};
-
+let kirgen = [];
 
 io.on("connection", (socket) => {
 
   socket.on("play", (data) => {
 
-    if (!kirgen.includes(data.telegramId)) {
-      kirgen.push(data.telegramId);
+    // Бірдей telegramId қайталанбасын
+    if (!kirgen.find(u => u.telegramId === data.telegramId)) {
+
+      kirgen.push({
+        telegramId: data.telegramId,
+        socketId: socket.id
+      });
+
     }
 
     console.log("Қазір массив:", kirgen);
 
-    // 👇 ДӘЛ ОСЫ ЖЕРГЕ жазылады
     if (kirgen.length === 2) {
 
-      komta.player1 = kirgen[0];
-      komta.player2 = kirgen[1];
+      const player1 = kirgen[0];
+      const player2 = kirgen[1];
 
-      console.log(komta);
+      console.log({ player1, player2 });
 
-        io.to(komta.player1.socketId).emit("bastaldy");
-    io.to(komta.player2.socketId).emit("bastaldy");
+      // ЕКЕУІНЕ ДЕ жібереміз
+      io.to(player1.socketId).emit("bastaldy");
+      io.to(player2.socketId).emit("bastaldy");
 
-    startGame();
+      startGame();
+
       kirgen = [];
     }
+
   });
 
-   
-
-
-  socket.on("disconnect",()=>{
-    console.log("ойыншы шығып кетті");
+  socket.on("disconnect", () => {
+    kirgen = kirgen.filter(u => u.socketId !== socket.id);
+    console.log("Ойыншы шықты");
   });
 
 });
@@ -151,6 +155,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
