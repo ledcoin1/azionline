@@ -83,8 +83,15 @@ io.on("connection",(socket)=>{
     const telegramId = data.telegramId;
     console.log("осы кірді",telegramId);
 
-    komta.id = telegramId;
-    komta.status = "zhai";
+    komta[socket.id]={
+      id: telegramId,
+      status: "zhai",
+      money: 500
+    };
+
+    console.log("қосылған ойынщы:",komta[socket.id]);
+
+    
     console.log(komta);
   });
 
@@ -101,6 +108,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
