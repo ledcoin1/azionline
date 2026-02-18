@@ -70,11 +70,7 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-let komta ={
-  id: null,
-  status: null,
-  money: 500
-}
+let komta ={};
 
 io.on("connection",(socket)=>{
   console.log("ойыншы кірді");
@@ -108,6 +104,7 @@ io.on("connection",(socket)=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
