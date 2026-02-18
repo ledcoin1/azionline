@@ -102,7 +102,7 @@ io.on("connection",(socket)=>{
   let player1 = players[0];
   let player2 = players[1];
 
-  let cards1 = deck.splice(0, 6);
+  let cards1 = deck.splice(0, 3);
   let cards2 = deck.splice(0, 6);
 
   io.to(player1).emit("cards", cards1);
@@ -157,6 +157,7 @@ function shuffle(deck) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
