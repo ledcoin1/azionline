@@ -75,7 +75,7 @@ let rooms = {};
 
 io.on("connection", (socket) => {
 
-  socket.on("join", (roomId) => {
+  socket.on("play", (roomId) => {
 
     // 1) Socket.io room
     socket.join(roomId);
@@ -100,6 +100,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
