@@ -74,32 +74,14 @@ app.post("/api/admin/balance", async(req,res)=>{
 let rooms = {};
 
 io.on("connection", (socket) => {
-
-  socket.on("play", (roomId) => {
-
-    // 1) Socket.io room
-    socket.join(roomId);
-
-    // 2) Егер объектте жоқ болса — жасаймыз
-    if (!rooms[roomId]) {
-      rooms[roomId] = {
-        players: [],
-        turn: null
-      };
-    }
-
-    // 3) Объектке ойыншы қосамыз
-    rooms[roomId].players.push(socket.id);
-
-    console.log(rooms);
-  });
-
-});
+  console.log("Ойыншы кірді:", socket.id);
+ 
  
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
