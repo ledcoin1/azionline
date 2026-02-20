@@ -71,100 +71,36 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-let komta ={};
+let rooms = {};
 
-io.on("connection",(socket)=>{
-  console.log("ойыншы кірді");
+io.on("connection", (socket) => {
 
-  socket.on("play",(data)=>{
-    const telegramId = data.telegramId;
-    console.log("осы плей басты",telegramId);
+  socket.on("join", (roomId) => {
 
-    komta[socket.id]={
-      id: telegramId,
-      status: "zhai",
-      money: 500
-    };
+    // 1) Socket.io room
+    socket.join(roomId);
 
-    console.log("қосылған ойынщы:",komta[socket.id]);
-
-    
-    console.log(komta);
-
-    if(Object.keys(komta).length === 2){
-        
-
-      let deck = createDeck();
-  shuffle(deck);
-
-  let players = Object.keys(komta);
-
-  let player1 = players[0];
-  let player2 = players[1];
-
-  let cards1 = deck.splice(0, 3);
-  let cards2 = deck.splice(0, 3);
-
-  io.to(player1).emit("cards", cards1);
-  io.to(player2).emit("cards", cards2);
-
-  console.log("1 ойыншы картасы:", cards1);
-  console.log("2 ойыншы картасы:", cards2);
-  
+    // 2) Егер объектте жоқ болса — жасаймыз
+    if (!rooms[roomId]) {
+      rooms[roomId] = {
+        players: [],
+        turn: null
+      };
     }
+
+    // 3) Объектке ойыншы қосамыз
+    rooms[roomId].players.push(socket.id);
+
+    console.log(rooms);
   });
 
-
-socket.on("throwCard", (card) => {
-  // Карта тасталғанын console-ға шығару
-  console.log("Ойыншы карта тастады:", card);
-
-  // Қарсы ойыншыға жіберу (өзін қоспай)
-  socket.broadcast.emit("enemyCard", card);
 });
-  
-  
-
-  socket.on("disconnect",()=>{
-    delete komta[socket.id];
-   console.log("ойыншы шығып кетті");
-  console.log("комтағы ойыншылар:",komta);  });
-});
-
-
-
-function createDeck() {
-  const suits = ["♠", "♥", "♦", "♣"];
-  const values = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"];
-
-  let deck = [];
-
-  for (let suit of suits) {
-    for (let value of values) {
-      deck.push(value + suit);
-    }
-  }
-
-  return deck;
-}
-
-function shuffle(deck) {
-  for (let i = deck.length - 1; i > 0; i--) {
-    let j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  return deck;
-}
-
-
-
-
-
  
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
