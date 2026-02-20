@@ -74,13 +74,18 @@ app.post("/api/admin/balance", async(req,res)=>{
 let rooms = {};
 
 io.on("connection", (socket) => {
-  console.log("Ойыншы кірді:", socket.id);});
- 
+  socket.join("room1");
+
+  console.log("Қосылғандар саны:",
+    io.sockets.adapter.rooms.get("room1")?.size
+  );
+});
  
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
