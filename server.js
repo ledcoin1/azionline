@@ -71,7 +71,7 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-let rooms = {};
+
 
 let rooms = {};
 
@@ -86,6 +86,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
