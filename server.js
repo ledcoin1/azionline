@@ -86,23 +86,18 @@ io.on("connection", (socket) => {
 
 
   socket.on("play",(data)=>{
-   const telegramId = data.telegramId
+   const telegramId = data.telegramId;
+   komta.name= "balabi";
    console.log("telegram osynday:",telegramId);
+   console.log(komta);
 
   });
-
-
-
-  socket.on("disconnect",()=>{
-    console.log("wygyp ketti");
-  });
-
-});
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
