@@ -76,7 +76,11 @@ app.post("/api/admin/balance", async(req,res)=>{
 let komta = {
 
   players:[],
-  name: "askar"
+  card: null,
+  obwiBalans: null,
+  turn: 1,
+  zhenis: null,
+  raund: null
 
 };
 
@@ -89,7 +93,12 @@ io.on("connection", (socket) => {
    const telegramId = data.telegramId;
    komta.players.push({
     id: socket.id,
-    telegram: telegramId
+    telegram: telegramId,
+    card: null,
+    turn: nuul,
+    status: azirshe,
+    balans: 500,
+    raund: null
    });
    
    console.log(komta);
@@ -104,10 +113,12 @@ io.on("connection", (socket) => {
 
 });
 
+
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
