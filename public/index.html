@@ -47,10 +47,6 @@
 
   <div id="komta"></div>
 
-  <div id="myCards"></div>
-
-  <div id="table"></div>
-
 
 
 <script src="/socket.io/socket.io.js"></script>
@@ -102,56 +98,14 @@
 
 
   socket.on("komta",(msg)=>{
-    document.getElementById("komta").innerText = msg;
-  });
-
-
-
-   socket.on("cards", (cards) => {
-    const container = document.getElementById("myCards");
-    container.innerHTML = "";
-
-   cards.forEach(card => {
-  const div = document.createElement("div");
-  div.textContent = card;
-  div.style.display = "inline-block";
-  div.style.margin = "5px";
-  div.style.padding = "10px";
-  div.style.border = "1px solid black";
-
-  div.onclick = function() {
-    // 1️⃣ Өзіңнің қолыңнан карта өшіру
-    div.remove();
-
-    // 2️⃣ Серверге хабар жіберу
-    socket.emit("throwCard", card);
-  };
-
-  container.appendChild(div);
-});
-
-  });
-
-
-  socket.on("enemyCard", (card) => {
-  const table = document.getElementById("table");
-  const div = document.createElement("div");
-  div.textContent = card;
-  div.style.display = "inline-block";
-  div.style.margin = "5px";
-  div.style.padding = "10px";
-  div.style.border = "1px solid red"; // қарсы ойыншы картасы қызыл
-
-  table.appendChild(div);
-});
-
+    document.getElementById("komta").innerText=msg;
+  })
 
 
 </script>
 
 </body>
 </html>
-
 
 
 
