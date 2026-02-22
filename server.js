@@ -89,6 +89,12 @@ io.on("connection", (socket) => {
 
 
   socket.on("play",(data)=>{
+
+    if(komta.players.length >=1){
+      socket.emit("toly","1 adam bar");
+      return;
+    }
+    
    const telegramId = data.telegramId;
    komta.players.push({
     id: socket.id,
@@ -123,6 +129,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
