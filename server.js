@@ -107,7 +107,12 @@ io.on("connection", (socket) => {
 
 
   socket.on("disconnect",()=>{
-    console.log("wygyp ketti");
+    komta.players = komta.players.filter(player => 
+    player.id !== socket.id
+  );
+
+  console.log("wygyp ketti");
+  console.log(komta);
   });
 
 });
@@ -117,6 +122,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
