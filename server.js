@@ -73,19 +73,37 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-let rooms = {};
+let komta = {
+
+  players:[],
+  name: "askar"
+
+};
 
 io.on("connection", (socket) => {
 
   console.log("ойыншы кірді")
 
+
+  socket.on("play",(data)=>{
+   const telegramId = data.telegramId
+   console.log("telegram osynday:",telegramId);
+
+  });
+
+
+
+  socket.on("disconnect",()=>{
+    console.log("wygyp ketti");
+  });
+
 });
 
- 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
