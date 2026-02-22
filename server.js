@@ -101,6 +101,7 @@ io.on("connection", (socket) => {
    });
    
    console.log(komta);
+    socket.emit("komta","komtadindar Kazdar");
 
   });
 
@@ -122,6 +123,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
