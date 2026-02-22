@@ -94,7 +94,7 @@ io.on("connection", (socket) => {
     id: socket.id,
     telegram: telegramId,
     card: null,
-    turn: nul,
+    turn: null,
     status: "azirshe",
     balans: 500,
     raund: null
@@ -117,6 +117,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
