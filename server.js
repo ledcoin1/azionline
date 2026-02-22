@@ -72,6 +72,21 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+san =[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+// Кездейсоқ сан алу
+let randomIndex = Math.floor(Math.random() * san.length);
+let randomValue = san[randomIndex];
+
+// Массивтен өшіру (қайталауды болдырмау үшін)
+san.splice(randomIndex, 1);
+
+console.log("Таңдалған сан:", randomValue);
+console.log("Қалған массив:", san);
+
+
+
+
 
 let komta = {
 
@@ -129,6 +144,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
