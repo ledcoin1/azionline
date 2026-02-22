@@ -97,15 +97,23 @@
   });
 
 
-  socket.on("komta",(msg)=>{
+ 
+
+   socket.on("komta",(msg)=>{
     document.getElementById("komta").innerText=msg;
-  })
+  });
+
+
+  socket.on("toly",(msg)=>{
+    alert (msg);
+  });
 
 
 </script>
 
 </body>
 </html>
+
 
 
 
