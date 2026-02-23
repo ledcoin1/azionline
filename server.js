@@ -70,6 +70,9 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+
+
+
 function kartaTaratu(){
   const emblmas = ["♥", "♦", "♣", "♠"];
   const sandars =["6","7","8","9","10","J","Q","K","A"];
@@ -89,7 +92,20 @@ let d = kartaTaratu();
 console.log(d);
 
 
+function shuffle(deck) {
+  // i = соңғы индекстен бастап 1-ге дейін
+  for (let i = deck.length - 1; i > 0; i--) {
+    // 0 ... i аралығынан кездейсоқ индекс таңдаймыз
+    let j = Math.floor(Math.random() * (i + 1));
 
+    // deck[i] мен deck[j] орындарын ауыстырамыз
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+}
+
+let deck = kartaTaratu(); // 36 карта дайын
+shuffle(deck);             // араласты
+console.log(deck);         // енді әр түрлі ретпен
 
 
 
@@ -168,8 +184,6 @@ console.log("Ойыншылар:", komta.players);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
