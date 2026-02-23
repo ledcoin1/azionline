@@ -192,49 +192,55 @@ socket.on("attack", (card) => {
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
 
-  // 1. Карта ойыншыда бар ма
   if (!player.cards.includes(card)) {
     socket.emit("error", "Сенде мұндай карта жоқ!");
     return;
   }
 
-  // 2. Turn тексеру
   if (!player.turn) {
     socket.emit("error", "Қазір сенің жүрісің емес!");
     return;
   }
 
-  // 3. Үстелде карта бар ма тексеру
+  // Үстелдегі карта бар ма?
   if (komta.card) {
     const tableSuit = komta.card.slice(-1); // үстелдегі картаның масті
     const cardSuit = card.slice(-1);        // ойыншының картасының масті
 
-    // Егер масть дұрыс емес және көзір де емес
-    if (cardSuit !== tableSuit && card !== komta.kozir) {
-      socket.emit("error", `Сол мастьтегі карта немесе көзір ғана жарамды!`);
+    const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
+    const hasTrump = player.cards.includes(komta.kozir);
+
+    // Егер ойыншыда масть болса, сол мастьті міндетті түрде жіберу керек
+    if (hasSuit && cardSuit !== tableSuit) {
+      socket.emit("error", `Сол мастьтегі карта міндетті!`);
       return;
     }
+
+    // Егер масть жоқ, бірақ көзір бар болса, тек көзірді жіберуге болады
+    if (!hasSuit && hasTrump && card !== komta.kozir) {
+      socket.emit("error", `Көзірді ғана жібере аласыз!`);
+      return;
+    }
+
+    // Егер масть жоқ және көзір жоқ болса → кез келген карта жарамды
   }
 
-  // 4. Карта дұрыс болса, жүріс жасалады
-  player.cards = player.cards.filter(c => c !== card); // ойыншыдан кетіру
-  komta.card = card;                                   // үстелге қою
+  // Карта дұрыс болса, жүріс жасалады
+  player.cards = player.cards.filter(c => c !== card);
+  komta.card = card;
 
-  // 5. Turn қарсы ойыншыға ауысады
   const opponent = komta.players.find(p => p.id !== player.id);
   if (opponent) {
     player.turn = false;
     opponent.turn = true;
   }
 
-  // 6. Клиентке жаңарту
   io.to(player.id).emit("cards", player.cards);
   io.emit("table", card);
 
   console.log(`${player.telegram} карта жіберді: ${card}`);
   console.log(`Енді turn: ${opponent ? opponent.telegram : "белгісіз"}`);
 });
-
   
 
   socket.on("disconnect",()=>{
@@ -277,6 +283,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
