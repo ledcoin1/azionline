@@ -140,7 +140,7 @@ io.on("connection", (socket) => {
 
 console.log("Көзір карта:", komta.kozir);
 console.log("Ойыншылар:", komta.players);
-console.log("Қалған карталар:", san.length);
+
 
    socket.emit("komta", "komtadasyndar Kazdar");
 
@@ -168,6 +168,7 @@ console.log("Қалған карталар:", san.length);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
