@@ -164,8 +164,8 @@ io.on("connection", (socket) => {
   }
 
 
-console.log(players[0].cards); // ["7♣","K♥","10♦"]
-console.log(players[1].cards); // ["6♠","Q♦","J♣"]
+console.log(komta.players[0].cards); // ["7♣","K♥","10♦"]
+console.log(komta.players[1].cards); // ["6♠","Q♦","J♣"]
 console.log(deck.length);       // 36 - 6 = 30 карта қалады
 
 
