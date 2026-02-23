@@ -188,20 +188,45 @@ komta.players[1].turn = false;
 
 
 socket.on("attack", (card) => {
-  // Қай ойыншы жасағанын табамыз
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
 
-  // Карта шынымен сол ойыншының картасы ма?
+  // Карта шынымен ойыншыда бар ма
   if (!player.cards.includes(card)) {
     socket.emit("error", "Сенде мұндай карта жоқ!");
     return;
   }
 
-  // Жүріс кезегі тексеру
+  // Turn тексеру
   if (!player.turn) {
     socket.emit("error", "Қазір сенің жүрісің емес!");
     return;
+  }
+
+  const tableCard = komta.table; // үстелдегі карта
+  const trump = komta.kozir;     // көзір
+
+  // Егер үстел бос болса – кез келген карта қоюға болады
+  if (tableCard) {
+    const tableSuit = tableCard.slice(-1); // масть
+    const cardSuit = card.slice(-1);
+
+    // 1) Сол мастьтағы карта болса – жарайды
+    // 2) Сол масть жоқ болса, көзір болса – жарайды
+    // 3) Сол масть та, көзір де жоқ – кез келген карта жарайды
+    const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
+    const hasTrump = player.cards.some(c => c.slice(-1) === trump.slice(-1));
+
+    if (cardSuit !== tableSuit) {
+      if (hasSuit && card !== trump) {
+        socket.emit("error", `Сол мастьтағы картаны қою керек! (${tableSuit})`);
+        return;
+      }
+      if (card !== trump && hasTrump && trump !== tableSuit) {
+        socket.emit("error", `Көзірмен жабу керек! (${trump})`);
+        return;
+      }
+    }
   }
 
   // Карта ойыншыдан кетеді
@@ -216,7 +241,7 @@ socket.on("attack", (card) => {
   // Жаңа карталарын ойыншыға қайта жіберу
   io.to(player.id).emit("cards", player.cards);
 
-  // Жүрісті ауыстыру
+  // Turn ауыстыру
   komta.players.forEach(p => p.turn = !p.turn);
 });
 
