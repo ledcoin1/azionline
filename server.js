@@ -68,10 +68,6 @@ app.post("/api/admin/balance", async(req,res)=>{
   res.json({ success: true });
 });
 
-
-
-
-
 san =[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 
 // Кездейсоқ сан алу
@@ -86,6 +82,9 @@ console.log("Қалған массив:", san);
 
 
 
+let san = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+
+
 
 
 let komta = {
@@ -94,7 +93,8 @@ let komta = {
   card: null,
   obwiBalans: null,
   zhenis: null,
-  raund: null
+  raund: null,
+  kozir: null
 
 };
 
@@ -105,24 +105,45 @@ io.on("connection", (socket) => {
 
   socket.on("play",(data)=>{
 
-    if(komta.players.length >=1){
-      socket.emit("toly","1 adam bar");
+    if(komta.players.length>=2){
+      socket.emit("toly","2 adam bar");
       return;
     }
-    
    const telegramId = data.telegramId;
    komta.players.push({
     id: socket.id,
     telegram: telegramId,
-    card: null,
+    card: [],
     turn: null,
     status: "azirshe",
     balans: 500,
     raund: null
    });
    
-   console.log(komta);
-    socket.emit("komta","komtadindar Kazdar");
+
+
+   let kozirIndex = Math.floor(Math.random() * san.length);
+komta.kozir = san[kozirIndex];  // kozir сақталады
+san.splice(kozirIndex, 1);       // массивтен өшіреміз
+
+for (let i = 0; i < komta.players.length; i++) {
+  komta.players[i].cards = []; // ойыншының карталары
+
+  for (let j = 0; j < 3; j++) {
+    let index = Math.floor(Math.random() * san.length);
+    komta.players[i].cards.push(san[index]);
+    san.splice(index, 1); // алынған картаны массивтен өшіру
+  }
+}
+
+
+   
+
+   console.log("Көзір карта:", komta.kozir);
+console.log("Ойыншылар:", komta.players);
+console.log("Қалған карталар:", san);
+
+   socket.emit("komta", "komtadasyndar Kazdar");
 
   });
 
@@ -144,11 +165,6 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
-
-
-
 
 
 
