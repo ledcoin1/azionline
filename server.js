@@ -164,9 +164,14 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
       io.to(player.id).emit("cards", player.cards);
     });
 
-  
      komta.kozir = deck[0];  
     deck.splice(0,1); 
+
+      
+    
+    
+komta.players[0].turn = true;
+komta.players[1].turn = false;
 
     
     console.log("Көзір карта:", komta.kozir);
@@ -174,13 +179,46 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
     console.log(komta.players[1].cards);
     console.log(deck.length);
 
-    console.log("Көзір карта:", komta.kozir);
+    
     console.log("Ойыншылар:", komta.players);
 
     socket.emit("komta", "komtadasyndar Kazdar");
 }});
 
 
+
+socket.on("attack", (card) => {
+  // Қай ойыншы жасағанын табамыз
+  const player = komta.players.find(p => p.id === socket.id);
+  if (!player) return;
+
+  // Карта шынымен сол ойыншының картасы ма?
+  if (!player.cards.includes(card)) {
+    socket.emit("error", "Сенде мұндай карта жоқ!");
+    return;
+  }
+
+  // Жүріс кезегі тексеру
+  if (!player.turn) {
+    socket.emit("error", "Қазір сенің жүрісің емес!");
+    return;
+  }
+
+  // Карта ойыншыдан кетеді
+  player.cards = player.cards.filter(c => c !== card);
+
+  // Карта үстелге қойылады
+  komta.table = card;
+
+  // Бәріне үстелдегі картаны көрсету
+  io.emit("table", card);
+
+  // Жаңа карталарын ойыншыға қайта жіберу
+  io.to(player.id).emit("cards", player.cards);
+
+  // Жүрісті ауыстыру
+  komta.players.forEach(p => p.turn = !p.turn);
+});
 
 
 
@@ -202,8 +240,6 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
