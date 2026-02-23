@@ -163,7 +163,11 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
       }
     });
 
-    // Енді ғана қауіпсіз console.log
+     komta.kozir = deck[0];  
+    deck.splice(0,1); 
+
+    
+    console.log("Көзір карта:", komta.kozir);
     console.log(komta.players[0].cards);
     console.log(komta.players[1].cards);
     console.log(deck.length);
