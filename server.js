@@ -150,6 +150,18 @@ io.on("connection", (socket) => {
    
 
 
+   players.forEach(player => {
+  for (let i = 0; i < 3; i++) {
+    let card = deck[0];        // бірінші картаны аламыз
+    player.cards.push(card);    // ойыншыға қосамыз
+    deck.splice(0, 1);         // колодадан өшіреміз
+  }
+});
+
+console.log(players[0].cards); // ["7♣","K♥","10♦"]
+console.log(players[1].cards); // ["6♠","Q♦","J♣"]
+console.log(deck.length);       // 36 - 6 = 30 карта қалады
+
 
 
 console.log("Көзір карта:", komta.kozir);
