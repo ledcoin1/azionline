@@ -71,17 +71,6 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 // 36 карталық колода
-let san = [];
-const suits = ["♥", "♦", "♣", "♠"];
-const values = ["6","7","8","9","10","J","Q","K","A"];
-
-for (let suit of suits) {
-  for (let value of values) {
-    san.push(value + suit); // мысалы: "6♥", "J♠"
-  }
-}
-
-console.log("Карталар дайын:", san.length); // 36
 
 
 
@@ -98,19 +87,8 @@ let komta = {
 };
 
 
-function createDeck() {
-  const suits = ["♥", "♦", "♣", "♠"];
-  const values = ["6","7","8","9","10","J","Q","K","A"];
-  let deck = [];
 
-  for (let suit of suits) {
-    for (let value of values) {
-      deck.push(value + suit);
-    }
-  }
 
-  return deck;
-}
 
 io.on("connection", (socket) => {
 
@@ -140,28 +118,7 @@ io.on("connection", (socket) => {
    
 
 
- // көзір картаны таңдау
-let kozirIndex = Math.floor(Math.random() * san.length);
-komta.kozir = san[kozirIndex];
-san.splice(kozirIndex, 1);
 
-// әр ойыншыға 3 карта беру
-for (let i = 0; i < komta.players.length; i++) {
-  komta.players[i].cards = [];
-  for (let j = 0; j < 3; j++) {
-    let index = Math.floor(Math.random() * san.length);
-    komta.players[i].cards.push(san[index]);
-    san.splice(index, 1);
-  }
-  io.to(komta.players[i].id).emit("cards", komta.players[i].cards);
-}
-
-if (komta.players.length === 2) {
-  komta.players[0].turn = true;
-  komta.players[1].turn = false;
-
-  console.log("Бірінші ойыншы жүрісті бастайды");
-}
 
 console.log("Көзір карта:", komta.kozir);
 console.log("Ойыншылар:", komta.players);
@@ -172,38 +129,6 @@ console.log("Қалған карталар:", san.length);
   });
 
 
-
-
-  socket.on("attack", (card) => {
-
-  const player = komta.players.find(p => p.id === socket.id);
-  if (!player) return;
-
-  // карта шынымен бар ма?
-  if (!player.cards.includes(card)) return;
-
-  // жүріс кезегі тексеру (қарапайым түрде)
-  if (player.turn !== true) {
-    socket.emit("error", "Қазір сенің жүрісің емес!");
-    return;
-  }
-
-  // картаны ойыншыдан алып тастау
-  player.cards = player.cards.filter(c => c !== card);
-
-  // үстелге қою
-  komta.table = card;
-
-  // бәріне үстелді көрсету
-  io.emit("table", card);
-
-  // жаңа карталарын қайта жіберу
-  io.to(socket.id).emit("cards", player.cards);
-
-  // жүрісті ауыстыру
-  komta.players.forEach(p => p.turn = !p.turn);
-
-});
 
 
 
