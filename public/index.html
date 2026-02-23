@@ -25,6 +25,23 @@
       border-radius: 10px;
       margin-top: 10px;
     }
+
+
+    #cards {
+  margin-top: 10px;
+}
+
+.card {
+  display: inline-block;
+  background: white;
+  color: black;
+  padding: 10px 14px;
+  margin: 5px;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: bold;
+}
+    
   </style>
 </head>
 <body>
@@ -46,6 +63,11 @@
   <button id="play">play</button>
 
   <div id="komta"></div>
+
+  <div class="box">
+  <p><b>Your Cards:</b></p>
+  <div id="cards"></div>
+</div>
 
 
 
@@ -109,10 +131,25 @@
   });
 
 
+  socket.on("cards", (cards) => {
+  const cardsDiv = document.getElementById("cards");
+  cardsDiv.innerHTML = "";
+
+  cards.forEach(card => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerText = card;
+
+    cardsDiv.appendChild(div);
+  });
+});
+  
+
 </script>
 
 </body>
 </html>
+
 
 
 
