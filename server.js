@@ -70,7 +70,25 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-// 36 карталық колода
+function kartaTaratu(){
+  const emblmas = ["♥", "♦", "♣", "♠"];
+  const sandars =["6","7","8","9","10","J","Q","K","A"];
+  let deck = [];
+
+  for(let emblma of emblmas){
+    for(let sandar of sandars){
+      deck.push(sandar + emblma);
+    }
+  }
+
+  return deck;
+}
+
+
+let d = kartaTaratu();
+console.log(d);
+
+
 
 
 
@@ -150,6 +168,7 @@ console.log("Қалған карталар:", san.length);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
