@@ -192,54 +192,53 @@ socket.on("attack", (card) => {
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
 
+  // Карта ойыншыда бар ма
   if (!player.cards.includes(card)) {
     socket.emit("error", "Сенде мұндай карта жоқ!");
+    console.log(`${player.telegram} карта жоқ деп жіберді: ${card}`);
     return;
   }
 
+  // Turn дұрыс па?
   if (!player.turn) {
     socket.emit("error", "Қазір сенің жүрісің емес!");
+    console.log(`${player.telegram} өз кезегінде емес деп жіберді`);
     return;
   }
 
   // Үстелдегі карта бар ма?
-  if (komta.card) {
-    const tableSuit = komta.card.slice(-1); // үстелдегі картаның масті
-    const cardSuit = card.slice(-1);        // ойыншының картасының масті
+  if (komta.table) {
+    const tableSuit = komta.table.slice(-1); // үстелдегі карта масті
+    const cardSuit = card.slice(-1);         // жіберілген карта масті
+    const trump = komta.kozir;               // көзір
 
-    const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
-    const hasTrump = player.cards.includes(komta.kozir);
+    const hasTableSuit = player.cards.some(c => c.slice(-1) === tableSuit);
+    const hasTrump = player.cards.includes(trump);
 
-    // Егер ойыншыда масть болса, сол мастьті міндетті түрде жіберу керек
-    if (hasSuit && cardSuit !== tableSuit) {
-      socket.emit("error", `Сол мастьтегі карта міндетті!`);
+    if (hasTableSuit && cardSuit !== tableSuit && card !== trump) {
+      socket.emit("error", "Сол мастьтегі карта немесе көзір ғана жарамды!");
+      console.log(`${player.telegram} дұрыс карта жібермеді: ${card}`);
       return;
     }
-
-    // Егер масть жоқ, бірақ көзір бар болса, тек көзірді жіберуге болады
-    if (!hasSuit && hasTrump && card !== komta.kozir) {
-      socket.emit("error", `Көзірді ғана жібере аласыз!`);
-      return;
-    }
-
-    // Егер масть жоқ және көзір жоқ болса → кез келген карта жарамды
   }
 
-  // Карта дұрыс болса, жүріс жасалады
+  // Карта дұрыс болса
   player.cards = player.cards.filter(c => c !== card);
-  komta.card = card;
+  komta.table = card;
 
+  // Turn ауыстыру
   const opponent = komta.players.find(p => p.id !== player.id);
   if (opponent) {
     player.turn = false;
     opponent.turn = true;
+    console.log(`Turn ауысты! Енді ${opponent.telegram} кезегі`);
   }
 
+  // Клиентке карта мен үстелді жіберу
   io.to(player.id).emit("cards", player.cards);
   io.emit("table", card);
 
   console.log(`${player.telegram} карта жіберді: ${card}`);
-  console.log(`Енді turn: ${opponent ? opponent.telegram : "белгісіз"}`);
 });
   
 
@@ -283,6 +282,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
