@@ -70,8 +70,18 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+let san = [];
 
-const san = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+// Мастьтар
+const suits = ["♥", "♦", "♣", "♠"];
+const values = ["6","7","8","9","10","J","Q","K","A"];
+
+// Барлығын біріктіру
+for (let suit of suits) {
+  for (let value of values) {
+    san.push(value + suit); // мысалы: "6♥", "J♠"
+  }
+}
 
 
 
@@ -126,6 +136,8 @@ for (let i = 0; i < komta.players.length; i++) {
 }
 
 
+
+
    
 
    console.log("Көзір карта:", komta.kozir);
@@ -154,8 +166,6 @@ console.log("Қалған карталар:", san);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
