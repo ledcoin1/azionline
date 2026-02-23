@@ -97,12 +97,31 @@ let komta = {
 
 };
 
+
+function createDeck() {
+  const suits = ["♥", "♦", "♣", "♠"];
+  const values = ["6","7","8","9","10","J","Q","K","A"];
+  let deck = [];
+
+  for (let suit of suits) {
+    for (let value of values) {
+      deck.push(value + suit);
+    }
+  }
+
+  return deck;
+}
+
 io.on("connection", (socket) => {
 
   console.log("ойыншы кірді")
 
 
   socket.on("play",(data)=>{
+
+    if (komta.players.length === 0) {
+  san = createDeck();
+}
 
     if(komta.players.length>=2){
       socket.emit("toly","2 adam bar");
@@ -112,7 +131,7 @@ io.on("connection", (socket) => {
    komta.players.push({
     id: socket.id,
     telegram: telegramId,
-    card: [],
+    cards: [],
     turn: null,
     status: "azirshe",
     balans: 500,
@@ -186,16 +205,7 @@ console.log("Қалған карталар:", san.length);
 
 });
 
-socket.on("table", (card) => {
-  const tableDiv = document.getElementById("table");
-  tableDiv.innerHTML = "";
 
-  const div = document.createElement("div");
-  div.className = "card";
-  div.innerText = card;
-
-  tableDiv.appendChild(div);
-});
 
 
 
