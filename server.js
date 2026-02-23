@@ -192,37 +192,47 @@ socket.on("attack", (card) => {
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
 
-  // Карта ойыншыда бар ма
+  // 1. Карта ойыншыда бар ма
   if (!player.cards.includes(card)) {
     socket.emit("error", "Сенде мұндай карта жоқ!");
-    console.log(`${player.telegram} карта жоқ деп қате жіберді: ${card}`);
     return;
   }
 
-  // Turn тексеру: ойыншының кезегі ме?
+  // 2. Turn тексеру
   if (!player.turn) {
     socket.emit("error", "Қазір сенің жүрісің емес!");
-    console.log(`${player.telegram} өз кезегінде емес деп қате жіберді`);
     return;
   }
 
-  // Егер карта бар және turn дұрыс болса
-  console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
+  // 3. Үстелде карта бар ма тексеру
+  if (komta.card) {
+    const tableSuit = komta.card.slice(-1); // үстелдегі картаның масті
+    const cardSuit = card.slice(-1);        // ойыншының картасының масті
 
-  // Карта ойыншыдан кетеді
-  player.cards = player.cards.filter(c => c !== card);
+    // Егер масть дұрыс емес және көзір де емес
+    if (cardSuit !== tableSuit && card !== komta.kozir) {
+      socket.emit("error", `Сол мастьтегі карта немесе көзір ғана жарамды!`);
+      return;
+    }
+  }
 
-  // turn қарсы ойыншыға ауысады
+  // 4. Карта дұрыс болса, жүріс жасалады
+  player.cards = player.cards.filter(c => c !== card); // ойыншыдан кетіру
+  komta.card = card;                                   // үстелге қою
+
+  // 5. Turn қарсы ойыншыға ауысады
   const opponent = komta.players.find(p => p.id !== player.id);
   if (opponent) {
     player.turn = false;
     opponent.turn = true;
-    console.log(`Turn ауысты! Енді ${opponent.telegram} кезегі`);
   }
 
-  // клиентке карталарды жібереміз
+  // 6. Клиентке жаңарту
   io.to(player.id).emit("cards", player.cards);
   io.emit("table", card);
+
+  console.log(`${player.telegram} карта жіберді: ${card}`);
+  console.log(`Енді turn: ${opponent ? opponent.telegram : "белгісіз"}`);
 });
 
   
@@ -267,6 +277,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
