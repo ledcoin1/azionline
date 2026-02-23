@@ -131,9 +131,7 @@ io.on("connection", (socket) => {
 
   socket.on("play",(data)=>{
 
-    if (komta.players.length === 0) {
-  san = createDeck();
-}
+
 
     if(komta.players.length>=2){
       socket.emit("toly","2 adam bar");
