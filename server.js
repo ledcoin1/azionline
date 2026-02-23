@@ -70,18 +70,18 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+// 36 карталық колода
 let san = [];
-
-// Мастьтар
 const suits = ["♥", "♦", "♣", "♠"];
 const values = ["6","7","8","9","10","J","Q","K","A"];
 
-// Барлығын біріктіру
 for (let suit of suits) {
   for (let value of values) {
     san.push(value + suit); // мысалы: "6♥", "J♠"
   }
 }
+
+console.log("Карталар дайын:", san.length); // 36
 
 
 
@@ -121,28 +121,24 @@ io.on("connection", (socket) => {
    
 
 
-   let kozirIndex = Math.floor(Math.random() * san.length);
-komta.kozir = san[kozirIndex];  // kozir сақталады
-san.splice(kozirIndex, 1);       // массивтен өшіреміз
+ // көзір картаны таңдау
+let kozirIndex = Math.floor(Math.random() * san.length);
+komta.kozir = san[kozirIndex];
+san.splice(kozirIndex, 1);
 
+// әр ойыншыға 3 карта беру
 for (let i = 0; i < komta.players.length; i++) {
-  komta.players[i].cards = []; // ойыншының карталары
-
+  komta.players[i].cards = [];
   for (let j = 0; j < 3; j++) {
     let index = Math.floor(Math.random() * san.length);
     komta.players[i].cards.push(san[index]);
-    san.splice(index, 1); // алынған картаны массивтен өшіру
+    san.splice(index, 1);
   }
 }
 
-
-
-
-   
-
-   console.log("Көзір карта:", komta.kozir);
+console.log("Көзір карта:", komta.kozir);
 console.log("Ойыншылар:", komta.players);
-console.log("Қалған карталар:", san);
+console.log("Қалған карталар:", san.length);
 
    socket.emit("komta", "komtadasyndar Kazdar");
 
