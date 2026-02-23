@@ -191,17 +191,22 @@ socket.on("attack", (card) => {
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
 
-  // Карта ойыншыда бар ма?
+  // Карта ойыншыда бар ма
   if (!player.cards.includes(card)) {
     socket.emit("error", "Сенде мұндай карта жоқ!");
     console.log(`${player.telegram} карта жоқ деп қате жіберді: ${card}`);
     return;
   }
 
-  // Егер карта бар болса, тексереміз
-  console.log(`${player.telegram} дұрыс карта жіберді: ${card}`);
+  // Turn тексеру: ойыншының кезегі ме?
+  if (!player.turn) {
+    socket.emit("error", "Қазір сенің жүрісің емес!");
+    console.log(`${player.telegram} өз кезегінде емес деп қате жіберді`);
+    return;
+  }
 
-  // Тек осы жерге дейін логика, ешқандай turn немесе үстелге қою жоқ
+  // Егер карта бар және turn дұрыс болса
+  console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
 });
 
 
@@ -221,6 +226,7 @@ socket.on("attack", (card) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
