@@ -149,10 +149,11 @@ io.on("connection", (socket) => {
    });
    
 
+    
 
- if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
-    deck = kartaTaratu();             // жаңа колода
-    shuffle(deck);                    // араласты
+if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
+    deck = kartaTaratu();             
+    shuffle(deck);                    
 
     komta.players.forEach(player => {
       for (let i = 0; i < 3; i++) {
@@ -161,22 +162,17 @@ io.on("connection", (socket) => {
         deck.splice(0,1);
       }
     });
-  }
 
+    // Енді ғана қауіпсіз console.log
+    console.log(komta.players[0].cards);
+    console.log(komta.players[1].cards);
+    console.log(deck.length);
 
-console.log(komta.players[0].cards); // ["7♣","K♥","10♦"]
-console.log(komta.players[1].cards); // ["6♠","Q♦","J♣"]
-console.log(deck.length);       // 36 - 6 = 30 карта қалады
+    console.log("Көзір карта:", komta.kozir);
+    console.log("Ойыншылар:", komta.players);
 
-
-
-console.log("Көзір карта:", komta.kozir);
-console.log("Ойыншылар:", komta.players);
-
-
-   socket.emit("komta", "komtadasyndar Kazdar");
-
-  });
+    socket.emit("komta", "komtadasyndar Kazdar");
+}});
 
 
 
