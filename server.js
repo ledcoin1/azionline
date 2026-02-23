@@ -163,6 +163,7 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
       }
     });
 
+  io.to(player.id).emit("cards", player.cards);
      komta.kozir = deck[0];  
     deck.splice(0,1); 
 
@@ -200,6 +201,7 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
