@@ -116,7 +116,8 @@ let komta = {
   obwiBalans: null,
   zhenis: null,
   raund: null,
-  kozir: null
+  kozir: null,
+  turnTimeout: null
 
 };
 
@@ -207,8 +208,24 @@ socket.on("attack", (card) => {
 
   // Егер карта бар және turn дұрыс болса
   console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
+
+  // Карта ойыншыдан кетеді
+  player.cards = player.cards.filter(c => c !== card);
+
+  // turn қарсы ойыншыға ауысады
+  const opponent = komta.players.find(p => p.id !== player.id);
+  if (opponent) {
+    player.turn = false;
+    opponent.turn = true;
+    console.log(`Turn ауысты! Енді ${opponent.telegram} кезегі`);
+  }
+
+  // клиентке карталарды жібереміз
+  io.to(player.id).emit("cards", player.cards);
+  io.emit("table", card);
 });
 
+  
 
   socket.on("disconnect",()=>{
     komta.players = komta.players.filter(player => 
@@ -222,10 +239,35 @@ socket.on("attack", (card) => {
 });
 
 
+
+function startTurn(player) {
+  // Бастапқыда turn белгіленген ойыншы
+  komta.players.forEach(p => p.turn = (p.id === player.id));
+
+  // Егер бұрынғы таймер болса, өшіру
+  if (komta.turnTimeout) clearTimeout(komta.turnTimeout);
+
+  // 10 секундта жүріс жасамаса, ойыншы жеңіледі
+  komta.turnTimeout = setTimeout(() => {
+    console.log(`${player.telegram} 10 секунд ішінде жүріс жасамады!`);
+    // turn жоққа санап, қарсы ойыншы жеңіске ие болады
+    const opponent = komta.players.find(p => p.id !== player.id);
+    opponent.raund += 1;
+    console.log(`${opponent.telegram} raund +=1, қазіргі raund: ${opponent.raund}`);
+
+    // turn автоматты түрде қарсыға ауысады
+    startTurn(opponent);
+
+    // клиентке хабар
+    io.to(player.id).emit("timeout", "Сен 10 секунд ішінде жүріс жасамадың!");
+  }, 10000);
+}
+
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
