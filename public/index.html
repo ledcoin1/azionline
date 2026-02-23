@@ -27,21 +27,21 @@
     }
 
 
-    #cards {
-  margin-top: 10px;
-}
+     .card {
+    display: inline-block;
+    padding: 10px 15px;
+    margin: 5px;
+    background: white;
+    color: black;
+    border-radius: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    user-select: none;
+  }
 
-.card {
-  display: inline-block;
-  background: white;
-  color: black;
-  padding: 10px 14px;
-  margin: 5px;
-  border-radius: 8px;
-  font-size: 20px;
-  font-weight: bold;
-}
-    
+  .card:hover {
+    transform: scale(1.1);
+  }
   </style>
 </head>
 <body>
@@ -64,11 +64,10 @@
 
   <div id="komta"></div>
 
-  <div class="box">
-  <p><b>Your Cards:</b></p>
-  <div id="cards"></div>
+ <div class="box">
+  <p><b>Сенің карталарың:</b></p>
+  <div id="cards"></div> <!-- Мұнда 3 карта көрсетіледі -->
 </div>
-
 
 
 <script src="/socket.io/socket.io.js"></script>
@@ -124,32 +123,46 @@
    socket.on("komta",(msg)=>{
     document.getElementById("komta").innerText=msg;
   });
+ socket.on("cards", (cards) => {
+    const cardsDiv = document.getElementById("cards");
+    cardsDiv.innerHTML = ""; // ескі карталарды тазалау
 
+    cards.forEach(card => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerText = card;
 
-  socket.on("toly",(msg)=>{
-    alert (msg);
+      // 👇 карта басқанда "attack" оқиғасын жібереміз
+      div.addEventListener("click", () => {
+        socket.emit("attack", card);
+      });
+
+      cardsDiv.appendChild(div);
+    });
   });
 
-
-  socket.on("cards", (cards) => {
-  const cardsDiv = document.getElementById("cards");
-  cardsDiv.innerHTML = "";
-
-  cards.forEach(card => {
+  // үстелге қойған картаны көрсету
+  socket.on("table", (card) => {
+    const tableDiv = document.getElementById("table");
+    tableDiv.innerHTML = "";
     const div = document.createElement("div");
     div.className = "card";
     div.innerText = card;
-
-    cardsDiv.appendChild(div);
+    tableDiv.appendChild(div);
   });
-});
+
   
+
+
+
+
+
+
 
 </script>
 
 </body>
 </html>
-
 
 
 
