@@ -137,6 +137,13 @@ for (let i = 0; i < komta.players.length; i++) {
   io.to(komta.players[i].id).emit("cards", komta.players[i].cards);
 }
 
+if (komta.players.length === 2) {
+  komta.players[0].turn = true;
+  komta.players[1].turn = false;
+
+  console.log("Бірінші ойыншы жүрісті бастайды");
+}
+
 console.log("Көзір карта:", komta.kozir);
 console.log("Ойыншылар:", komta.players);
 console.log("Қалған карталар:", san.length);
@@ -144,6 +151,51 @@ console.log("Қалған карталар:", san.length);
    socket.emit("komta", "komtadasyndar Kazdar");
 
   });
+
+
+
+
+  socket.on("attack", (card) => {
+
+  const player = komta.players.find(p => p.id === socket.id);
+  if (!player) return;
+
+  // карта шынымен бар ма?
+  if (!player.cards.includes(card)) return;
+
+  // жүріс кезегі тексеру (қарапайым түрде)
+  if (player.turn !== true) {
+    socket.emit("error", "Қазір сенің жүрісің емес!");
+    return;
+  }
+
+  // картаны ойыншыдан алып тастау
+  player.cards = player.cards.filter(c => c !== card);
+
+  // үстелге қою
+  komta.table = card;
+
+  // бәріне үстелді көрсету
+  io.emit("table", card);
+
+  // жаңа карталарын қайта жіберу
+  io.to(socket.id).emit("cards", player.cards);
+
+  // жүрісті ауыстыру
+  komta.players.forEach(p => p.turn = !p.turn);
+
+});
+
+socket.on("table", (card) => {
+  const tableDiv = document.getElementById("table");
+  tableDiv.innerHTML = "";
+
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerText = card;
+
+  tableDiv.appendChild(div);
+});
 
 
 
@@ -163,7 +215,6 @@ console.log("Қалған карталар:", san.length);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
