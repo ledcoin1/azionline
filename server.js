@@ -134,6 +134,7 @@ for (let i = 0; i < komta.players.length; i++) {
     komta.players[i].cards.push(san[index]);
     san.splice(index, 1);
   }
+  io.to(komta.players[i].id).emit("cards", komta.players[i].cards);
 }
 
 console.log("Көзір карта:", komta.kozir);
@@ -162,6 +163,7 @@ console.log("Қалған карталар:", san.length);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
