@@ -27,6 +27,13 @@
     }
 
 
+.cards-container, .table-container {
+  display: flex;
+  justify-content: center; /* горизонталь ортасына шығару */
+  gap: 10px;              /* карталардың арасы */
+  margin-top: 10px;
+}
+
      .card {
     display: inline-block;
     padding: 10px 15px;
@@ -64,10 +71,17 @@
 
   <div id="komta"></div>
 
- <div class="box">
+
+<div class="box">
   <p><b>Сенің карталарың:</b></p>
-  <div id="cards"></div> <!-- Мұнда 3 карта көрсетіледі -->
+  <div id="cards" class="cards-container"></div>
 </div>
+
+<div class="box">
+  <p><b>Үстелдегі карта:</b></p>
+  <div id="table" class="table-container"></div>
+</div>
+
 
 
 <script src="/socket.io/socket.io.js"></script>
@@ -141,17 +155,16 @@
     });
   });
 
-  // үстелге қойған картаны көрсету
   socket.on("table", (card) => {
-    const tableDiv = document.getElementById("table");
-    tableDiv.innerHTML = "";
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerText = card;
-    tableDiv.appendChild(div);
-  });
+  const tableDiv = document.getElementById("table");
+  tableDiv.innerHTML = "";
 
-  
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerText = card;
+
+  tableDiv.appendChild(div);
+});
 
 
 
