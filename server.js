@@ -191,92 +191,18 @@ socket.on("attack", (card) => {
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
 
-  // Карта ойыншыда бар ма
+  // Карта ойыншыда бар ма?
   if (!player.cards.includes(card)) {
     socket.emit("error", "Сенде мұндай карта жоқ!");
+    console.log(`${player.telegram} карта жоқ деп қате жіберді: ${card}`);
     return;
   }
 
-  // Turn тексеру
-  if (!player.turn) {
-    socket.emit("error", "Қазір сенің жүрісің емес!");
-    return;
-  }
+  // Егер карта бар болса, тексереміз
+  console.log(`${player.telegram} дұрыс карта жіберді: ${card}`);
 
-  // Карта ойыншыдан кетеді
-  player.cards = player.cards.filter(c => c !== card);
-
-  // Егер үстел бос болса, бірінші карта ретінде қоямыз
-  if (!komta.table) {
-    komta.table = [
-      { playerId: player.id, card }
-    ];
-  } else {
-    komta.table.push({ playerId: player.id, card });
-  }
-
-  io.emit("table", komta.table.map(c => c.card));
-
-  // Егер екі ойыншы да жүріс жасаған болса
-  if (komta.table.length === 2) {
-    const first = komta.table[0];
-    const second = komta.table[1];
-
-    const trump = komta.kozir.slice(-1);
-
-    const firstSuit = first.card.slice(-1);
-    const secondSuit = second.card.slice(-1);
-
-    const firstValue = parseCardValue(first.card);
-    const secondValue = parseCardValue(second.card);
-
-    let winnerId;
-
-    // Егер екінші карта сол масть болса және үлкен болса
-    if (secondSuit === firstSuit && secondValue > firstValue) {
-      winnerId = second.playerId;
-    }
-    // Егер екінші карта көзір болса, бірінші карта көзір емес
-    else if (secondSuit === trump && firstSuit !== trump) {
-      winnerId = second.playerId;
-    }
-    // Басқа жағдайларда бірінші ойыншы жеңеді
-    else {
-      winnerId = first.playerId;
-    }
-
-    // raund қосу
-    const winner = komta.players.find(p => p.id === winnerId);
-    winner.raund = (winner.raund || 0) + 1;
-
-    // Үстелді тазалау
-    komta.table = null;
-
-    // Жеңген ойыншыға turn беру
-    komta.players.forEach(p => p.turn = (p.id === winnerId));
-
-    // Бәріне хабарлау
-    io.emit("round-winner", { winnerId, raund: winner.raund });
-
-    // Егер raund 2 болса – жеңімпаз
-    if (winner.raund === 2) {
-      io.emit("game-winner", { winnerId });
-    }
-  } else {
-    // Егер бір ғана карта болса – turn ауысады автомат емес, екінші ойыншы жүріс жасайды
-    komta.players.forEach(p => p.turn = (p.id !== player.id));
-  }
+  // Тек осы жерге дейін логика, ешқандай turn немесе үстелге қою жоқ
 });
-
-function parseCardValue(card) {
-  const value = card.slice(0, -1);
-  if (!isNaN(value)) return Number(value);
-  if (value === "J") return 11;
-  if (value === "Q") return 12;
-  if (value === "K") return 13;
-  if (value === "A") return 14;
-  return 0;
-}
 
 
   socket.on("disconnect",()=>{
@@ -295,6 +221,7 @@ function parseCardValue(card) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
