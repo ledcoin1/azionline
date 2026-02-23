@@ -166,7 +166,10 @@
   tableDiv.appendChild(div);
 });
 
-
+socket.on("error", (msg) => {
+  alert(msg); // немесе қалауыңша DOM-ға шығару
+  console.log("Қате хабар келді:", msg);
+});
 
 
 
@@ -176,6 +179,7 @@
 
 </body>
 </html>
+
 
 
 
