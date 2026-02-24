@@ -188,36 +188,60 @@ komta.players[1].turn = false;
 }});
 
 
-socket.on("attack",(card)=>{
+socket.on("attack", (card) => {
   const player = komta.players.find(p => p.id === socket.id);
-if (!player) return;
+  if (!player) return;
 
+  // 1) Карта ойыншыда бар ма
+  if (!player.cards.includes(card)) {
+    socket.emit("error", "Сенде мұндай карта жоқ!");
+    return;
+  }
 
-if(!players.cards.includes(card)){
-  return;
-}
+  // 2) Кезек тексеру
+  if (!player.turn) {
+    socket.emit("error", "Қазір сенің жүрісің емес!");
+    return;
+  }
 
-if(!player.turn){
-  socket.emit("error","сенің кезегін емес");
-  return;
-}
+  // 3) Үстелде жүріс бар ма?
+  if (!komta.table) komta.table = []; // раунд басында бос массив
+  const tableCard = komta.table[komta.table.length - 1]; // соңғы жүріс
 
- player.cards = player.cards.filter(c => c !== card);
+  if (tableCard) {
+    const tableSuit = tableCard.card.slice(-1); // үстелдегі картаның масті
+    const cardSuit = card.slice(-1);            // ойыншының картасының масті
 
-})
+    const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
+    const hasTrump = player.cards.includes(komta.kozir);
 
+    // Масть тексеру
+    if (hasSuit && cardSuit !== tableSuit) {
+      socket.emit("error", `Сол мастьтегі карта міндетті!`);
+      return;
+    }
 
-  
+    // Көзір тексеру
+    if (!hasSuit && hasTrump && card !== komta.kozir) {
+      socket.emit("error", `Көзірді ғана жібере аласыз!`);
+      return;
+    }
+  }
 
-  socket.on("disconnect",()=>{
-    komta.players = komta.players.filter(player => 
-    player.id !== socket.id
-  );
+  // 4) Карта дұрыс болса, үстелге қосамыз
+  player.cards = player.cards.filter(c => c !== card);
+  komta.table.push({playerId: player.id, card});
 
-  console.log("wygyp ketti");
-  console.log(komta);
-  });
+  // 5) Кезек ауысады
+  const opponent = komta.players.find(p => p.id !== player.id);
+  if (opponent) {
+    player.turn = false;
+    opponent.turn = true;
+  }
 
+  // 6) Клиентке хабарлаймыз
+  io.to(player.id).emit("cards", player.cards);
+  io.emit("table", komta.table); // үстелдегі барлық жүрістер
 });
 
 
@@ -249,6 +273,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
