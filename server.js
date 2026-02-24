@@ -146,7 +146,8 @@ io.on("connection", (socket) => {
     turn: null,
     status: "azirshe",
     balans: 500,
-    raund: null
+    raund: null,
+     table: []
    });
    
 
@@ -213,7 +214,7 @@ socket.on("attack", (card) => {
   player.cards = player.cards.filter(c => c !== card);
 
   // 2️⃣ Үстелге қойылады
-  komta.table = card;
+  komta.table.push(card);
 
   // 3️⃣ Барлық ойыншыларға жібереміз
   io.emit("table", komta.table);
@@ -265,6 +266,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
