@@ -206,18 +206,19 @@ socket.on("attack", (card) => {
   }
 
   console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
-
+  });
 
 socket.on("disconnect",()=>{
     komta.players = komta.players.filter(player => 
     player.id !== socket.id
   );
-
+  });
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
