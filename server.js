@@ -188,25 +188,25 @@ komta.players[1].turn = false;
 }});
 
 
-
-socket.on("attack", (card) => {
-
+socket.on("attack",(card)=>{
   const player = komta.players.find(p => p.id === socket.id);
-  if (!player) return;
+if (!player) return;
 
-  if (!player.cards.includes(card)) return;
-  if (!player.turn) return;
 
-  // Қолынан өшіру
-  player.cards = player.cards.filter(c => c !== card);
+if(!players.cards.includes(card)){
+  return;
+}
 
-  // Үстелге қосу
-  komta.table.push(card);
+if(!player.turn){
+  socket.emit("error","сенің кезегін емес");
+  return;
+}
 
-  io.emit("table", komta.table);
-  socket.emit("cards", player.cards);
+ player.cards = player.cards.filter(c => c !== card);
 
-});
+})
+
+
   
 
   socket.on("disconnect",()=>{
@@ -249,6 +249,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
