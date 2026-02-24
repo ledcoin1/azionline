@@ -188,25 +188,7 @@ komta.players[1].turn = false;
 }});
 
 
-socket.on("attack", (card) => {
 
-  const player = komta.players.find(p => p.id === socket.id);
-  if (!player) return;
-
-  // Қолында карта бар ма?
-  if (!player.cards.includes(card)) {
-    socket.emit("error", "Сенде мұндай карта жоқ!");
-    return;
-  }
-
-  // ⚡ Turn тексеру: ойыншының кезегі ме?
-  if (!player.turn) {
-    socket.emit("error", "Қазір сенің жүрісің емес!");
-    return;
-  }
-
-  console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
-  });
 
 socket.on("disconnect",()=>{
     komta.players = komta.players.filter(player => 
@@ -218,6 +200,7 @@ socket.on("disconnect",()=>{
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
