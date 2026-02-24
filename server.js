@@ -191,38 +191,21 @@ komta.players[1].turn = false;
 
 socket.on("attack", (card) => {
 
-  // 1️⃣ Ойыншыны табамыз
   const player = komta.players.find(p => p.id === socket.id);
-  if (!player) {
-    console.log("Ойыншы табылмады");
-    return;
-  }
+  if (!player) return;
 
-  // 2️⃣ Карта расымен қолында бар ма?
-  if (!player.cards.includes(card)) {
-    socket.emit("error", "Сенде мұндай карта жоқ!");
-    return;
-  }
+  if (!player.cards.includes(card)) return;
+  if (!player.turn) return;
 
-  // 3️⃣ Кезек соныкі ме?
-  if (!player.turn) {
-    socket.emit("error", "Қазір сенің жүрісің емес!");
-    return;
-  }
-
-   // 1️⃣ Карта ойыншының қолынан алынады
+  // Қолынан өшіру
   player.cards = player.cards.filter(c => c !== card);
 
-  // 2️⃣ Үстелге қойылады
+  // Үстелге қосу
   komta.table.push(card);
 
-  // 3️⃣ Барлық ойыншыларға жібереміз
   io.emit("table", komta.table);
-
-  // 4️⃣ Жүрген ойыншыға жаңа қолын жібереміз
   socket.emit("cards", player.cards);
 
-  console.log("Үстелге шықты:", card);
 });
   
 
@@ -266,6 +249,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
