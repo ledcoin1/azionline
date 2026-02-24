@@ -209,7 +209,19 @@ socket.on("attack", (card) => {
     return;
   }
 
-  console.log("Базалық тексерулер өтті ✅");
+   // 1️⃣ Карта ойыншының қолынан алынады
+  player.cards = player.cards.filter(c => c !== card);
+
+  // 2️⃣ Үстелге қойылады
+  komta.table = card;
+
+  // 3️⃣ Барлық ойыншыларға жібереміз
+  io.emit("table", komta.table);
+
+  // 4️⃣ Жүрген ойыншыға жаңа қолын жібереміз
+  socket.emit("cards", player.cards);
+
+  console.log("Үстелге шықты:", card);
 });
   
 
@@ -253,6 +265,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
