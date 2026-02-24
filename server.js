@@ -116,8 +116,7 @@ let komta = {
   obwiBalans: null,
   zhenis: null,
   raund: null,
-  kozir: null,
-  turnTimeout: null
+  kozir: null
 
 };
 
@@ -147,7 +146,7 @@ io.on("connection", (socket) => {
     status: "azirshe",
     balans: 500,
     raund: null,
-     table: []
+    turnTimeout: null
    });
    
 
@@ -189,35 +188,77 @@ komta.players[1].turn = false;
 
 
 
+socket.on("attack", (card) => {
 
-socket.on("disconnect",()=>{
+  const player = komta.players.find(p => p.id === socket.id);
+  if (!player) return;
+
+  // Қолында карта бар ма?
+  if (!player.cards.includes(card)) {
+    socket.emit("error", "Сенде мұндай карта жоқ!");
+    return;
+  }
+
+  // ⚡ Turn тексеру: ойыншының кезегі ме?
+  if (!player.turn) {
+    socket.emit("error", "Қазір сенің жүрісің емес!");
+    return;
+  }
+
+  console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
+
+});
+
+
+
+
+
+  socket.on("disconnect",()=>{
     komta.players = komta.players.filter(player => 
     player.id !== socket.id
   );
+
+  console.log("wygyp ketti");
+  console.log(komta);
   });
+
+});
+
+
+
+
+
+
+
+function startTurn(player) {
+  // Бастапқыда turn белгіленген ойыншы
+  komta.players.forEach(p => p.turn = (p.id === player.id));
+
+  // Егер бұрынғы таймер болса, өшіру
+  if (komta.turnTimeout) clearTimeout(komta.turnTimeout);
+
+  // 10 секундта жүріс жасамаса, ойыншы жеңіледі
+  komta.turnTimeout = setTimeout(() => {
+    console.log(`${player.telegram} 10 секунд ішінде жүріс жасамады!`);
+    // turn жоққа санап, қарсы ойыншы жеңіске ие болады
+    const opponent = komta.players.find(p => p.id !== player.id);
+    opponent.raund += 1;
+    console.log(`${opponent.telegram} raund +=1, қазіргі raund: ${opponent.raund}`);
+
+    // turn автоматты түрде қарсыға ауысады
+    startTurn(opponent);
+
+    // клиентке хабар
+    io.to(player.id).emit("timeout", "Сен 10 секунд ішінде жүріс жасамадың!");
+  }, 10000);
+}
+
+
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
