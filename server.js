@@ -189,56 +189,27 @@ komta.players[1].turn = false;
 
 
 socket.on("attack", (card) => {
-  const player = komta.players.find(p => p.id === socket.id);
-  if (!player) return;
 
-  // Карта ойыншыда бар ма
+  // 1️⃣ Ойыншыны табамыз
+  const player = komta.players.find(p => p.id === socket.id);
+  if (!player) {
+    console.log("Ойыншы табылмады");
+    return;
+  }
+
+  // 2️⃣ Карта расымен қолында бар ма?
   if (!player.cards.includes(card)) {
     socket.emit("error", "Сенде мұндай карта жоқ!");
-    console.log(`${player.telegram} карта жоқ деп жіберді: ${card}`);
     return;
   }
 
-  // Turn дұрыс па?
+  // 3️⃣ Кезек соныкі ме?
   if (!player.turn) {
     socket.emit("error", "Қазір сенің жүрісің емес!");
-    console.log(`${player.telegram} өз кезегінде емес деп жіберді`);
     return;
   }
 
-  // Үстелдегі карта бар ма?
-  if (komta.table) {
-    const tableSuit = komta.table.slice(-1); // үстелдегі карта масті
-    const cardSuit = card.slice(-1);         // жіберілген карта масті
-    const trump = komta.kozir;               // көзір
-
-    const hasTableSuit = player.cards.some(c => c.slice(-1) === tableSuit);
-    const hasTrump = player.cards.includes(trump);
-
-    if (hasTableSuit && cardSuit !== tableSuit && card !== trump) {
-      socket.emit("error", "Сол мастьтегі карта немесе көзір ғана жарамды!");
-      console.log(`${player.telegram} дұрыс карта жібермеді: ${card}`);
-      return;
-    }
-  }
-
-  // Карта дұрыс болса
-  player.cards = player.cards.filter(c => c !== card);
-  komta.table = card;
-
-  // Turn ауыстыру
-  const opponent = komta.players.find(p => p.id !== player.id);
-  if (opponent) {
-    player.turn = false;
-    opponent.turn = true;
-    console.log(`Turn ауысты! Енді ${opponent.telegram} кезегі`);
-  }
-
-  // Клиентке карта мен үстелді жіберу
-  io.to(player.id).emit("cards", player.cards);
-  io.emit("table", card);
-
-  console.log(`${player.telegram} карта жіберді: ${card}`);
+  console.log("Базалық тексерулер өтті ✅");
 });
   
 
@@ -282,6 +253,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
