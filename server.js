@@ -215,10 +215,14 @@ socket.on("attack", (card) => {
     komta.table.push(card);
     player.cards = player.cards.filter(c=>c !== card);
 
-    player.turn = false;
-    const nextPlayer = komta.player.find(p=>p.id !== player.id);
+     // 3️⃣ Кезекті ауыстыру
+  player.turn = false;
+
+  const nextPlayer = komta.players.find(p => p.id !== player.id);
+  if (nextPlayer) {
     nextPlayer.turn = true;
-    io.emit("tableUpdate",komta.table);
+  }
+    io.emit("table",komta.table);
     io.to(player.id).emit("cards", player.cards);
   }
 });
@@ -273,6 +277,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
