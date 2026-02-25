@@ -215,9 +215,34 @@ socket.on("attack", (card) => {
      console.log("Ойыншы карталары:", player.cards);
     const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
     if (hasSuit) {
-    console.log("✅ Ойыншы қолында осы масть бар");
+    if (cardSuit !== tableSuit) {
+    socket.emit("error", "Сол мастьпен жүру керек!");
+    return;
+  }
+
+  console.log("✅ Дұрыс мастьпен жүрді");
   } else {
     console.log("❌ Ойыншы қолында бұл масть ЖОҚ");
+    
+    const trumpSuit = komta.kozir;
+
+    const hasTrump = player.cards.some(c => c.slice(-1) === trumpSuit);
+
+
+  if (hasTrump) {
+
+    if (cardSuit !== trumpSuit) {
+      socket.emit("error", "Көзірмен жүру керек!");
+      return;
+    }
+
+    console.log("✅ Көзірмен дұрыс жүрді");
+
+  } else {
+
+    console.log("🔥 Масть те жоқ, көзір де жоқ — кез келген карта жүреді");
+
+  }
   }
 
   
