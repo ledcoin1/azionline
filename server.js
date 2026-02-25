@@ -287,49 +287,7 @@ io.to(player.id).emit("cards", player.cards);
   }
     io.emit("table",komta.table);
     io.to(player.id).emit("cards", player.cards);
-
-    // 4️⃣ Барлығы жүрді ме? → есептеу
-if (komta.table.length === komta.players.length) {
-    const result = resolveTable(komta);  // үстелдегі карталарды есептейтін функция
-    const winner = komta.players.find(p => p.id === result.winnerId);
-
-    // Raund есебін жаңарту
-    winner.raund = (winner.raund || 0) + 1;
-
-    console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
-
-    // Жеңген ойыншыға кезек беру
-    komta.players.forEach(p => p.turn = false);
-    winner.turn = true;
-
-    // Үстелді тазалау
-    komta.table = [];
-
-    // Клиентке тазаланған үстелді жіберу
-    io.emit("table", komta.table);
-}
   }
-
-  // 4️⃣ Барлығы жүрді ме? → есептеу
-if (komta.table.length === komta.players.length) {
-    const result = resolveTable(komta);  // үстелдегі карталарды есептейтін функция
-    const winner = komta.players.find(p => p.id === result.winnerId);
-
-    // Raund есебін жаңарту
-    winner.raund = (winner.raund || 0) + 1;
-
-    console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
-
-    // Жеңген ойыншыға кезек беру
-    komta.players.forEach(p => p.turn = false);
-    winner.turn = true;
-
-    // Үстелді тазалау
-    komta.table = [];
-
-    // Клиентке тазаланған үстелді жіберу
-    io.emit("table", komta.table);
-}
 });
 
 
@@ -345,7 +303,6 @@ if (komta.table.length === komta.players.length) {
   console.log(komta);
   });
 
-  
 });
 
 
@@ -354,40 +311,11 @@ if (komta.table.length === komta.players.length) {
 
 
 
-function resolveTable(komta) {
-  const table = komta.table; // енді әр элемент {card, playerId}
-  const trumpSuit = komta.kozir.slice(-1);
-
-  let winningCard = table[0].card;
-  let winnerId = table[0].playerId;
-
-  const ranks = ["6","7","8","9","10","J","Q","K","A"];
-
-  for (let i = 1; i < table.length; i++) {
-    const card = table[i].card;
-    const cardSuit = card.slice(-1);
-    const winningSuit = winningCard.slice(-1);
-
-    if (cardSuit === trumpSuit && winningSuit !== trumpSuit) {
-      winningCard = card;
-      winnerId = table[i].playerId;
-    } else if (cardSuit === winningSuit) {
-      if (ranks.indexOf(card.slice(0, -1)) > ranks.indexOf(winningCard.slice(0, -1))) {
-        winningCard = card;
-        winnerId = table[i].playerId;
-      }
-    }
-  }
-
-  return { winnerId, winningCard };
-}
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
