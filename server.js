@@ -250,7 +250,28 @@ if (komta.table.length > 0) {
       console.log("🔥 Кез келген карта жүруге болады");
     }
   }
+  console.log("✅ Жүріс қабылданды");
+
+  // Картаны үстелге салу
+komta.table.push(card);
+
+// Қолдан алып тастау
+player.cards = player.cards.filter(c => c !== card);
+
+// Кезекті ауыстыру
+player.turn = false;
+
+const nextPlayer = komta.players.find(p => p.id !== player.id);
+if (nextPlayer) {
+  nextPlayer.turn = true;
 }
+
+// Клиентке жіберу
+io.emit("table", komta.table);
+io.to(player.id).emit("cards", player.cards);
+}
+
+
   else {
     console.log("karta zhok ustelde");
 
@@ -319,6 +340,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
