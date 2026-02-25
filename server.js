@@ -211,7 +211,8 @@ socket.on("attack", (card) => {
     console.log("үстел карта бар");
 
     const tableSuit = komta.table[0].slice(-1);
-     const cardSuit = card.slice(-1);
+    const cardSuit = card.slice(-1);               // ⚠️ ұмытпа
+  const trumpSuit = komta.kozir.slice(-1); 
      console.log("Үстел масты:", tableSuit);
      console.log("Ойыншы карталары:", player.cards);
     const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
@@ -244,6 +245,18 @@ socket.on("attack", (card) => {
     console.log("🔥 Масть те жоқ, көзір де жоқ — кез келген карта жүреді");
 
   }
+
+
+komta.table.push(card);
+player.cards = player.cards.filter(c=>c !== card);
+player.turn = false;
+const nextPlayer = komta.players.find(p => p.id !== player.id);
+ if (nextPlayer) {
+    nextPlayer.turn = true;
+  }
+io.emit("table",komta.table);
+    io.to(player.id).emit("cards", player.cards);
+
   }
 
   
@@ -316,7 +329,6 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
