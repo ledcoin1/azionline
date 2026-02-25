@@ -210,6 +210,17 @@ socket.on("attack", (card) => {
   if(komta.table.length > 0){
     console.log("үстел карта бар");
 
+      const cardRank = card.split("_")[0];
+
+  const sameRank = komta.table.some(c => {
+    return c.split("_")[0] === cardRank;
+  });
+
+  if (!sameRank) {
+    socket.emit("error", "Бұл рангтағы карта үстелде жоқ!");
+    return;
+  }
+
     
     
   }else {
@@ -280,6 +291,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
