@@ -211,6 +211,11 @@ socket.on("attack", (card) => {
     console.log("үстел карта бар");
   }else {
     console.log("karta zhok ustelde");
+
+    komta.table.push(card);
+    player.cards = player.cards.filter(c=>c !== card);
+    io.emit("tableUpdate",komta.table);
+    io.to(player.id).emit("cards", player.cards);
   }
 });
 
