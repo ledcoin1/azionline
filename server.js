@@ -206,62 +206,52 @@ socket.on("attack", (card) => {
   }
 
   console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
+if (komta.table.length > 0) {
+  console.log("үстелде карта бар");
 
-  if(komta.table.length > 0){
-    console.log("үстел карта бар");
+  // 🟢 Мастьтарды дұрыс алу
+  const tableSuit = komta.table[0].slice(-1);   // үстел масты
+  const cardSuit = card.slice(-1);              // жүрген карта масты
+  const trumpSuit = komta.kozir.slice(-1);      // көзір масты
 
-    const tableSuit = komta.table[0].slice(-1);
-    const cardSuit = card.slice(-1);               // ⚠️ ұмытпа
- 
-     console.log("Үстел масты:", tableSuit);
-     console.log("Ойыншы карталары:", player.cards);
-    const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
-    if (hasSuit) {
+  console.log("Үстел масты:", tableSuit);
+  console.log("Көзір масты:", trumpSuit);
+  console.log("Ойыншы карталары:", player.cards);
+
+  // 🟢 Қолында үстел масты бар ма?
+  const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
+
+  if (hasSuit) {
+    // Міндетті түрде сол мастьпен жүру керек
     if (cardSuit !== tableSuit) {
-    socket.emit("error", "Сол мастьпен жүру керек!");
-    return;
-  }
-
-  console.log("✅ Дұрыс мастьпен жүрді");
-  } else {
-    console.log("❌ Ойыншы қолында бұл масть ЖОҚ");
-    
-    const trumpSuit = komta.kozir;
-
-    const hasTrump = player.cards.some(c => c.slice(-1) === trumpSuit);
-
-
-  if (hasTrump) {
-
-    if (cardSuit !== trumpSuit) {
-      socket.emit("error", "Көзірмен жүру керек!");
+      socket.emit("error", "Сол мастьпен жүру керек!");
       return;
     }
 
-    console.log("✅ Көзірмен дұрыс жүрді");
+    console.log("✅ Дұрыс мастьпен жүрді");
+  } 
+  else {
+    console.log("❌ Ойыншы қолында үстел масты ЖОҚ");
 
-  } else {
+    // 🟢 Қолында көзір бар ма?
+    const hasTrump = player.cards.some(c => c.slice(-1) === trumpSuit);
 
-    console.log("🔥 Масть те жоқ, көзір де жоқ — кез келген карта жүреді");
+    if (hasTrump) {
+      // Міндетті түрде көзірмен жүру керек
+      if (cardSuit !== trumpSuit) {
+        socket.emit("error", "Көзірмен жүру керек!");
+        return;
+      }
 
+      console.log("✅ Көзірмен дұрыс жүрді");
+    } 
+    else {
+      // Масть те жоқ, көзір де жоқ → кез келген карта
+      console.log("🔥 Кез келген карта жүруге болады");
+    }
   }
-
-
-komta.table.push(card);
-player.cards = player.cards.filter(c=>c !== card);
-player.turn = false;
-const nextPlayer = komta.players.find(p => p.id !== player.id);
- if (nextPlayer) {
-    nextPlayer.turn = true;
-  }
-io.emit("table",komta.table);
-    io.to(player.id).emit("cards", player.cards);
-
-  }
-
-  
-
-}else {
+}
+  else {
     console.log("karta zhok ustelde");
 
     komta.table.push(card);
@@ -329,6 +319,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
