@@ -287,7 +287,49 @@ io.to(player.id).emit("cards", player.cards);
   }
     io.emit("table",komta.table);
     io.to(player.id).emit("cards", player.cards);
+
+    // 4️⃣ Барлығы жүрді ме? → есептеу
+if (komta.table.length === komta.players.length) {
+    const result = resolveTable(komta);  // үстелдегі карталарды есептейтін функция
+    const winner = komta.players.find(p => p.id === result.winnerId);
+
+    // Raund есебін жаңарту
+    winner.raund = (winner.raund || 0) + 1;
+
+    console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
+
+    // Жеңген ойыншыға кезек беру
+    komta.players.forEach(p => p.turn = false);
+    winner.turn = true;
+
+    // Үстелді тазалау
+    komta.table = [];
+
+    // Клиентке тазаланған үстелді жіберу
+    io.emit("table", komta.table);
+}
   }
+
+  // 4️⃣ Барлығы жүрді ме? → есептеу
+if (komta.table.length === komta.players.length) {
+    const result = resolveTable(komta);  // үстелдегі карталарды есептейтін функция
+    const winner = komta.players.find(p => p.id === result.winnerId);
+
+    // Raund есебін жаңарту
+    winner.raund = (winner.raund || 0) + 1;
+
+    console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
+
+    // Жеңген ойыншыға кезек беру
+    komta.players.forEach(p => p.turn = false);
+    winner.turn = true;
+
+    // Үстелді тазалау
+    komta.table = [];
+
+    // Клиентке тазаланған үстелді жіберу
+    io.emit("table", komta.table);
+}
 });
 
 
@@ -303,6 +345,7 @@ io.to(player.id).emit("cards", player.cards);
   console.log(komta);
   });
 
+  
 });
 
 
@@ -311,35 +354,43 @@ io.to(player.id).emit("cards", player.cards);
 
 
 
-function startTurn(player) {
-  // Бастапқыда turn белгіленген ойыншы
-  komta.players.forEach(p => p.turn = (p.id === player.id));
 
-  // Егер бұрынғы таймер болса, өшіру
-  if (komta.turnTimeout) clearTimeout(komta.turnTimeout);
+function resolveTable(komta) {
+  const table = komta.table;
+  const trumpSuit = komta.kozir.slice(-1);
 
-  // 10 секундта жүріс жасамаса, ойыншы жеңіледі
-  komta.turnTimeout = setTimeout(() => {
-    console.log(`${player.telegram} 10 секунд ішінде жүріс жасамады!`);
-    // turn жоққа санап, қарсы ойыншы жеңіске ие болады
-    const opponent = komta.players.find(p => p.id !== player.id);
-    opponent.raund += 1;
-    console.log(`${opponent.telegram} raund +=1, қазіргі raund: ${opponent.raund}`);
+  // Алғашқы карта үстем деп аламыз
+  let winningCard = table[0];
+  let winnerId = komta.players.find(p => p.cards.includes(table[0]))?.id;
 
-    // turn автоматты түрде қарсыға ауысады
-    startTurn(opponent);
+  const ranks = ["6","7","8","9","10","J","Q","K","A"];
 
-    // клиентке хабар
-    io.to(player.id).emit("timeout", "Сен 10 секунд ішінде жүріс жасамадың!");
-  }, 10000);
+  for (let i = 1; i < table.length; i++) {
+    const card = table[i];
+    const cardSuit = card.slice(-1);
+    const winningSuit = winningCard.slice(-1);
+
+    // Көзір әрқашан үстем
+    if (cardSuit === trumpSuit && winningSuit !== trumpSuit) {
+      winningCard = card;
+      winnerId = komta.players.find(p => p.cards.includes(card))?.id;
+    } else if (cardSuit === winningSuit) {
+      // rank бойынша салыстыру
+      if (ranks.indexOf(card.slice(0, -1)) > ranks.indexOf(winningCard.slice(0, -1))) {
+        winningCard = card;
+        winnerId = komta.players.find(p => p.cards.includes(card))?.id;
+      }
+    }
+  }
+
+  return { winnerId, winningCard };
 }
-
-
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
