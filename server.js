@@ -211,16 +211,22 @@ socket.on("attack", (card) => {
     console.log("үстел карта бар");
 
     const tableSuit = komta.table[0].slice(-1);
+    const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
   const cardSuit = card.slice(-1);
 
   console.log("Үстел масты:", tableSuit);
   console.log("Жүрген карта масты:", cardSuit);
 
-  if (cardSuit === tableSuit) {
-    console.log("✅ ДҰРЫС: масть сәйкес");
+  if (hasSuit) {
+  if (card.slice(-1) !== tableSuit) {
+    socket.emit("error", "Сол мастьпен жүру керек!");
+    return;
   } else {
-    console.log("❌ ҚАТЕ: масть сәйкес емес");
+    console.log("✅ Масть дұрыс, жүре алады");
   }
+} else {
+  console.log("⚡ Сол масть қолында жоқ, ойыншы кез келген карта (көзір) салуға болады");
+}
 
   
 
