@@ -235,7 +235,7 @@ socket.on("attack", (card) => {
 
   io.emit("tableUpdate", komta.table);
   io.to(player.id).emit("cards", player.cards);
-}
+
 
     
     
@@ -307,6 +307,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
