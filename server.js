@@ -116,8 +116,8 @@ let komta = {
   obwiBalans: null,
   zhenis: null,
   raund: null,
-  kozir: null
-
+  kozir: null,
+  table: [] 
 };
 
 
@@ -207,6 +207,11 @@ socket.on("attack", (card) => {
 
   console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
 
+  if(komta.table.length > 0){
+    console.log("үстел карта бар");
+  }else {
+    console.log("karta zhok ustelde");
+  }
 });
 
 
