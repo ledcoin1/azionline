@@ -209,6 +209,32 @@ socket.on("attack", (card) => {
 
   if(komta.table.length > 0){
     console.log("үстел карта бар");
+
+     const cardRank = card.split("_")[0];
+
+  const sameRank = komta.table.some(c => {
+    return c.split("_")[0] === cardRank;
+  });
+
+  if (!sameRank) {
+    socket.emit("error", "Бұл рангтағы карта үстелде жоқ!");
+    return;
+  }
+
+  // ✅ Егер ранг сәйкес болса ғана карта қоямыз
+  komta.table.push(card);
+  player.cards = player.cards.filter(c => c !== card);
+
+  player.turn = false;
+
+  const nextPlayer = komta.players.find(p => p.id !== player.id);
+  if (nextPlayer) {
+    nextPlayer.turn = true;
+  }
+
+  io.emit("tableUpdate", komta.table);
+  io.to(player.id).emit("cards", player.cards);
+    
   }else {
     console.log("karta zhok ustelde");
 
@@ -277,6 +303,7 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
