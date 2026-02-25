@@ -214,7 +214,11 @@ socket.on("attack", (card) => {
 
     komta.table.push(card);
     player.cards = player.cards.filter(c=>c !== card);
-    io.emit("table",komta.table);
+
+    player.turn = false;
+    const nextPlayer = komta.player.find(p=>p.id !== player.id);
+    nextPlayer.turn = true;
+    io.emit("tableUpdate",komta.table);
     io.to(player.id).emit("cards", player.cards);
   }
 });
@@ -269,7 +273,6 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
