@@ -212,7 +212,7 @@ socket.on("attack", (card) => {
 
     const tableSuit = komta.table[0].slice(-1);
     const cardSuit = card.slice(-1);               // ⚠️ ұмытпа
-  const trumpSuit = komta.kozir.slice(-1); 
+ 
      console.log("Үстел масты:", tableSuit);
      console.log("Ойыншы карталары:", player.cards);
     const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
