@@ -216,8 +216,13 @@ socket.on("attack", (card) => {
   console.log("Үстел масты:", tableSuit);
   console.log("Жүрген карта масты:", cardSuit);
 
-  io.emit("table", komta.table);
-  io.to(player.id).emit("cards", player.cards);
+  if (cardSuit === tableSuit) {
+    console.log("✅ ДҰРЫС: масть сәйкес");
+  } else {
+    console.log("❌ ҚАТЕ: масть сәйкес емес");
+  }
+
+  
 
 }else {
     console.log("karta zhok ustelde");
