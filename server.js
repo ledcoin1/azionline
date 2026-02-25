@@ -354,31 +354,27 @@ if (komta.table.length === komta.players.length) {
 
 
 
-
 function resolveTable(komta) {
-  const table = komta.table;
+  const table = komta.table; // енді әр элемент {card, playerId}
   const trumpSuit = komta.kozir.slice(-1);
 
-  // Алғашқы карта үстем деп аламыз
-  let winningCard = table[0];
-  let winnerId = komta.players.find(p => p.cards.includes(table[0]))?.id;
+  let winningCard = table[0].card;
+  let winnerId = table[0].playerId;
 
   const ranks = ["6","7","8","9","10","J","Q","K","A"];
 
   for (let i = 1; i < table.length; i++) {
-    const card = table[i];
+    const card = table[i].card;
     const cardSuit = card.slice(-1);
     const winningSuit = winningCard.slice(-1);
 
-    // Көзір әрқашан үстем
     if (cardSuit === trumpSuit && winningSuit !== trumpSuit) {
       winningCard = card;
-      winnerId = komta.players.find(p => p.cards.includes(card))?.id;
+      winnerId = table[i].playerId;
     } else if (cardSuit === winningSuit) {
-      // rank бойынша салыстыру
       if (ranks.indexOf(card.slice(0, -1)) > ranks.indexOf(winningCard.slice(0, -1))) {
         winningCard = card;
-        winnerId = komta.players.find(p => p.cards.includes(card))?.id;
+        winnerId = table[i].playerId;
       }
     }
   }
@@ -390,6 +386,7 @@ function resolveTable(komta) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
