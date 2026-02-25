@@ -210,18 +210,16 @@ socket.on("attack", (card) => {
   if(komta.table.length > 0){
     console.log("үстел карта бар");
 
-      // 🟢 Үстелдегі БІРІНШІ картаның мастын аламыз
-  const tableSuit = komta.table[0].split("_")[1];
+    const tableSuit = komta.table[0].slice(-1);
+  const cardSuit = card.slice(-1);
 
-  console.log(tableSuit);
+  console.log("Үстел масты:", tableSuit);
+  console.log("Жүрген карта масты:", cardSuit);
 
   io.emit("table", komta.table);
   io.to(player.id).emit("cards", player.cards);
 
-
-    
-    
-  }else {
+}else {
     console.log("karta zhok ustelde");
 
     komta.table.push(card);
