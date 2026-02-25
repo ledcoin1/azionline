@@ -213,27 +213,9 @@ socket.on("attack", (card) => {
       // 🟢 Үстелдегі БІРІНШІ картаның мастын аламыз
   const tableSuit = komta.table[0].split("_")[1];
 
-  // 🟢 Ойыншы жүрген картаның мастын аламыз
-  const cardSuit = card.split("_")[1];
+  console.log(tableSuit);
 
-  // 🛑 Егер масть сәйкес келмесе
-  if (cardSuit !== tableSuit) {
-    socket.emit("error", "Сол мастьпен жүру керек!");
-    return;
-  }
-
-  // ✅ Егер масть дұрыс болса — карта қоямыз
-  komta.table.push(card);
-  player.cards = player.cards.filter(c => c !== card);
-
-  player.turn = false;
-
-  const nextPlayer = komta.players.find(p => p.id !== player.id);
-  if (nextPlayer) {
-    nextPlayer.turn = true;
-  }
-
-  io.emit("tableUpdate", komta.table);
+  io.emit("table", komta.table);
   io.to(player.id).emit("cards", player.cards);
 
 
@@ -307,7 +289,6 @@ function startTurn(player) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
