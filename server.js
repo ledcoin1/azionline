@@ -107,7 +107,30 @@ let deck = kartaTaratu(); // 36 карта дайын
 shuffle(deck);             // араласты
 console.log(deck);         // енді әр түрлі ретпен
 
+function checkGameWinner(komta) {
+  const gameWinner = komta.players.find(p => p.raund >= 2);
 
+  if (!gameWinner) return;
+
+  console.log(`🏆 КОМТА ЖЕҢІМПАЗЫ: ${gameWinner.telegram}`);
+
+  
+
+  
+  io.emit("gameWinner", {
+    telegram: gameWinner.telegram,
+    balans: gameWinner.balans
+  });
+
+  // Комтаны reset жасау
+  komta.players.forEach(p => {
+    p.raund = 0;
+    p.turn = false;
+  });
+
+  komta.table = [];
+  komta.table2 = [];
+}
 
 let komta = {
 
@@ -312,7 +335,13 @@ io.to(player.id).emit("cards", player.cards);
   // 👇 МІНЕ ОСЫ ЖЕР
   winner.raund += 1;
 
-       console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
+       console.log(`🏆 Раунд жеңімпазы: ${winner.telegram}`);
+  console.log(`🔥 Оның раунд саны: ${winner.raund}`);
+
+  checkGameWinner(komta); // 👈 осында
+
+
+
         komta.players.forEach(p => p.turn = false);
   winner.turn = true;
   // Үстелді тазалау келесі раундқа
