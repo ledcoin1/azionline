@@ -238,7 +238,7 @@ io.on("connection", (socket) => {
     console.log("❌ Play қатесі:", err);
   }
 
-});
+
 
     
 
@@ -449,6 +449,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
