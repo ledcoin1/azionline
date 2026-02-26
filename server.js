@@ -252,82 +252,41 @@ if (komta.table.length > 0) {
   }
   console.log("✅ Жүріс қабылданды");
 
- // 1️⃣ Картаны үстелге қосу
-komta.table.push({ card, playerId: player.id }); // playerId-мен бірге сақтаймыз
+  // Картаны үстелге салу
+komta.table.push(card);
 
-// 2️⃣ Ойыншыдан қолынан алып тастау
+// Қолдан алып тастау
 player.cards = player.cards.filter(c => c !== card);
 
-// 3️⃣ Кезекті ауыстыру
+// Кезекті ауыстыру
 player.turn = false;
+
 const nextPlayer = komta.players.find(p => p.id !== player.id);
 if (nextPlayer) {
   nextPlayer.turn = true;
 }
 
-// 4️⃣ Клиентке жаңартулар
+// Клиентке жіберу
 io.emit("table", komta.table);
 io.to(player.id).emit("cards", player.cards);
-
-// 5️⃣ Барлық ойыншылар жүрді ме? → есептеу
-if (komta.table.length === komta.players.length) {
-  const result = resolveTable(komta); // үстелдегі карталарды есептейтін функция
-  const winner = komta.players.find(p => p.id === result.winnerId);
-
-  // Raund санын жаңарту
-  winner.raund = (winner.raund || 0) + 1;
-
-  console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
-
-  // Жеңген ойыншыға кезек беру
-  komta.players.forEach(p => p.turn = false);
-  winner.turn = true;
-
-  // Үстелді тазалау келесі раундқа дайын
-  komta.table = [];
-
-  io.emit("table", komta.table);
-}
 }
 
 
   else {
-   // 1️⃣ Картаны үстелге қосу
-komta.table.push({ card, playerId: player.id }); // playerId-мен бірге сақтаймыз
+    console.log("karta zhok ustelde");
 
-// 2️⃣ Ойыншыдан қолынан алып тастау
-player.cards = player.cards.filter(c => c !== card);
+    komta.table.push(card);
+    player.cards = player.cards.filter(c=>c !== card);
 
-// 3️⃣ Кезекті ауыстыру
-player.turn = false;
-const nextPlayer = komta.players.find(p => p.id !== player.id);
-if (nextPlayer) {
-  nextPlayer.turn = true;
-}
+     // 3️⃣ Кезекті ауыстыру
+  player.turn = false;
 
-// 4️⃣ Клиентке жаңартулар
-io.emit("table", komta.table);
-io.to(player.id).emit("cards", player.cards);
-
-// 5️⃣ Барлық ойыншылар жүрді ме? → есептеу
-if (komta.table.length === komta.players.length) {
-  const result = resolveTable(komta); // үстелдегі карталарды есептейтін функция
-  const winner = komta.players.find(p => p.id === result.winnerId);
-
-  // Raund санын жаңарту
-  winner.raund = (winner.raund || 0) + 1;
-
-  console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
-
-  // Жеңген ойыншыға кезек беру
-  komta.players.forEach(p => p.turn = false);
-  winner.turn = true;
-
-  // Үстелді тазалау келесі раундқа дайын
-  komta.table = [];
-
-  io.emit("table", komta.table);
-}
+  const nextPlayer = komta.players.find(p => p.id !== player.id);
+  if (nextPlayer) {
+    nextPlayer.turn = true;
+  }
+    io.emit("table",komta.table);
+    io.to(player.id).emit("cards", player.cards);
   }
 });
 
@@ -349,37 +308,6 @@ if (komta.table.length === komta.players.length) {
 
 
 
-function resolveTable(komta) {
-  const table = komta.table; // [{ card, playerId }, ...]
-  const trumpSuit = komta.kozir.slice(-1);
-
-  let winningCard = table[0].card;
-  let winnerId = table[0].playerId;
-
-  const ranks = ["6","7","8","9","10","J","Q","K","A"];
-
-  for (let i = 1; i < table.length; i++) {
-    const card = table[i].card;
-    const cardSuit = card.slice(-1);
-    const winningSuit = winningCard.slice(-1);
-
-    // 🃏 Көзір әрқашан үстем
-    if (cardSuit === trumpSuit && winningSuit !== trumpSuit) {
-      winningCard = card;
-      winnerId = table[i].playerId;
-    } 
-    // Сол масть болса rank-ы бойынша салыстыру
-    else if (cardSuit === winningSuit) {
-      if (ranks.indexOf(card.slice(0,-1)) > ranks.indexOf(winningCard.slice(0,-1))) {
-        winningCard = card;
-        winnerId = table[i].playerId;
-      }
-    }
-  }
-
-  return { winnerId, winningCard };
-}
-
 
 
 
@@ -388,8 +316,6 @@ function resolveTable(komta) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
