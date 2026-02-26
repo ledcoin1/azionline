@@ -26,6 +26,10 @@
       margin-top: 10px;
     }
 
+.hidden {
+  display: none;
+}
+
 
 .cards-container, .table-container {
   display: flex;
@@ -72,12 +76,12 @@
   <div id="komta"></div>
 
 
-<div class="box">
+<div class="box hidden">
   <p><b>Сенің карталарың:</b></p>
   <div id="cards" class="cards-container"></div>
 </div>
 
-<div class="box">
+<div class="box hidden">
   <p><b>Үстелдегі карта:</b></p>
   <div id="table" class="table-container"></div>
 </div>
@@ -184,7 +188,6 @@ socket.on("gameWinner", (data) => {
 
 </body>
 </html>
-
 
 
 
