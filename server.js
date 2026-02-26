@@ -269,6 +269,14 @@ if (nextPlayer) {
 // Клиентке жіберу
 io.emit("table", komta.table);
 io.to(player.id).emit("cards", player.cards);
+
+
+   // Барлық ойыншылар жүрді ме?
+    if (komta.table.length === komta.players.length) {
+        console.log("✅ Барлық ойыншылар жүрді — үстел толық");
+    } else {
+        console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
+    }
 }
 
 
@@ -287,6 +295,13 @@ io.to(player.id).emit("cards", player.cards);
   }
     io.emit("table",komta.table);
     io.to(player.id).emit("cards", player.cards);
+
+     // Барлық ойыншылар жүрді ме?
+    if (komta.table.length === komta.players.length) {
+        console.log("✅ Барлық ойыншылар жүрді — үстел толық");
+    } else {
+        console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
+    }
   }
 });
 
@@ -316,6 +331,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
