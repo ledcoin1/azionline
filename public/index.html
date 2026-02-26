@@ -82,6 +82,7 @@
   <div id="table" class="table-container"></div>
 </div>
 
+  <div id="winner"></div>
 
 
 <script src="/socket.io/socket.io.js"></script>
@@ -172,13 +173,18 @@ socket.on("error", (msg) => {
 });
 
 
+socket.on("gameWinner", (data) => {
+  const winnerBlock = document.getElementById("winner");
+  winnerBlock.innerText = 
+    `🏆 Жеңімпаз: ${data.telegram} | Баланс: ${data.balans}`;
 
-
+});
 
 </script>
 
 </body>
 </html>
+
 
 
 
