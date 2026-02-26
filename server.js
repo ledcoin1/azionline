@@ -117,38 +117,40 @@ let komta = {
   zhenis: null,
   raund: null,
   kozir: null,
-  table: [] 
+  table: [],
+  table2: []
 };
 
 
 function resolveTable(komta) {
-  const table = komta.table;           // [{ card, playerId }, ...]
-  const trumpSuit = komta.kozir.slice(-1);
+  const table = komta.table;   // ["9♥", "J♠", ...]
+  const players = komta.table2; // ["id1", "id2", ...]
 
-  let winningCard = table[0].card;
-  let winnerId = table[0].playerId;
-
+  const trumpSuit = komta.kozir.slice(-1); // көзір масты
   const ranks = ["6","7","8","9","10","J","Q","K","A"];
 
+  // Бастапқы жеңімпаз — бірінші карта
+  let winningCard = table[0];
+  let winnerId = players[0];
+
   for (let i = 1; i < table.length; i++) {
-    const card = table[i].card;          // ✅ осы енді әрқашан string
-    const cardSuit = card.slice(-1);     
+    const card = table[i];
+    const cardSuit = card.slice(-1);
     const winningSuit = winningCard.slice(-1);
 
     if (cardSuit === trumpSuit && winningSuit !== trumpSuit) {
       winningCard = card;
-      winnerId = table[i].playerId;
+      winnerId = players[i];
     } else if (cardSuit === winningSuit) {
       if (ranks.indexOf(card.slice(0,-1)) > ranks.indexOf(winningCard.slice(0,-1))) {
         winningCard = card;
-        winnerId = table[i].playerId;
+        winnerId = players[i];
       }
     }
   }
 
   return { winnerId, winningCard };
 }
-
 
 io.on("connection", (socket) => {
 
@@ -279,7 +281,8 @@ if (komta.table.length > 0) {
   console.log("✅ Жүріс қабылданды");
 
   // Картаны үстелге салу
-komta.table.push({ card, playerId: player.id });
+komta.table.push(card);
+  komta.table2.push(player.id);
 
 // Қолдан алып тастау
 player.cards = player.cards.filter(c => c !== card);
@@ -312,7 +315,8 @@ io.to(player.id).emit("cards", player.cards);
   else {
     console.log("karta zhok ustelde");
 
-    komta.table.push({ card, playerId: player.id });
+   komta.table.push(card);
+    komta.table2.push(player.id);
     player.cards = player.cards.filter(c=>c !== card);
 
      // 3️⃣ Кезекті ауыстыру
@@ -363,6 +367,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
