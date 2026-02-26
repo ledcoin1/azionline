@@ -188,26 +188,57 @@ io.on("connection", (socket) => {
   console.log("ойыншы кірді")
 
 
-  socket.on("play",(data)=>{
+  socket.on("play", async (data) => {
 
+  try {
 
-
-    if(komta.players.length>=2){
-      socket.emit("toly","2 adam bar");
+    if (komta.players.length >= 2) {
+      socket.emit("toly", "2 adam bar");
       return;
     }
-   const telegramId = data.telegramId;
-   komta.players.push({
-    id: socket.id,
-    telegram: telegramId,
-    cards: [],
-    turn: null,
-    status: "azirshe",
-    balans: 500,
-    raund: 0,
-    turnTimeout: null
-   });
-   
+
+    const telegramId = data.telegramId;
+    if (!telegramId) return;
+
+    // 🔎 БАЗАДАН ҚОЛДАНУШЫНЫ ТАБУ
+    const user = await User.findOne({ telegramId });
+
+    if (!user) {
+      console.log("❌ Қолданушы табылмады");
+      socket.emit("error", "User not found");
+      return;
+    }
+
+    console.log("👤 Ойыншы балансы:", user.balance);
+
+    // 💰 БАЛАНС ТЕКСЕРУ
+    if (user.balance < 500) {
+      console.log("⛔ Баланс жеткіліксіз:", user.balance);
+      socket.emit("balanceError", "Баланс 500-ден төмен");
+      return;
+    }
+
+    // ✅ ОЙЫНҒА ҚОСУ
+    komta.players.push({
+      id: socket.id,
+      telegram: telegramId,
+      cards: [],
+      turn: null,
+      status: "azirshe",
+      balans: user.balance,   // базадағы нақты баланс
+      raund: 0,
+      turnTimeout: null
+    });
+
+    console.log("✅ Ойыншы қосылды:", telegramId);
+
+    io.emit("players", komta.players);
+
+  } catch (err) {
+    console.log("❌ Play қатесі:", err);
+  }
+
+});
 
     
 
@@ -418,6 +449,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
