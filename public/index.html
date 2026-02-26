@@ -154,15 +154,21 @@ socket.on("cards", (cards) => {
     cardsDiv.appendChild(div);
   });
 });
-  socket.on("table", (card) => {
+  socket.on("table", (table) => {
   const tableDiv = document.getElementById("table");
   tableDiv.innerHTML = "";
 
-  const div = document.createElement("div");
-  div.className = "card";
-  div.innerText = card;
+  const parentBox = tableDiv.parentElement;
+  if (parentBox.classList.contains("hidden")) {
+    parentBox.classList.remove("hidden");
+  }
 
-  tableDiv.appendChild(div);
+  table.forEach(card => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerText = card;
+    tableDiv.appendChild(div);
+  });
 });
 
 socket.on("error", (msg) => {
@@ -182,6 +188,7 @@ socket.on("gameWinner", (data) => {
 
 </body>
 </html>
+
 
 
 
