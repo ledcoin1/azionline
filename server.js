@@ -252,41 +252,82 @@ if (komta.table.length > 0) {
   }
   console.log("✅ Жүріс қабылданды");
 
-  // Картаны үстелге салу
-komta.table.push(card);
+ // 1️⃣ Картаны үстелге қосу
+komta.table.push({ card, playerId: player.id }); // playerId-мен бірге сақтаймыз
 
-// Қолдан алып тастау
+// 2️⃣ Ойыншыдан қолынан алып тастау
 player.cards = player.cards.filter(c => c !== card);
 
-// Кезекті ауыстыру
+// 3️⃣ Кезекті ауыстыру
 player.turn = false;
-
 const nextPlayer = komta.players.find(p => p.id !== player.id);
 if (nextPlayer) {
   nextPlayer.turn = true;
 }
 
-// Клиентке жіберу
+// 4️⃣ Клиентке жаңартулар
 io.emit("table", komta.table);
 io.to(player.id).emit("cards", player.cards);
+
+// 5️⃣ Барлық ойыншылар жүрді ме? → есептеу
+if (komta.table.length === komta.players.length) {
+  const result = resolveTable(komta); // үстелдегі карталарды есептейтін функция
+  const winner = komta.players.find(p => p.id === result.winnerId);
+
+  // Raund санын жаңарту
+  winner.raund = (winner.raund || 0) + 1;
+
+  console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
+
+  // Жеңген ойыншыға кезек беру
+  komta.players.forEach(p => p.turn = false);
+  winner.turn = true;
+
+  // Үстелді тазалау келесі раундқа дайын
+  komta.table = [];
+
+  io.emit("table", komta.table);
+}
 }
 
 
   else {
-    console.log("karta zhok ustelde");
+   // 1️⃣ Картаны үстелге қосу
+komta.table.push({ card, playerId: player.id }); // playerId-мен бірге сақтаймыз
 
-    komta.table.push(card);
-    player.cards = player.cards.filter(c=>c !== card);
+// 2️⃣ Ойыншыдан қолынан алып тастау
+player.cards = player.cards.filter(c => c !== card);
 
-     // 3️⃣ Кезекті ауыстыру
-  player.turn = false;
+// 3️⃣ Кезекті ауыстыру
+player.turn = false;
+const nextPlayer = komta.players.find(p => p.id !== player.id);
+if (nextPlayer) {
+  nextPlayer.turn = true;
+}
 
-  const nextPlayer = komta.players.find(p => p.id !== player.id);
-  if (nextPlayer) {
-    nextPlayer.turn = true;
-  }
-    io.emit("table",komta.table);
-    io.to(player.id).emit("cards", player.cards);
+// 4️⃣ Клиентке жаңартулар
+io.emit("table", komta.table);
+io.to(player.id).emit("cards", player.cards);
+
+// 5️⃣ Барлық ойыншылар жүрді ме? → есептеу
+if (komta.table.length === komta.players.length) {
+  const result = resolveTable(komta); // үстелдегі карталарды есептейтін функция
+  const winner = komta.players.find(p => p.id === result.winnerId);
+
+  // Raund санын жаңарту
+  winner.raund = (winner.raund || 0) + 1;
+
+  console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
+
+  // Жеңген ойыншыға кезек беру
+  komta.players.forEach(p => p.turn = false);
+  winner.turn = true;
+
+  // Үстелді тазалау келесі раундқа дайын
+  komta.table = [];
+
+  io.emit("table", komta.table);
+}
   }
 });
 
@@ -316,6 +357,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
