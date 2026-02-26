@@ -144,7 +144,7 @@ let komta = {
 
   players:[],
   card: null,
-  obwiBalans: null,
+  obwiBalans: 0,
   zhenis: null,
   raund: null,
   kozir: null,
@@ -217,6 +217,15 @@ io.on("connection", (socket) => {
       socket.emit("balanceError", "Баланс 500-ден төмен");
       return;
     }
+
+      // 🔥 500 АЛАМЫЗ
+    user.balance -= 500;
+    await user.save();
+
+    // 🔥 БАНККЕ ҚОСАМЫЗ
+    komta.obwiBalans += 500;
+
+    console.log("💰 Комта банкі:", komta.obwiBalans);
 
     // ✅ ОЙЫНҒА ҚОСУ
     komta.players.push({
@@ -449,6 +458,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
