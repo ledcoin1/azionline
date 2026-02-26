@@ -121,7 +121,40 @@ let komta = {
 };
 
 
+function resolveTable(komta) {
+  const table = komta.table;           // [{ card, playerId }, ...]
+  const trumpSuit = komta.kozir.slice(-1); // Көзір масты
 
+  // Бірінші карта бастапқы жеңімпаз деп аламыз
+  let winningCard = table[0].card;
+  let winnerId = table[0].playerId;
+
+  // Карталардың рангтары (6-A)
+  const ranks = ["6","7","8","9","10","J","Q","K","A"];
+
+  // Үстелдегі қалған карталарды салыстырамыз
+  for (let i = 1; i < table.length; i++) {
+    const card = table[i].card;
+    const cardSuit = card.slice(-1);          // Жүрген картаның масты
+    const winningSuit = winningCard.slice(-1); // Қазіргі жеңімпаз картасының масты
+
+    // 1️⃣ Көзір әрқашан үстем
+    if (cardSuit === trumpSuit && winningSuit !== trumpSuit) {
+      winningCard = card;
+      winnerId = table[i].playerId;
+    }
+    // 2️⃣ Сол масть болса, rank бойынша салыстыру
+    else if (cardSuit === winningSuit) {
+      if (ranks.indexOf(card.slice(0,-1)) > ranks.indexOf(winningCard.slice(0,-1))) {
+        winningCard = card;
+        winnerId = table[i].playerId;
+      }
+    }
+    // Басқа масть → ештеңе өзгермейді
+  }
+
+  return { winnerId, winningCard }; // жеңген ойыншының id және картасы
+}
 
 
 io.on("connection", (socket) => {
@@ -274,6 +307,9 @@ io.to(player.id).emit("cards", player.cards);
    // Барлық ойыншылар жүрді ме?
     if (komta.table.length === komta.players.length) {
         console.log("✅ Барлық ойыншылар жүрді — үстел толық");
+      const result = resolveTable(komta);
+      const winner = komta.players.find(p => p.id === result.winnerId);
+       console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
     } else {
         console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
     }
@@ -299,6 +335,9 @@ io.to(player.id).emit("cards", player.cards);
      // Барлық ойыншылар жүрді ме?
     if (komta.table.length === komta.players.length) {
         console.log("✅ Барлық ойыншылар жүрді — үстел толық");
+      const result = resolveTable(komta);
+      const winner = komta.players.find(p => p.id === result.winnerId);
+       console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
     } else {
         console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
     }
@@ -331,6 +370,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
