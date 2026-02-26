@@ -173,7 +173,7 @@ io.on("connection", (socket) => {
     turn: null,
     status: "azirshe",
     balans: 500,
-    raund: null,
+    raund: 0,
     turnTimeout: null
    });
    
@@ -305,6 +305,13 @@ io.to(player.id).emit("cards", player.cards);
         console.log("✅ Барлық ойыншылар жүрді — үстел толық");
       const result = resolveTable(komta);
       const winner = komta.players.find(p => p.id === result.winnerId);
+
+
+       if (!winner) return;
+
+  // 👇 МІНЕ ОСЫ ЖЕР
+  winner.raund += 1;
+
        console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
         komta.players.forEach(p => p.turn = false);
   winner.turn = true;
@@ -312,6 +319,7 @@ io.to(player.id).emit("cards", player.cards);
   komta.table = [];
   komta.table2 = [];
   io.emit("table", komta.table);
+  io.emit("players", komta.players);
     } else {
         console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
     }
