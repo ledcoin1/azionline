@@ -137,24 +137,23 @@
    socket.on("komta",(msg)=>{
     document.getElementById("komta").innerText=msg;
   });
- socket.on("cards", (cards) => {
-    const cardsDiv = document.getElementById("cards");
-    cardsDiv.innerHTML = ""; // ескі карталарды тазалау
+socket.on("cards", (cards) => {
+  const cardsDiv = document.getElementById("cards");
+  cardsDiv.innerHTML = ""; // ескі карталарды тазалау
 
-    cards.forEach(card => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerText = card;
+  // Егер box.hidden болса, оны көрсетеміз
+  const parentBox = cardsDiv.parentElement;
+  if (parentBox.classList.contains("hidden")) {
+    parentBox.classList.remove("hidden");
+  }
 
-      // 👇 карта басқанда "attack" оқиғасын жібереміз
-      div.addEventListener("click", () => {
-        socket.emit("attack", card);
-      });
-
-      cardsDiv.appendChild(div);
-    });
+  cards.forEach(card => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerText = card;
+    cardsDiv.appendChild(div);
   });
-
+});
   socket.on("table", (card) => {
   const tableDiv = document.getElementById("table");
   tableDiv.innerHTML = "";
@@ -183,6 +182,7 @@ socket.on("gameWinner", (data) => {
 
 </body>
 </html>
+
 
 
 
