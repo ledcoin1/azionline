@@ -306,6 +306,12 @@ io.to(player.id).emit("cards", player.cards);
       const result = resolveTable(komta);
       const winner = komta.players.find(p => p.id === result.winnerId);
        console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
+        komta.players.forEach(p => p.turn = false);
+  winner.turn = true;
+  // Үстелді тазалау келесі раундқа
+  komta.table = [];
+  komta.table2 = [];
+  io.emit("table", komta.table);
     } else {
         console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
     }
@@ -367,6 +373,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
