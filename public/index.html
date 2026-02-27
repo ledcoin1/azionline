@@ -57,12 +57,12 @@
 
   <h2>🃏 Card Game</h2>
 
-  <div class="box">
+  <div class="box"  id="cardsBox" style="display: none;>
     <p><b>Your Telegram ID:</b></p>
     <p id="tgId">Loading...</p>
   </div>
 
-  <div class="box">
+  <div class="box"  id="cardsBox" style="display: none;>
     <p><b>Your Balance:</b></p>
     <p id="balance">Loading...</p>
   </div>
@@ -127,6 +127,9 @@
 
   document.getElementById("play").addEventListener("click",()=>{
     socket.emit("play",{telegramId});
+
+    document.getElementById("cardsBox").style.display = "block";
+  document.getElementById("tableBox").style.display = "block";
   });
 
 
@@ -181,6 +184,7 @@ socket.on("gameWinner", (data) => {
 
 </body>
 </html>
+
 
 
 
