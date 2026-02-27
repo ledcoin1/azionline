@@ -128,8 +128,7 @@
   document.getElementById("play").addEventListener("click",()=>{
     socket.emit("play",{telegramId});
 
-    document.getElementById("cardsBox").style.display = "block";
-  document.getElementById("tableBox").style.display = "block";
+  
   });
 
 
@@ -137,6 +136,8 @@
 
    socket.on("komta",(msg)=>{
     document.getElementById("komta").innerText=msg;
+     document.getElementById("cardsBox").style.display = "block";
+  document.getElementById("tableBox").style.display = "block";
   });
  socket.on("cards", (cards) => {
     const cardsDiv = document.getElementById("cards");
@@ -184,6 +185,7 @@ socket.on("gameWinner", (data) => {
 
 </body>
 </html>
+
 
 
 
