@@ -18,39 +18,39 @@
       border-radius: 10px;
       margin-top: 20px;
     }
-
-    .play{
+    .hidden {
+      display: none;
+    }
+    .play {
       background-color: chartreuse;
-      padding: 10px;
+      padding: 10px 20px;
       border-radius: 10px;
       margin-top: 10px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
     }
-
-
-
-
-.cards-container, .table-container {
-  display: flex;
-  justify-content: center; /* горизонталь ортасына шығару */
-  gap: 10px;              /* карталардың арасы */
-  margin-top: 10px;
-}
-
-     .card {
-    display: inline-block;
-    padding: 10px 15px;
-    margin: 5px;
-    background: white;
-    color: black;
-    border-radius: 10px;
-    font-size: 20px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .card:hover {
-    transform: scale(1.1);
-  }
+    .cards-container, .table-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .card {
+      display: inline-block;
+      padding: 10px 15px;
+      margin: 5px;
+      background: white;
+      color: black;
+      border-radius: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.1);
+    }
   </style>
 </head>
 <body>
@@ -67,122 +67,106 @@
     <p id="balance">Loading...</p>
   </div>
 
-
-
-  <button id="play">play</button>
+  <button id="play" class="play">Play</button>
 
   <div id="komta"></div>
 
+  <!-- Әуелде жасырылған блоктар -->
+  <div class="box hidden" id="playerCardsBox">
+    <p><b>Сенің карталарың:</b></p>
+    <div id="cards" class="cards-container"></div>
+  </div>
 
-<div class="box"> <p><b>Сенің карталарың:</b></p>
-   <div id="cards" class="cards-container"></div> </div>
-    <div class="box"> <p><b>Үстелдегі карта:</b></p> 
-  <div id="table" class="table-container"></div> </div>
+  <div class="box hidden" id="tableBox">
+    <p><b>Үстелдегі карта:</b></p> 
+    <div id="table" class="table-container"></div>
+  </div>
 
   <div id="winner"></div>
 
-
 <script src="/socket.io/socket.io.js"></script>
-
 <script>
+let telegramId;
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-  let telegramId;
-  const tg = window.Telegram.WebApp;
-  tg.expand();
+const user = tg.initDataUnsafe?.user;
 
-  const user = tg.initDataUnsafe?.user;
+if (!user) {
+  document.getElementById("tgId").innerText = "Not opened in Telegram";
+} else {
+  telegramId = user.id;
+  document.getElementById("tgId").innerText = telegramId;
 
-  if (!user) {
-    document.getElementById("tgId").innerText = "Not opened in Telegram";
-  } else {
+  fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telegramId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("balance").innerText = data.balance;
+  })
+  .catch(err => {
+    document.getElementById("balance").innerText = "Error";
+  });
+}
 
-       telegramId = user.id;
+const socket = io();
 
-    telegramId = user.id;
-    document.getElementById("tgId").innerText = telegramId;
+// play батырмасы
+document.getElementById("play").addEventListener("click", () => {
+  socket.emit("play", { telegramId });
 
-    // LOGIN API-ға сұрау
-    fetch("/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ telegramId })
-    })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("balance").innerText = data.balance;
-    })
-    .catch(err => {
-      document.getElementById("balance").innerText = "Error";
+  // play батырмасын жасыру
+  document.getElementById("play").classList.add("hidden");
+
+  // карталар мен үстелді көрсету
+  document.getElementById("playerCardsBox").classList.remove("hidden");
+  document.getElementById("tableBox").classList.remove("hidden");
+});
+
+socket.on("komta", (msg) => {
+  document.getElementById("komta").innerText = msg;
+});
+
+socket.on("cards", (cards) => {
+  const cardsDiv = document.getElementById("cards");
+  cardsDiv.innerHTML = "";
+  cards.forEach(card => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerText = card;
+
+    // картаға басқанда "attack"
+    div.addEventListener("click", () => {
+      socket.emit("attack", card);
     });
 
-  }
-
-
-  
-
-
-  const socket = io();
-
-  document.getElementById("play").addEventListener("click",()=>{
-    socket.emit("play",{telegramId});
+    cardsDiv.appendChild(div);
   });
+});
 
-
- 
-
-   socket.on("komta",(msg)=>{
-    document.getElementById("komta").innerText=msg;
-  });
- socket.on("cards", (cards) => {
-    const cardsDiv = document.getElementById("cards");
-    cardsDiv.innerHTML = ""; // ескі карталарды тазалау
-
-    cards.forEach(card => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerText = card;
-
-      // 👇 карта басқанда "attack" оқиғасын жібереміз
-      div.addEventListener("click", () => {
-        socket.emit("attack", card);
-      });
-
-      cardsDiv.appendChild(div);
-    });
-  });
-
-  socket.on("table", (card) => {
+socket.on("table", (card) => {
   const tableDiv = document.getElementById("table");
   tableDiv.innerHTML = "";
-
   const div = document.createElement("div");
   div.className = "card";
   div.innerText = card;
-
   tableDiv.appendChild(div);
 });
 
 socket.on("error", (msg) => {
-  alert(msg); // немесе қалауыңша DOM-ға шығару
+  alert(msg);
   console.log("Қате хабар келді:", msg);
 });
-
 
 socket.on("gameWinner", (data) => {
   const winnerBlock = document.getElementById("winner");
   winnerBlock.innerText = 
     `🏆 Жеңімпаз: ${data.telegram} | Баланс: ${data.balans}`;
-
 });
-
 </script>
 
 </body>
 </html>
-
-
-
-
-
