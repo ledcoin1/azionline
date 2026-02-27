@@ -1,199 +1,207 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Card Game</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      font-family: Arial;
-      background: #111;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
-    .box {
-      background: #222;
-      padding: 20px;
-      border-radius: 10px;
-      margin-top: 20px;
-    }
+<meta charset="UTF-8" />
+<title>Card Game</title>
 
-    .play{
-      background-color: chartreuse;
-      padding: 10px;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 
-
-
-
-.cards-container, .table-container {
-  display: flex;
-  justify-content: center; /* горизонталь ортасына шығару */
-  gap: 10px;              /* карталардың арасы */
-  margin-top: 10px;
+<style>
+body{
+  margin:0;
+  font-family: Arial;
+  background:#111;
+  color:white;
+  text-align:center;
 }
 
-     .card {
-    display: inline-block;
-    padding: 10px 15px;
-    margin: 5px;
-    background: white;
-    color: black;
-    border-radius: 10px;
-    font-size: 20px;
-    cursor: pointer;
-    user-select: none;
-  }
+.top{
+  padding:15px;
+  background:#1c1c1c;
+}
 
-  .card:hover {
-    transform: scale(1.1);
-  }
-  </style>
+.playBtn{
+  background:chartreuse;
+  border:none;
+  padding:12px 25px;
+  font-size:18px;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:15px;
+}
+
+.hidden{
+  display:none;
+}
+
+.table{
+  margin-top:40px;
+  min-height:120px;
+}
+
+.cards{
+  margin-top:40px;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.card{
+  background:white;
+  color:black;
+  padding:12px 18px;
+  border-radius:10px;
+  font-size:20px;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.card:hover{
+  transform:scale(1.1);
+}
+
+.turn{
+  color:chartreuse;
+  margin-top:10px;
+  font-weight:bold;
+}
+
+.players{
+  margin-top:20px;
+  font-size:14px;
+  opacity:0.8;
+}
+</style>
 </head>
 <body>
 
-  <h2>🃏 Card Game</h2>
-
- <div class="box" id="cardsBox" style="display: none;">
-  <p><b>Сенің карталарың:</b></p>
-  <div id="cards" class="cards-container"></div>
+<div class="top">
+  <div>ID: <span id="tgId">...</span></div>
+  <div>Balance: <span id="balance">...</span></div>
+  <button id="play" class="playBtn">PLAY</button>
+  <div id="turnInfo" class="turn"></div>
 </div>
 
-<div class="box" id="tableBox" style="display: none;">
-  <p><b>Үстелдегі карта:</b></p>
-  <div id="table" class="table-container"></div>
+<div id="gameArea" class="hidden">
+
+  <div class="table">
+    <h3>Үстел</h3>
+    <div id="tableCards" class="cards"></div>
+  </div>
+
+  <div>
+    <h3>Сенің карталарың</h3>
+    <div id="myCards" class="cards"></div>
+  </div>
+
+  <div class="players" id="playersInfo"></div>
+
 </div>
 
-
-  <button id="play">play</button>
-
-  <div id="komta"></div>
-
-
-<div class="box"> <p><b>Сенің карталарың:</b></p>
-   <div id="cards" class="cards-container"></div> </div>
-    <div class="box"> <p><b>Үстелдегі карта:</b></p> 
-  <div id="table" class="table-container"></div> </div>
-
-  <div id="winner"></div>
-
-
-<script src="/socket.io/socket.io.js"></script>
+<div id="winner"></div>
 
 <script>
+const socket = io();
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-  let telegramId;
-  const tg = window.Telegram.WebApp;
-  tg.expand();
+let telegramId = null;
 
-  const user = tg.initDataUnsafe?.user;
+/* ========= TELEGRAM LOGIN ========= */
+const user = tg.initDataUnsafe?.user;
 
-  if (!user) {
-    document.getElementById("tgId").innerText = "Not opened in Telegram";
-  } else {
+if(user){
+  telegramId = user.id;
+  document.getElementById("tgId").innerText = telegramId;
 
-       telegramId = user.id;
+  fetch("/api/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ telegramId })
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    document.getElementById("balance").innerText = data.balance;
+  });
+}else{
+  document.getElementById("tgId").innerText = "Not Telegram";
+}
 
-    telegramId = user.id;
-    document.getElementById("tgId").innerText = telegramId;
+/* ========= PLAY ========= */
+document.getElementById("play").onclick = ()=>{
+  socket.emit("play",{ telegramId });
+};
 
-    // LOGIN API-ға сұрау
-    fetch("/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ telegramId })
-    })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("balance").innerText = data.balance;
-    })
-    .catch(err => {
-      document.getElementById("balance").innerText = "Error";
-    });
+/* ========= PLAYERS ========= */
+socket.on("players",(players)=>{
+  const me = players.find(p=>p.telegram == telegramId);
 
+  if(players.length === 2){
+    document.getElementById("gameArea").classList.remove("hidden");
+    document.getElementById("play").style.display="none";
   }
 
+  if(me){
+    if(me.turn){
+      document.getElementById("turnInfo").innerText = "🔥 Сенің кезегің!";
+    }else{
+      document.getElementById("turnInfo").innerText = "⏳ Қарсылас жүріп жатыр";
+    }
+  }
 
-  
-
-
-  const socket = io();
-
-  document.getElementById("play").addEventListener("click",()=>{
-    socket.emit("play",{telegramId});
-document.getElementById("cardsBox").style.display = "block";
-  document.getElementById("tableBox").style.display = "block";
-  
-  });
-
-
- 
-
-   socket.on("komta",(msg)=>{
-    document.getElementById("komta").innerText=msg;
-   
-  });
- socket.on("cards", (cards) => {
-
-   document.getElementById("cardsBox").style.display = "block";
-  document.getElementById("tableBox").style.display = "block";
-   
-    const cardsDiv = document.getElementById("cards");
-    cardsDiv.innerHTML = ""; // ескі карталарды тазалау
-
-    cards.forEach(card => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerText = card;
-
-      // 👇 карта басқанда "attack" оқиғасын жібереміз
-      div.addEventListener("click", () => {
-        socket.emit("attack", card);
-      });
-
-      cardsDiv.appendChild(div);
-    });
-  });
-
-  socket.on("table", (card) => {
-  const tableDiv = document.getElementById("table");
-  tableDiv.innerHTML = "";
-
-  const div = document.createElement("div");
-  div.className = "card";
-  div.innerText = card;
-
-  tableDiv.appendChild(div);
+  document.getElementById("playersInfo").innerText =
+    players.map(p=>`ID:${p.telegram} | Раунд:${p.raund}`).join(" | ");
 });
 
-socket.on("error", (msg) => {
-  alert(msg); // немесе қалауыңша DOM-ға шығару
-  console.log("Қате хабар келді:", msg);
+/* ========= CARDS ========= */
+socket.on("cards",(cards)=>{
+  const box = document.getElementById("myCards");
+  box.innerHTML="";
+
+  cards.forEach(card=>{
+    const div = document.createElement("div");
+    div.className="card";
+    div.innerText=card;
+
+    div.onclick=()=>{
+      socket.emit("attack",card);
+    };
+
+    box.appendChild(div);
+  });
 });
 
+/* ========= TABLE ========= */
+socket.on("table",(cards)=>{
+  const box = document.getElementById("tableCards");
+  box.innerHTML="";
 
-socket.on("gameWinner", (data) => {
-  const winnerBlock = document.getElementById("winner");
-  winnerBlock.innerText = 
-    `🏆 Жеңімпаз: ${data.telegram} | Баланс: ${data.balans}`;
-
+  cards.forEach(card=>{
+    const div = document.createElement("div");
+    div.className="card";
+    div.innerText=card;
+    box.appendChild(div);
+  });
 });
 
+/* ========= WINNER ========= */
+socket.on("gameWinner",(data)=>{
+  document.getElementById("winner").innerHTML =
+    `<h2>🏆 Жеңімпаз: ${data.telegram}</h2>
+     <h3>Баланс: ${data.balans}</h3>`;
+});
+
+/* ========= ERRORS ========= */
+socket.on("error",(msg)=>{
+  alert(msg);
+});
+
+socket.on("balanceError",(msg)=>{
+  alert(msg);
+});
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
