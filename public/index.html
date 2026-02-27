@@ -57,16 +57,15 @@
 
   <h2>🃏 Card Game</h2>
 
-  <div class="box"  id="cardsBox" style="display: none;>
-    <p><b>Your Telegram ID:</b></p>
-    <p id="tgId">Loading...</p>
-  </div>
+ <div class="box" id="cardsBox" style="display: none;">
+  <p><b>Сенің карталарың:</b></p>
+  <div id="cards" class="cards-container"></div>
+</div>
 
-  <div class="box"  id="cardsBox" style="display: none;>
-    <p><b>Your Balance:</b></p>
-    <p id="balance">Loading...</p>
-  </div>
-
+<div class="box" id="tableBox" style="display: none;">
+  <p><b>Үстелдегі карта:</b></p>
+  <div id="table" class="table-container"></div>
+</div>
 
 
   <button id="play">play</button>
@@ -189,6 +188,7 @@ socket.on("gameWinner", (data) => {
 
 </body>
 </html>
+
 
 
 
