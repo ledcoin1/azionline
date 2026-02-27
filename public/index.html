@@ -9,229 +9,180 @@
       font-family: Arial;
       background: #111;
       color: white;
-      margin: 0;
+      text-align: center;
       padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
     }
-
-    h2 { margin-bottom: 10px; }
-
     .box {
       background: #222;
-      padding: 15px;
+      padding: 20px;
       border-radius: 10px;
-      margin-top: 15px;
-      width: 90%;
-      max-width: 400px;
-      text-align: center;
-    }
-
-    .hidden { display: none; }
-
-    #play {
-      background-color: chartreuse;
-      padding: 15px 30px;
-      border: none;
-      border-radius: 12px;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
       margin-top: 20px;
-      transition: 0.2s;
     }
 
-    #play:hover { transform: scale(1.05); }
-
-    .game-area {
-      position: relative;
-      width: 100%;
-      max-width: 600px;
-      height: 400px;
-      margin-top: 30px;
-    }
-
-    .player {
-      position: absolute;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .player.top { top: 0; left: 50%; transform: translateX(-50%); }
-    .player.bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
-
-    .card-back, .card {
-      width: 60px;
-      height: 90px;
+    .play{
+      background-color: chartreuse;
+      padding: 10px;
       border-radius: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 18px;
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.2s;
+      margin-top: 10px;
     }
 
-    .card-back {
-      background: #555;
-      color: #555;
-    }
 
-    .card:hover { transform: scale(1.2); }
 
-    .table {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      gap: 15px;
-    }
 
-    .card-played {
-      width: 60px;
-      height: 90px;
-      border-radius: 10px;
-      background: white;
-      color: black;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 20px;
-    }
+.cards-container, .table-container {
+  display: flex;
+  justify-content: center; /* горизонталь ортасына шығару */
+  gap: 10px;              /* карталардың арасы */
+  margin-top: 10px;
+}
+
+     .card {
+    display: inline-block;
+    padding: 10px 15px;
+    margin: 5px;
+    background: white;
+    color: black;
+    border-radius: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .card:hover {
+    transform: scale(1.1);
+  }
   </style>
 </head>
 <body>
 
-<h2>🃏 Card Game</h2>
+  <h2>🃏 Card Game</h2>
 
-<div class="box">
-  <p><b>Your Telegram ID:</b></p>
-  <p id="tgId">Loading...</p>
-</div>
-
-<div class="box">
-  <p><b>Your Balance:</b></p>
-  <p id="balance">Loading...</p>
-</div>
-
-<button id="play">Play</button>
-
-<div id="komta"></div>
-
-<!-- Game Area -->
-<div class="game-area hidden" id="gameArea">
-  <!-- Top player (opponent) -->
-  <div class="player top" id="topPlayer">
-    <div class="card-back"></div>
-    <div class="card-back"></div>
-    <div class="card-back"></div>
+  <div class="box">
+    <p><b>Your Telegram ID:</b></p>
+    <p id="tgId">Loading...</p>
   </div>
 
-  <!-- Table -->
-  <div class="table" id="table"></div>
-
-  <!-- Bottom player (self) -->
-  <div class="player bottom" id="bottomPlayer">
-    <div class="card" id="cards"></div>
+  <div class="box">
+    <p><b>Your Balance:</b></p>
+    <p id="balance">Loading...</p>
   </div>
-</div>
 
-<div id="winner" class="box hidden"></div>
+
+
+  <button id="play">play</button>
+
+  <div id="komta"></div>
+
+
+<div class="box"> <p><b>Сенің карталарың:</b></p>
+   <div id="cards" class="cards-container"></div> </div>
+    <div class="box"> <p><b>Үстелдегі карта:</b></p> 
+  <div id="table" class="table-container"></div> </div>
+
+  <div id="winner"></div>
+
 
 <script src="/socket.io/socket.io.js"></script>
+
 <script>
-let telegramId;
-const tg = window.Telegram.WebApp;
-tg.expand();
-const user = tg.initDataUnsafe?.user;
 
-if (user) {
-  telegramId = user.id;
-  document.getElementById("tgId").innerText = telegramId;
+  let telegramId;
+  const tg = window.Telegram.WebApp;
+  tg.expand();
 
-  fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telegramId })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("balance").innerText = data.balance;
-  })
-  .catch(err => document.getElementById("balance").innerText = "Error");
-} else {
-  document.getElementById("tgId").innerText = "Not opened in Telegram";
-}
+  const user = tg.initDataUnsafe?.user;
 
-const socket = io();
+  if (!user) {
+    document.getElementById("tgId").innerText = "Not opened in Telegram";
+  } else {
 
-// Play button click
-document.getElementById("play").addEventListener("click", () => {
-  socket.emit("play", { telegramId });
+       telegramId = user.id;
 
-  // Hide play button
-  document.getElementById("play").classList.add("hidden");
+    telegramId = user.id;
+    document.getElementById("tgId").innerText = telegramId;
 
-  // Show game area
-  document.getElementById("gameArea").classList.remove("hidden");
-});
-
-// Show komta messages
-socket.on("komta",(msg)=>{
-  document.getElementById("komta").innerText = msg;
-});
-
-// Display player cards
-socket.on("cards", (cards) => {
-  const bottomDiv = document.getElementById("bottomPlayer");
-  bottomDiv.innerHTML = "";
-  cards.forEach(card => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.innerText = card;
-
-    div.addEventListener("click", () => {
-      socket.emit("attack", card);
+    // LOGIN API-ға сұрау
+    fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ telegramId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("balance").innerText = data.balance;
+    })
+    .catch(err => {
+      document.getElementById("balance").innerText = "Error";
     });
 
-    bottomDiv.appendChild(div);
-  });
-});
+  }
 
-// Display table cards
-socket.on("table", (cards) => {
+
+  
+
+
+  const socket = io();
+
+  document.getElementById("play").addEventListener("click",()=>{
+    socket.emit("play",{telegramId});
+  });
+
+
+ 
+
+   socket.on("komta",(msg)=>{
+    document.getElementById("komta").innerText=msg;
+  });
+ socket.on("cards", (cards) => {
+    const cardsDiv = document.getElementById("cards");
+    cardsDiv.innerHTML = ""; // ескі карталарды тазалау
+
+    cards.forEach(card => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerText = card;
+
+      // 👇 карта басқанда "attack" оқиғасын жібереміз
+      div.addEventListener("click", () => {
+        socket.emit("attack", card);
+      });
+
+      cardsDiv.appendChild(div);
+    });
+  });
+
+  socket.on("table", (card) => {
   const tableDiv = document.getElementById("table");
   tableDiv.innerHTML = "";
 
-  if(Array.isArray(cards)) {
-    cards.forEach(card => {
-      const div = document.createElement("div");
-      div.className = "card-played";
-      div.innerText = card;
-      tableDiv.appendChild(div);
-    });
-  } else if(cards) {
-    const div = document.createElement("div");
-    div.className = "card-played";
-    div.innerText = cards;
-    tableDiv.appendChild(div);
-  }
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerText = card;
+
+  tableDiv.appendChild(div);
 });
 
-// Show game winner
+socket.on("error", (msg) => {
+  alert(msg); // немесе қалауыңша DOM-ға шығару
+  console.log("Қате хабар келді:", msg);
+});
+
+
 socket.on("gameWinner", (data) => {
   const winnerBlock = document.getElementById("winner");
-  winnerBlock.classList.remove("hidden");
-  winnerBlock.innerText = `🏆 Жеңімпаз: ${data.telegram} | Баланс: ${data.balans}`;
+  winnerBlock.innerText = 
+    `🏆 Жеңімпаз: ${data.telegram} | Баланс: ${data.balans}`;
+
 });
 
-// Error messages
-socket.on("error", (msg) => alert(msg));
 </script>
 
 </body>
 </html>
+
+
+
+
+
