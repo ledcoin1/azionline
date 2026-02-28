@@ -304,6 +304,18 @@ sendDecisionToCurrentPlayer()
 }});
 
 
+socket.on("decision", (choice) => {
+
+  if (socket.id !== komta.decisionPlayer) {
+    socket.emit("error", "Қазір сен шешім қабылдамайсың");
+    return;
+  }
+
+  console.log("Таңдалды:", choice);
+
+  komta.decisionPlayer = null;
+  
+});
 
 socket.on("attack", (card) => {
 
