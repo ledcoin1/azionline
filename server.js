@@ -183,6 +183,22 @@ function resolveTable(komta) {
   return { winnerId, winningCard };
 }
 
+
+function sendDecisionToCurrentPlayer() {
+
+  const currentPlayer = komta.players.find(p => p.turn === true);
+  if (!currentPlayer) return;
+
+  komta.canAttack = false; // ❗ карта уақытша тоқтайды
+  komta.decisionPlayer = currentPlayer.id;
+
+  io.to(currentPlayer.id).emit("makeDecision", {
+    options: ["gotov", "podnyat", "bito"]
+  });
+
+  console.log("Decision жіберілді:", currentPlayer.telegram);
+}
+
 io.on("connection", (socket) => {
 
   console.log("ойыншы кірді")
@@ -273,6 +289,8 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
 komta.players[0].turn = true;
 komta.players[1].turn = false;
 
+sendDecisionToCurrentPlayer()
+
     
     console.log("Көзір карта:", komta.kozir);
     console.log(komta.players[0].cards);
@@ -282,7 +300,7 @@ komta.players[1].turn = false;
     
     console.log("Ойыншылар:", komta.players);
 
-    socket.emit("komta", "komtadasyndar Kazdar");
+    
 }});
 
 
