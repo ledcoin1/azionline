@@ -143,8 +143,6 @@ function checkGameWinner(komta) {
 let komta = {
 
   players:[],
-   phase: "waiting", 
-  decisionPlayer: null,
   card: null,
   obwiBalans: 0,
   zhenis: null,
@@ -154,14 +152,6 @@ let komta = {
   table2: []
 };
 
-function startDecisionPhase(player){
-  komta.phase = "decision";
-  komta.decisionPlayer = player.id;
-
-  io.to(player.id).emit("makeDecision", {
-    options: ["podnyat", "gotov", "brosit"]
-  });
-}
 
 function resolveTable(komta) {
   const table = komta.table;   // ["9♥", "J♠", ...]
@@ -283,8 +273,6 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
 komta.players[0].turn = true;
 komta.players[1].turn = false;
 
-  startDecisionPhase(komta.players[0]);
-
     
     console.log("Көзір карта:", komta.kozir);
     console.log(komta.players[0].cards);
@@ -298,41 +286,14 @@ komta.players[1].turn = false;
 }});
 
 
-  socket.on("decision", (choice) => {
-
-  if(komta.phase !== "decision") return;
-
-  if(socket.id !== komta.decisionPlayer){
-    socket.emit("error","Қазір сен шешім қабылдамайсың");
-    return;
-  }
-
-  console.log("Ойыншы таңдады:", choice);
-
-  if(choice === "podnyat"){
-    console.log("Ойыншы көтерді");
-    komta.phase = "playing";
-  }
-
-  if(choice === "gotov"){
-    console.log("Ойыншы дайын");
-    komta.phase = "playing";
-  }
-
-  if(choice === "brosit"){
-    console.log("Ойыншы тастады");
-    komta.phase = "playing";
-  }
-
-});
-
 
 socket.on("attack", (card) => {
 
-   if(komta.phase !== "playing"){
-    socket.emit("error","Алдымен шешім қабылдау керек!");
-    return;
-     }
+  if (!komta.canAttack) {
+    socket.emit("error", "Алдымен шешім қабылда!");
+    return; // ❗ ОСЫ МАҢЫЗДЫ
+  }
+
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
 
@@ -502,8 +463,6 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
