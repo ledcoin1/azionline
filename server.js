@@ -140,8 +140,18 @@ function checkGameWinner(komta) {
 }
 
 
-let rooms=[];
+let komta = {
 
+  players:[],
+  card: null,
+  obwiBalans: 0,
+  zhenis: null,
+  raund: null,
+  kozir: null,
+  table: [],
+  table2: []
+};
+ 
 
 function resolveTable(komta) {
   const table = komta.table;   // ["9♥", "J♠", ...]
@@ -195,83 +205,63 @@ io.on("connection", (socket) => {
 
 
   socket.on("play", async (data) => {
+
   try {
+
+    if (komta.players.length >= 2) {
+      socket.emit("toly", "2 adam bar");
+      return;
+    }
+
     const telegramId = data.telegramId;
     if (!telegramId) return;
 
+    // 🔎 БАЗАДАН ҚОЛДАНУШЫНЫ ТАБУ
     const user = await User.findOne({ telegramId });
+
     if (!user) {
+      console.log("❌ Қолданушы табылмады");
       socket.emit("error", "User not found");
       return;
     }
 
+    console.log("👤 Ойыншы балансы:", user.balance);
+
+    // 💰 БАЛАНС ТЕКСЕРУ
     if (user.balance < 500) {
+      console.log("⛔ Баланс жеткіліксіз:", user.balance);
       socket.emit("balanceError", "Баланс 500-ден төмен");
       return;
     }
 
-    // 🔹 Бос комта іздеу (2 ойыншыдан аз болса)
-    let komta = rooms.find(r => r.players.length < 2);
-
-    if (!komta) {
-      // 🔹 Бос комта жоқ → жаңа комта жасау
-      komta = {
-        players: [],
-        deck: [],
-        kozir: null,
-        table: [],
-        table2: [],
-        obwiBalans: 0
-      };
-      rooms.push(komta);
-    }
-
-    // 💰 Балансты алып комта банкіне қосу
+      // 🔥 500 АЛАМЫЗ
     user.balance -= 500;
     await user.save();
+
+    // 🔥 БАНККЕ ҚОСАМЫЗ
     komta.obwiBalans += 500;
 
-    // ✅ Ойыншыны қосу
+    console.log("💰 Комта банкі:", komta.obwiBalans);
+
+    // ✅ ОЙЫНҒА ҚОСУ
     komta.players.push({
       id: socket.id,
       telegram: telegramId,
       cards: [],
       turn: null,
       status: "azirshe",
-      balans: user.balance,
+      balans: user.balance,   // базадағы нақты баланс
       raund: 0,
       turnTimeout: null
     });
 
+    console.log("✅ Ойыншы қосылды:", telegramId);
+
     io.emit("players", komta.players);
-
-    // 🔹 Егер комта толық болса (2 ойыншы) — сенің бұрынғы логикаңмен ойын бастау
-    if (komta.players.length === 2) {
-      deck = kartaTaratu();
-      shuffle(deck);
-
-      komta.players.forEach(player => {
-        for (let i = 0; i < 3; i++) {
-          let card = deck[0];
-          player.cards.push(card);
-          deck.splice(0,1);
-        }
-        io.to(player.id).emit("cards", player.cards);
-      });
-
-      komta.kozir = deck[0];
-      deck.splice(0,1);
-
-      komta.players[0].turn = true;
-      komta.players[1].turn = false;
-
-      sendDecisionToCurrentPlayer(komta); // ⚡ мұнда komta параметрі қосылады
-    }
 
   } catch (err) {
     console.log("❌ Play қатесі:", err);
   }
-
 
 
 
@@ -488,7 +478,6 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
