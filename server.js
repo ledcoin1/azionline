@@ -69,7 +69,33 @@ app.post("/api/admin/balance", async(req,res)=>{
 });
 
 
+function startTurnTimer(komta, playerId) {
+  // бұрынғы таймерді өшіреміз
+  const player = komta.players.find(p => p.id === playerId);
+  if (!player) return;
 
+  if (player.turnTimeout) {
+    clearTimeout(player.turnTimeout);
+  }
+
+  // жаңа 7 секундтық таймер
+  player.turnTimeout = setTimeout(async () => {
+    console.log(`⏰ Уақыт бітті: ${player.telegram}`);
+
+    // автоматты түрде жүрісті қарсыласқа береміз
+    player.turn = false;
+    const nextPlayer = komta.players.find(p => p.id !== player.id);
+    if (nextPlayer) nextPlayer.turn = true;
+
+    // үстелдегі картаны автоматты түрде шешу (немесе тек кезекті беру)
+    io.emit("players", komta.players);
+
+    // кез келген қажет логика
+    // мысалы, егер карта салу міндетті болса, бито деп өтуге болады
+    // await resolveTable(komta); <- қажет болса қосуға болады
+
+  }, 7000); // 7 секунд
+}
 
 
 
@@ -356,8 +382,12 @@ if (existingPlayer) {
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
 
+    startTurnTimer(komta, nextPlayer.id);
+
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
+
+    
 
     if (komta.table.length === komta.players.length) {
       const result = resolveTable(komta);
@@ -436,6 +466,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
