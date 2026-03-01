@@ -140,7 +140,18 @@ function checkGameWinner(komta) {
 }
 
 
-let rooms =[];
+let rooms = []; // барлық комталарды сақтау
+
+function createKomta() {
+  return {
+    players: [],
+    deck: [],
+    kozir: null,
+    table: [],
+    table2: [],
+    obwiBalans: 0
+  };
+}
  
 
 function resolveTable(komta) {
@@ -190,255 +201,173 @@ function sendDecisionToCurrentPlayer() {
 }
 
 io.on("connection", (socket) => {
-
-  console.log("ойыншы кірді")
-
+  console.log("ойыншы кірді");
 
   socket.on("play", async (data) => {
-  try {
-    const telegramId = data.telegramId;
-    if (!telegramId) return;
+    try {
+      const telegramId = data.telegramId;
+      if (!telegramId) return;
 
-    const user = await User.findOne({ telegramId });
-    if (!user) {
-      socket.emit("error", "User not found");
-      return;
-    }
-
-    if (user.balance < 500) {
-      socket.emit("balanceError", "Баланс 500-ден төмен");
-      return;
-    }
-
-    // 🔹 Бос комта іздеу (2 адамға дейін)
-    let komta = rooms.find(r => r.players.length < 2);
-
-    // 🔹 Егер бос комта жоқ → жаңа комта жасау
-    if (!komta) {
-      komta = {
-        players: [],
-        deck: [],
-        kozir: null,
-        table: [],
-        table2: [],
-        obwiBalans: 0
-      };
-      rooms.push(komta);
-    }
-
-    // 🔥 500 алу
-    user.balance -= 500;
-    await user.save();
-
-    komta.obwiBalans += 500;
-
-    // ✅ Ойыншыны комтаға қосу
-    komta.players.push({
-      id: socket.id,
-      telegram: telegramId,
-      cards: [],
-      turn: null,
-      status: "azirshe",
-      balans: user.balance,
-      raund: 0,
-      turnTimeout: null
-    });
-
-    io.emit("players", komta.players);
-
-    // 🔹 Егер комта толық (2 адам) → ойын бастау
-    if (komta.players.length === 2) {
-      komta.deck = kartaTaratu();
-      shuffle(komta.deck);
-
-      komta.players.forEach(player => {
-        for (let i = 0; i < 3; i++) {
-          let card = komta.deck.shift();
-          player.cards.push(card);
-        }
-        io.to(player.id).emit("cards", player.cards);
-      });
-
-      komta.kozir = komta.deck.shift();
-
-      komta.players[0].turn = true;
-      komta.players[1].turn = false;
-
-      console.log("Көзір карта:", komta.kozir);
-      console.log("Ойыншылар:", komta.players);
-
-      // sendDecisionToCurrentPlayer() бұрынғыдай жұмыс істейді
-    }
-
-  } catch (err) {
-    console.log("❌ Play қатесі:", err);
-  }
-});
-
-
-socket.on("attack", (card) => {
-
-  
-
-  const player = komta.players.find(p => p.id === socket.id);
-  if (!player) return;
-
-  // Қолында карта бар ма?
-  if (!player.cards.includes(card)) {
-    socket.emit("error", "Сенде мұндай карта жоқ!");
-    return;
-  }
-
-  // ⚡ Turn тексеру: ойыншының кезегі ме?
-  if (!player.turn) {
-    socket.emit("error", "Қазір сенің жүрісің емес!");
-    return;
-  }
-
-  console.log(`${player.telegram} дұрыс карта жіберді және turn дұрыс: ${card}`);
-if (komta.table.length > 0) {
-  console.log("үстелде карта бар");
-
-  // 🟢 Мастьтарды дұрыс алу
-  const tableSuit = komta.table[0].slice(-1);   // үстел масты
-  const cardSuit = card.slice(-1);              // жүрген карта масты
-  const trumpSuit = komta.kozir.slice(-1);      // көзір масты
-
-  console.log("Үстел масты:", tableSuit);
-  console.log("Көзір масты:", trumpSuit);
-  console.log("Ойыншы карталары:", player.cards);
-
-  // 🟢 Қолында үстел масты бар ма?
-  const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
-
-  if (hasSuit) {
-    // Міндетті түрде сол мастьпен жүру керек
-    if (cardSuit !== tableSuit) {
-      socket.emit("error", "Сол мастьпен жүру керек!");
-      return;
-    }
-
-    console.log("✅ Дұрыс мастьпен жүрді");
-  } 
-  else {
-    console.log("❌ Ойыншы қолында үстел масты ЖОҚ");
-
-    // 🟢 Қолында көзір бар ма?
-    const hasTrump = player.cards.some(c => c.slice(-1) === trumpSuit);
-
-    if (hasTrump) {
-      // Міндетті түрде көзірмен жүру керек
-      if (cardSuit !== trumpSuit) {
-        socket.emit("error", "Көзірмен жүру керек!");
+      // 🔎 БАЗАДАН ҚОЛДАНУШЫНЫ ТАБУ
+      const user = await User.findOne({ telegramId });
+      if (!user) {
+        console.log("❌ Қолданушы табылмады");
+        socket.emit("error", "User not found");
         return;
       }
 
-      console.log("✅ Көзірмен дұрыс жүрді");
-    } 
-    else {
-      // Масть те жоқ, көзір де жоқ → кез келген карта
-      console.log("🔥 Кез келген карта жүруге болады");
+      console.log("👤 Ойыншы балансы:", user.balance);
+
+      // 💰 БАЛАНС ТЕКСЕРУ
+      if (user.balance < 500) {
+        console.log("⛔ Баланс жеткіліксіз:", user.balance);
+        socket.emit("balanceError", "Баланс 500-ден төмен");
+        return;
+      }
+
+      // 🔹 Бос комта іздеу
+      let komta = rooms.find(r => r.players.length < 2);
+
+      // 🔹 Егер бос комта жоқ → жаңа комта жасау
+      if (!komta) {
+        komta = createKomta();
+        rooms.push(komta);
+      }
+
+      // 🔥 500 АЛАМЫЗ
+      user.balance -= 500;
+      await user.save();
+
+      // 🔥 БАНККЕ ҚОСАМЫЗ
+      komta.obwiBalans += 500;
+
+      console.log("💰 Комта банкі:", komta.obwiBalans);
+
+      // ✅ ОЙЫНҒА ҚОСУ
+      komta.players.push({
+        id: socket.id,
+        telegram: telegramId,
+        cards: [],
+        turn: null,
+        status: "azirshe",
+        balans: user.balance,
+        raund: 0,
+        turnTimeout: null
+      });
+
+      console.log("✅ Ойыншы қосылды:", telegramId);
+
+      io.emit("players", komta.players);
+
+      // 🔹 Егер комтада 2 адам болса, ойын бастау
+      if (komta.players.length === 2) {
+        komta.deck = kartaTaratu();
+        shuffle(komta.deck);
+
+        komta.players.forEach(player => {
+          for (let i = 0; i < 3; i++) {
+            let card = komta.deck[0];
+            player.cards.push(card);
+            komta.deck.splice(0, 1);
+          }
+          io.to(player.id).emit("cards", player.cards);
+        });
+
+        komta.kozir = komta.deck[0];
+        komta.deck.splice(0, 1);
+
+        komta.players[0].turn = true;
+        komta.players[1].turn = false;
+
+        console.log("Көзір карта:", komta.kozir);
+        console.log("Ойыншылар:", komta.players);
+      }
+
+    } catch (err) {
+      console.log("❌ Play қатесі:", err);
     }
-  }
-  console.log("✅ Жүріс қабылданды");
-
-  // Картаны үстелге салу
-komta.table.push(card);
-  komta.table2.push(player.id);
-
-// Қолдан алып тастау
-player.cards = player.cards.filter(c => c !== card);
-
-// Кезекті ауыстыру
-player.turn = false;
-
-const nextPlayer = komta.players.find(p => p.id !== player.id);
-if (nextPlayer) {
-  nextPlayer.turn = true;
-}
-
-// Клиентке жіберу
-io.emit("table", komta.table);
-io.to(player.id).emit("cards", player.cards);
-
-
-   // Барлық ойыншылар жүрді ме?
-    if (komta.table.length === komta.players.length) {
-        console.log("✅ Барлық ойыншылар жүрді — үстел толық");
-      const result = resolveTable(komta);
-      const winner = komta.players.find(p => p.id === result.winnerId);
-
-
-       if (!winner) return;
-
-  // 👇 МІНЕ ОСЫ ЖЕР
-  winner.raund += 1;
-
-       console.log(`🏆 Раунд жеңімпазы: ${winner.telegram}`);
-  console.log(`🔥 Оның раунд саны: ${winner.raund}`);
-
-  checkGameWinner(komta); // 👈 осында
-
-
-
-        komta.players.forEach(p => p.turn = false);
-  winner.turn = true;
-  // Үстелді тазалау келесі раундқа
-  komta.table = [];
-  komta.table2 = [];
-  io.emit("table", komta.table);
-  io.emit("players", komta.players);
-    } else {
-        console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
-    }
-}
-
-
-  else {
-    console.log("karta zhok ustelde");
-
-   komta.table.push(card);
-    komta.table2.push(player.id);
-    player.cards = player.cards.filter(c=>c !== card);
-
-     // 3️⃣ Кезекті ауыстыру
-  player.turn = false;
-
-  const nextPlayer = komta.players.find(p => p.id !== player.id);
-  if (nextPlayer) {
-    nextPlayer.turn = true;
-  }
-    io.emit("table",komta.table);
-    io.to(player.id).emit("cards", player.cards);
-
-     // Барлық ойыншылар жүрді ме?
-    if (komta.table.length === komta.players.length) {
-        console.log("✅ Барлық ойыншылар жүрді — үстел толық");
-      const result = resolveTable(komta);
-      const winner = komta.players.find(p => p.id === result.winnerId);
-       console.log(`🏆 Жеңген ойыншы: ${winner.telegram}, карта: ${result.winningCard}`);
-    } else {
-        console.log(`ℹ️ Жүрген ойыншылар саны: ${komta.table.length}/${komta.players.length}`);
-    }
-  }
-});
-
-
-
-
-
-  socket.on("disconnect",()=>{
-    komta.players = komta.players.filter(player => 
-    player.id !== socket.id
-  );
-
-  console.log("wygyp ketti");
-  console.log(komta);
   });
 
+  // 🔹 attack логикасын өзгеріссіз қалдырдық
+  socket.on("attack", (card) => {
+    // кімнің комтасында ойнап отырғанын табу
+    let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
+    if (!komta) return;
+
+    const player = komta.players.find(p => p.id === socket.id);
+    if (!player) return;
+
+    if (!player.cards.includes(card)) {
+      socket.emit("error", "Сенде мұндай карта жоқ!");
+      return;
+    }
+
+    if (!player.turn) {
+      socket.emit("error", "Қазір сенің жүрісің емес!");
+      return;
+    }
+
+    console.log(`${player.telegram} дұрыс карта жіберді: ${card}`);
+
+    if (komta.table.length > 0) {
+      const tableSuit = komta.table[0].slice(-1);
+      const cardSuit = card.slice(-1);
+      const trumpSuit = komta.kozir.slice(-1);
+
+      const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
+
+      if (hasSuit && cardSuit !== tableSuit) {
+        socket.emit("error", "Сол мастьпен жүру керек!");
+        return;
+      } else if (!hasSuit) {
+        const hasTrump = player.cards.some(c => c.slice(-1) === trumpSuit);
+        if (hasTrump && cardSuit !== trumpSuit) {
+          socket.emit("error", "Көзірмен жүру керек!");
+          return;
+        }
+      }
+    }
+
+    // карта үстелге
+    komta.table.push(card);
+    komta.table2.push(player.id);
+    player.cards = player.cards.filter(c => c !== card);
+
+    // кезекті ауыстыру
+    player.turn = false;
+    const nextPlayer = komta.players.find(p => p.id !== player.id);
+    if (nextPlayer) nextPlayer.turn = true;
+
+    io.emit("table", komta.table);
+    io.to(player.id).emit("cards", player.cards);
+
+    if (komta.table.length === komta.players.length) {
+      const result = resolveTable(komta);
+      const winner = komta.players.find(p => p.id === result.winnerId);
+      if (winner) winner.raund += 1;
+
+      checkGameWinner(komta);
+
+      komta.players.forEach(p => p.turn = false);
+      if (winner) winner.turn = true;
+
+      komta.table = [];
+      komta.table2 = [];
+      io.emit("table", komta.table);
+      io.emit("players", komta.players);
+    }
+  });
+
+  // 🔹 disconnect
+  socket.on("disconnect", () => {
+    // кімнің комтасында екенін тауып алып, жою
+    let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
+    if (!komta) return;
+
+    komta.players = komta.players.filter(p => p.id !== socket.id);
+    console.log("wygyp ketti", socket.id);
+  });
 });
-
-
 
 
 
@@ -449,6 +378,7 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
