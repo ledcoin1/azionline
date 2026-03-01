@@ -193,46 +193,7 @@ function resolveTable(komta) {
 }
 
 
-function startTurnTimer(komta, player) {
-  if (!player) return;
 
-  // Ескі таймерді тоқтату
-  if (player.turnTimeout) clearTimeout(player.turnTimeout);
-
-  player.turnTimeout = setTimeout(async () => {
-    console.log("⏰ Таймер өтті, ойыншы жеңіліп қалды:", player.telegram);
-
-    // Келесі ойыншы жеңімпаз болып алады
-    const remainingPlayer = komta.players.find(p => p.id !== player.id);
-    if (remainingPlayer) {
-      remainingPlayer.balans += komta.obwiBalans;
-
-      const user = await User.findOne({ telegramId: remainingPlayer.telegram });
-      if (user) {
-        user.balance = remainingPlayer.balans;
-        await user.save();
-      }
-
-      io.to(remainingPlayer.id).emit("gameWinner", {
-        telegram: remainingPlayer.telegram,
-        balans: remainingPlayer.balans,
-        prize: komta.obwiBalans
-      });
-
-      komta.obwiBalans = 0;
-    }
-
-    // Таймер өтіп кеткен ойыншыны комтадан шығару
-    komta.players = komta.players.filter(p => p.id !== player.id);
-    io.to(komta.id).emit("players", komta.players);
-
-    // Егер комта бос болса жою
-    if (komta.players.length === 0) {
-      rooms = rooms.filter(r => r !== komta);
-      console.log("Комта бос, жойылды");
-    }
-  }, 7000); // 7 секунд
-}
 
 io.on("connection", (socket) => {
   console.log("ойыншы кірді");
@@ -243,12 +204,12 @@ io.on("connection", (socket) => {
       if (!telegramId) return;
 
       // 🔹 Егер ойыншы бұрыннан комтада болса, қайта қосылуына жол бермейміз
-      let existingPlayer = rooms.some(r => r.players.some(p => p.telegram === telegramId));
-      if (existingPlayer) {
-        console.log("❌ Ойыншы бұрыннан ойында:", telegramId);
-        socket.emit("error", "Сен қазір комтадасың");
-        return;
-      }
+let existingPlayer = rooms.some(r => r.players.some(p => p.telegram === telegramId));
+if (existingPlayer) {
+  console.log("❌ Ойыншы бұрыннан ойында:", telegramId);
+  socket.emit("error", "Сен қазір комтадасың");
+  return;
+}
 
       // 🔎 БАЗАДАН ҚОЛДАНУШЫНЫ ТАБУ
       const user = await User.findOne({ telegramId });
@@ -294,9 +255,9 @@ io.on("connection", (socket) => {
         status: "azirshe",
         balans: user.balance,
         raund: 0,
-        turnTimeout: null // ⬅️ Таймер үшін
+        turnTimeout: null
       });
-      socket.join(komta.id);
+      socket.join(komta.id); // 🔥 ОСЫ ЖОҚ СЕНДЕ
 
       console.log("✅ Ойыншы қосылды:", telegramId);
 
@@ -325,9 +286,6 @@ io.on("connection", (socket) => {
 
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
-
-        // 🔔 Бастапқы таймерді қосу бірінші ойыншыға
-        startTurnTimer(komta, komta.players[0]);
       }
 
     } catch (err) {
@@ -337,6 +295,7 @@ io.on("connection", (socket) => {
 
   // 🔹 attack логикасын өзгеріссіз қалдырдық
   socket.on("attack", async (card) => {
+    // кімнің комтасында ойнап отырғанын табу
     let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
     if (!komta) return;
 
@@ -374,12 +333,6 @@ io.on("connection", (socket) => {
       }
     }
 
-    // Таймерді тоқтату
-    if (player.turnTimeout) {
-      clearTimeout(player.turnTimeout);
-      player.turnTimeout = null;
-    }
-
     // карта үстелге
     komta.table.push(card);
     komta.table2.push(player.id);
@@ -388,10 +341,7 @@ io.on("connection", (socket) => {
     // кезекті ауыстыру
     player.turn = false;
     const nextPlayer = komta.players.find(p => p.id !== player.id);
-    if (nextPlayer) {
-      nextPlayer.turn = true;
-      startTurnTimer(komta, nextPlayer); // ⬅️ Келесі ойыншыға таймер
-    }
+    if (nextPlayer) nextPlayer.turn = true;
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -413,44 +363,58 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 🔹 disconnect логикасын өзгертпей қалдырдық
-  socket.on("disconnect", async () => {
-    let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
-    if (!komta) return;
+  // 🔹 disconnect
+ socket.on("disconnect", async () => {
+  // кімнің комтасында екенін тауып алу
+  let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
+  if (!komta) return;
 
-    const leaver = komta.players.find(p => p.id === socket.id);
-    const remainingPlayer = komta.players.find(p => p.id !== socket.id);
+  // шығып кеткен ойыншы
+  const leaver = komta.players.find(p => p.id === socket.id);
 
-    console.log("Ойыншы кетті:", socket.id);
+  // қалған ойыншы
+  const remainingPlayer = komta.players.find(p => p.id !== socket.id);
 
-    if (komta.players.length === 2 && remainingPlayer) {
-      console.log("🏆 Жеңімпаз қалған ойыншы:", remainingPlayer.telegram);
-      remainingPlayer.balans += komta.obwiBalans;
+  console.log("Ойыншы кетті:", socket.id);
 
-      const user = await User.findOne({ telegramId: remainingPlayer.telegram });
-      if (user) {
-        user.balance = remainingPlayer.balans;
-        await user.save();
-      }
+  // ойынға тек 2 адам қатысса және біреуі кетті → қалғанын жеңімпаз етіп беру
+  if (komta.players.length === 2 && remainingPlayer) {
+    console.log("🏆 Жеңімпаз қалған ойыншы:", remainingPlayer.telegram);
 
-      io.to(remainingPlayer.id).emit("gameWinner", {
-        telegram: remainingPlayer.telegram,
-        balans: remainingPlayer.balans,
-        prize: komta.obwiBalans
-      });
+    // балансқа комта банкін қосу
+    remainingPlayer.balans += komta.obwiBalans;
 
-      komta.obwiBalans = 0;
+    // егер базада сақтағың келсе:
+    const user = await User.findOne({ telegramId: remainingPlayer.telegram });
+    if (user) {
+      user.balance = remainingPlayer.balans;
+      await user.save();
     }
 
-    komta.players = komta.players.filter(p => p.id !== socket.id);
+    // клиентке жіберу
+    io.to(remainingPlayer.id).emit("gameWinner", {
+      telegram: remainingPlayer.telegram,
+      balans: remainingPlayer.balans,
+      prize: komta.obwiBalans
+    });
 
-    if (komta.players.length === 0) {
-      rooms = rooms.filter(r => r !== komta);
-      console.log("Комта бос, жойылды");
-    } else {
-      komta.players.forEach(p => io.to(p.id).emit("players", komta.players));
-    }
-  });
+    // комта банкін тазалау
+    komta.obwiBalans = 0;
+  }
+
+  // ойыншыны комтадан жою
+  komta.players = komta.players.filter(p => p.id !== socket.id);
+
+  // егер комта бос қалса, оны rooms тізімінен шығару
+  if (komta.players.length === 0) {
+    rooms = rooms.filter(r => r !== komta);
+    console.log("Комта бос, жойылды");
+  } else {
+    // қалған ойыншыларға жаңартылған тізім
+    komta.players.forEach(p => io.to(p.id).emit("players", komta.players));
+  }
+});
+
 
 });
 
@@ -459,7 +423,6 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
