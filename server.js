@@ -151,6 +151,7 @@ let rooms = []; // барлық комталарды сақтау
 
 function createKomta() {
   return {
+    id: "room_" + Date.now(), // 🔥 МАҢЫЗДЫ
     players: [],
     deck: [],
     kozir: null,
@@ -261,10 +262,11 @@ io.on("connection", (socket) => {
         raund: 0,
         turnTimeout: null
       });
+      socket.join(komta.id); // 🔥 ОСЫ ЖОҚ СЕНДЕ
 
       console.log("✅ Ойыншы қосылды:", telegramId);
 
-      io.emit("players", komta.players);
+      io.to(komta.id).emit("players", komta.players);
 
       // 🔹 Егер комтада 2 адам болса, ойын бастау
       if (komta.players.length === 2) {
@@ -282,6 +284,7 @@ io.on("connection", (socket) => {
 
         komta.kozir = komta.deck[0];
         komta.deck.splice(0, 1);
+        io.to(komta.id).emit("kozir", komta.kozir);
 
         komta.players[0].turn = true;
         komta.players[1].turn = false;
@@ -385,6 +388,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
