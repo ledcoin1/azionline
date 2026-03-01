@@ -130,7 +130,7 @@ body{
   color:gold;
 }
 
-  #table-center {
+#table-center {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -144,9 +144,6 @@ body{
 </head>
 <body>
 
-
-
-  
 <div class="top">
   <div>ID: <span id="tgId"></span></div>
   <div>Balance: <span id="balance"></span></div>
@@ -162,23 +159,23 @@ body{
 
   <div class="table" id="table"></div>
 
+  <!-- 🔥 ТЕК ОСЫ ЖЕР ӨЗГЕРДІ (game ішіне кірді) -->
+  <div id="table-center">
+    <div id="kozir-card"></div>
+  </div>
+
   <div class="myCards" id="myCards"></div>
 
   <div id="winner" class="winner"></div>
 
 </div>
 
-
-  <div id="decisionBox" style="display:none;">
+<div id="decisionBox" style="display:none;">
   <button onclick="sendDecision('podnyat')">Поднять</button>
   <button onclick="sendDecision('gotov')">Готов</button>
   <button onclick="sendDecision('brosit')">Бросить</button>
 </div>
 
-
-  <div id="table-center">
-  <div id="kozir-card" class="card-back"></div>
-</div>
 <script>
 const socket = io();
 const tg = window.Telegram.WebApp;
@@ -206,7 +203,6 @@ play.onclick=()=>{
   socket.emit("play",{ telegramId });
 };
 
-/* PLAYERS */
 socket.on("players",(players)=>{
   const me=players.find(p=>p.telegram==telegramId);
   if(players.length===2){
@@ -218,7 +214,6 @@ socket.on("players",(players)=>{
     turnInfo.innerText=me.turn?"🔥 Сенің кезегің":"⏳ Қарсылас жүріп жатыр";
   }
 
-  /* қарсылас жабық 3 карта */
   const opponent=players.find(p=>p.telegram!=telegramId);
   opponentCards.innerHTML="";
   if(opponent){
@@ -230,7 +225,6 @@ socket.on("players",(players)=>{
   }
 });
 
-/* МЕНІҢ КАРТАЛАР */
 socket.on("cards",(cards)=>{
   myCards.innerHTML="";
   cards.forEach(card=>{
@@ -242,7 +236,6 @@ socket.on("cards",(cards)=>{
   });
 });
 
-/* ҮСТЕЛ */
 socket.on("table",(cards)=>{
   table.innerHTML="";
   cards.forEach(card=>{
@@ -253,23 +246,19 @@ socket.on("table",(cards)=>{
   });
 });
 
-/* ЖЕҢІМПАЗ */
 socket.on("gameWinner",(data)=>{
   winner.innerText="🏆 "+data.telegram+" жеңді!";
 });
 
-/* БАНК */
 socket.on("players",(players)=>{
   let bank=players.length*500;
   document.getElementById("bank").innerText=bank;
 });
 
-/* ҚАТЕ */
 socket.on("error",(msg)=>alert(msg));
 socket.on("balanceError",(msg)=>alert(msg));
 
-
-  socket.on("makeDecision", (data) => {
+socket.on("makeDecision", (data) => {
   document.getElementById("decisionBox").style.display = "block";
 });
 
@@ -278,21 +267,11 @@ function sendDecision(choice){
   document.getElementById("decisionBox").style.display = "none";
 }
 
-
-  socket.on("kozir", (kozirCard) => {
-  console.log("Көзір келді:", kozirCard);
-
+socket.on("kozir", (kozirCard) => {
   const kozirDiv = document.getElementById("kozir-card");
-
-  // егер сурет арқылы көрсетсең:
   kozirDiv.innerHTML = `<img src="/cards/${kozirCard}.png" class="card-img">`;
-
-  // немесе текстпен:
-  // kozirDiv.innerText = kozirCard;
 });
 </script>
 
 </body>
 </html>
-
-
