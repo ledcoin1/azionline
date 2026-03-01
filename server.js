@@ -108,34 +108,45 @@ shuffle(deck);             // араласты
 console.log(deck);         // енді әр түрлі ретпен
 
 function checkGameWinner(komta) {
-
   const gameWinner = komta.players.find(p => p.raund >= 2);
   if (!gameWinner) return;
 
-  console.log(`🏆 КОМТА ЖЕҢІМПАЗЫ: ${gameWinner.telegram}`);
+  // 🔹 Жеңімпазға комта банкінен беру
+  const prize = komta.obwiBalans;
+  console.log(`🏆 КОМТА ЖЕҢІМПАЗЫ: ${gameWinner.telegram}, ұтып алған: ${prize}`);
 
+  gameWinner.balans += prize;  // балансына қосу
+  komta.obwiBalans = 0;        // комта банкін босату
+
+  // Клиентке жіберу
   io.emit("gameWinner", {
     telegram: gameWinner.telegram,
-    balans: gameWinner.balans
+    balans: gameWinner.balans,
+    prize: prize
   });
 
   // 🔥 3 секунд күтеміз (клиент көрсетуі үшін)
   setTimeout(() => {
-
     console.log("♻️ Комта толық тазартылды");
 
-    // Үстел тазалау
+    // Үстелді тазалау
     komta.table = [];
     komta.table2 = [];
 
-    // Ойыншыларды толық тазалау
+    // Ойыншыларды тазалау
     komta.players = [];
+
+    // Колода мен көзірді тазалау
+    komta.deck = [];
+    komta.kozir = null;
+
+    // Комта банкін тазалау (барлығы беріледі жеңімпазға)
+    komta.obwiBalans = 0;
 
     // Клиентке бос күй жіберу
     io.emit("table", []);
     io.emit("players", []);
     io.emit("resetGame");
-
   }, 3000);
 }
 
@@ -378,6 +389,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
