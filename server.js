@@ -107,45 +107,41 @@ let deck = kartaTaratu(); // 36 карта дайын
 shuffle(deck);             // араласты
 console.log(deck);         // енді әр түрлі ретпен
 
-function checkGameWinner(komta) {
+async function checkGameWinner(komta) {
   const gameWinner = komta.players.find(p => p.raund >= 2);
   if (!gameWinner) return;
 
-  // 🔹 Жеңімпазға комта банкінен беру
   const prize = komta.obwiBalans;
-  console.log(`🏆 КОМТА ЖЕҢІМПАЗЫ: ${gameWinner.telegram}, ұтып алған: ${prize}`);
 
-  gameWinner.balans += prize;  // балансына қосу
-  komta.obwiBalans = 0;        // комта банкін босату
+  console.log(`🏆 ЖЕҢІМПАЗ: ${gameWinner.telegram}, ұтып алған: ${prize}`);
 
-  // Клиентке жіберу
+  // 🔥 БАЗАДАН ТАБУ
+  const user = await User.findOne({ telegramId: gameWinner.telegram });
+  if (!user) return;
+
+  // 🔥 БАЗАҒА ҚОСУ
+  user.balance += prize;
+  await user.save();
+
+  // 🔥 ОБЪЕКТТІ ДЕ ЖАҢАРТУ (клиентке көрсету үшін)
+  gameWinner.balans = user.balance;
+
+  komta.obwiBalans = 0;
+
   io.emit("gameWinner", {
     telegram: gameWinner.telegram,
-    balans: gameWinner.balans,
+    balans: user.balance,
     prize: prize
   });
 
-  // 🔥 3 секунд күтеміз (клиент көрсетуі үшін)
   setTimeout(() => {
-    console.log("♻️ Комта толық тазартылды");
-
-    // Үстелді тазалау
+    komta.players = [];
     komta.table = [];
     komta.table2 = [];
-
-    // Ойыншыларды тазалау
-    komta.players = [];
-
-    // Колода мен көзірді тазалау
     komta.deck = [];
     komta.kozir = null;
-
-    // Комта банкін тазалау (барлығы беріледі жеңімпазға)
     komta.obwiBalans = 0;
 
-    // Клиентке бос күй жіберу
-    io.emit("table", []);
-    io.emit("players", []);
     io.emit("resetGame");
   }, 3000);
 }
@@ -357,7 +353,7 @@ io.on("connection", (socket) => {
       const winner = komta.players.find(p => p.id === result.winnerId);
       if (winner) winner.raund += 1;
 
-      checkGameWinner(komta);
+      await checkGameWinner(komta);
 
       komta.players.forEach(p => p.turn = false);
       if (winner) winner.turn = true;
@@ -389,6 +385,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
