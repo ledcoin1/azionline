@@ -216,6 +216,14 @@ io.on("connection", (socket) => {
       const telegramId = data.telegramId;
       if (!telegramId) return;
 
+      // 🔹 Егер ойыншы бұрыннан комтада болса, қайта қосылуына жол бермейміз
+let existingPlayer = rooms.some(r => r.players.some(p => p.telegram === telegramId));
+if (existingPlayer) {
+  console.log("❌ Ойыншы бұрыннан ойында:", telegramId);
+  socket.emit("error", "Сен қазір комтадасың");
+  return;
+}
+
       // 🔎 БАЗАДАН ҚОЛДАНУШЫНЫ ТАБУ
       const user = await User.findOne({ telegramId });
       if (!user) {
@@ -428,6 +436,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
