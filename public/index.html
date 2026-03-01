@@ -130,11 +130,25 @@ body{
   color:gold;
 }
 
+/* 🔥 Көзірді үстел ортасына шығару */
 #table-center {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top:35%;
+  left:50%;
+  transform:translateX(-50%);
+  width:100px;
+  height:140px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:50;
+}
+
+#kozir-card img {
+  width:80px;
+  height:auto;
+  border-radius:8px;
+  box-shadow:0 5px 10px rgba(0,0,0,0.5);
 }
 
 .card-img {
@@ -159,7 +173,7 @@ body{
 
   <div class="table" id="table"></div>
 
-  <!-- 🔥 ТЕК ОСЫ ЖЕР ӨЗГЕРДІ (game ішіне кірді) -->
+  <!-- 🔥 Көзір div енді осы жерде -->
   <div id="table-center">
     <div id="kozir-card"></div>
   </div>
@@ -203,6 +217,7 @@ play.onclick=()=>{
   socket.emit("play",{ telegramId });
 };
 
+/* PLAYERS */
 socket.on("players",(players)=>{
   const me=players.find(p=>p.telegram==telegramId);
   if(players.length===2){
@@ -214,6 +229,7 @@ socket.on("players",(players)=>{
     turnInfo.innerText=me.turn?"🔥 Сенің кезегің":"⏳ Қарсылас жүріп жатыр";
   }
 
+  /* қарсылас жабық 3 карта */
   const opponent=players.find(p=>p.telegram!=telegramId);
   opponentCards.innerHTML="";
   if(opponent){
@@ -225,6 +241,7 @@ socket.on("players",(players)=>{
   }
 });
 
+/* МЕНІҢ КАРТАЛАР */
 socket.on("cards",(cards)=>{
   myCards.innerHTML="";
   cards.forEach(card=>{
@@ -236,6 +253,7 @@ socket.on("cards",(cards)=>{
   });
 });
 
+/* ҮСТЕЛ */
 socket.on("table",(cards)=>{
   table.innerHTML="";
   cards.forEach(card=>{
@@ -246,18 +264,22 @@ socket.on("table",(cards)=>{
   });
 });
 
+/* ЖЕҢІМПАЗ */
 socket.on("gameWinner",(data)=>{
   winner.innerText="🏆 "+data.telegram+" жеңді!";
 });
 
+/* БАНК */
 socket.on("players",(players)=>{
   let bank=players.length*500;
   document.getElementById("bank").innerText=bank;
 });
 
+/* ҚАТЕ */
 socket.on("error",(msg)=>alert(msg));
 socket.on("balanceError",(msg)=>alert(msg));
 
+/* DECISION */
 socket.on("makeDecision", (data) => {
   document.getElementById("decisionBox").style.display = "block";
 });
@@ -267,9 +289,11 @@ function sendDecision(choice){
   document.getElementById("decisionBox").style.display = "none";
 }
 
+/* 🔥 Көзірді клиентте көрсету */
 socket.on("kozir", (kozirCard) => {
+  console.log("Көзір келді:", kozirCard);
   const kozirDiv = document.getElementById("kozir-card");
-  kozirDiv.innerHTML = `<img src="/cards/${kozirCard}.png" class="card-img">`;
+  kozirDiv.innerHTML = `<img src="/cards/${kozirCard}.png" alt="${kozirCard}" />`;
 });
 </script>
 
