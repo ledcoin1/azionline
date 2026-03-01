@@ -296,7 +296,7 @@ io.on("connection", (socket) => {
   });
 
   // 🔹 attack логикасын өзгеріссіз қалдырдық
-  socket.on("attack", (card) => {
+  socket.on("attack", async (card) => {
     // кімнің комтасында ойнап отырғанын табу
     let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
     if (!komta) return;
@@ -385,6 +385,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
