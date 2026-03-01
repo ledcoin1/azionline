@@ -289,7 +289,7 @@ if (komta.players.length === 2) {   // егер 2 ойыншы кірсе
 komta.players[0].turn = true;
 komta.players[1].turn = false;
 
-sendDecisionToCurrentPlayer()
+
 
     
     console.log("Көзір карта:", komta.kozir);
@@ -304,25 +304,10 @@ sendDecisionToCurrentPlayer()
 }});
 
 
-socket.on("decision", (choice) => {
-
-  if (socket.id !== komta.decisionPlayer) {
-    socket.emit("error", "Қазір сен шешім қабылдамайсың");
-    return;
-  }
-
-  console.log("Таңдалды:", choice);
-
-  komta.decisionPlayer = null;
-  
-});
 
 socket.on("attack", (card) => {
 
-  if (!komta.canAttack) {
-    socket.emit("error", "Алдымен шешім қабылда!");
-    return; // ❗ ОСЫ МАҢЫЗДЫ
-  }
+  
 
   const player = komta.players.find(p => p.id === socket.id);
   if (!player) return;
@@ -493,7 +478,6 @@ io.to(player.id).emit("cards", player.cards);
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
 
 
 
