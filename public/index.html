@@ -129,10 +129,24 @@ body{
   font-size:28px;
   color:gold;
 }
+
+  #table-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.card-img {
+  width: 80px;
+}
 </style>
 </head>
 <body>
 
+
+
+  
 <div class="top">
   <div>ID: <span id="tgId"></span></div>
   <div>Balance: <span id="balance"></span></div>
@@ -159,6 +173,11 @@ body{
   <button onclick="sendDecision('podnyat')">Поднять</button>
   <button onclick="sendDecision('gotov')">Готов</button>
   <button onclick="sendDecision('brosit')">Бросить</button>
+</div>
+
+
+  <div id="table-center">
+  <div id="kozir-card" class="card-back"></div>
 </div>
 <script>
 const socket = io();
@@ -258,8 +277,22 @@ function sendDecision(choice){
   socket.emit("decision", choice);
   document.getElementById("decisionBox").style.display = "none";
 }
+
+
+  socket.on("kozir", (kozirCard) => {
+  console.log("Көзір келді:", kozirCard);
+
+  const kozirDiv = document.getElementById("kozir-card");
+
+  // егер сурет арқылы көрсетсең:
+  kozirDiv.innerHTML = `<img src="/cards/${kozirCard}.png" class="card-img">`;
+
+  // немесе текстпен:
+  // kozirDiv.innerText = kozirCard;
+});
 </script>
 
 </body>
 </html>
+
 
