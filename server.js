@@ -369,16 +369,56 @@ io.on("connection", (socket) => {
   });
 
   // 🔹 disconnect
-  socket.on("disconnect", () => {
-    // кімнің комтасында екенін тауып алып, жою
-    let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
-    if (!komta) return;
+ socket.on("disconnect", async () => {
+  // кімнің комтасында екенін тауып алу
+  let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
+  if (!komta) return;
 
-    komta.players = komta.players.filter(p => p.id !== socket.id);
-    console.log("wygyp ketti", socket.id);
-  });
+  // шығып кеткен ойыншы
+  const leaver = komta.players.find(p => p.id === socket.id);
+
+  // қалған ойыншы
+  const remainingPlayer = komta.players.find(p => p.id !== socket.id);
+
+  console.log("Ойыншы кетті:", socket.id);
+
+  // ойынға тек 2 адам қатысса және біреуі кетті → қалғанын жеңімпаз етіп беру
+  if (komta.players.length === 2 && remainingPlayer) {
+    console.log("🏆 Жеңімпаз қалған ойыншы:", remainingPlayer.telegram);
+
+    // балансқа комта банкін қосу
+    remainingPlayer.balans += komta.obwiBalans;
+
+    // егер базада сақтағың келсе:
+    const user = await User.findOne({ telegramId: remainingPlayer.telegram });
+    if (user) {
+      user.balance = remainingPlayer.balans;
+      await user.save();
+    }
+
+    // клиентке жіберу
+    io.to(remainingPlayer.id).emit("gameWinner", {
+      telegram: remainingPlayer.telegram,
+      balans: remainingPlayer.balans,
+      prize: komta.obwiBalans
+    });
+
+    // комта банкін тазалау
+    komta.obwiBalans = 0;
+  }
+
+  // ойыншыны комтадан жою
+  komta.players = komta.players.filter(p => p.id !== socket.id);
+
+  // егер комта бос қалса, оны rooms тізімінен шығару
+  if (komta.players.length === 0) {
+    rooms = rooms.filter(r => r !== komta);
+    console.log("Комта бос, жойылды");
+  } else {
+    // қалған ойыншыларға жаңартылған тізім
+    komta.players.forEach(p => io.to(p.id).emit("players", komta.players));
+  }
 });
-
 
 
 
@@ -388,6 +428,7 @@ io.on("connection", (socket) => {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
