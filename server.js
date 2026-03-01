@@ -421,13 +421,14 @@ io.on("connection", (socket) => {
 });
 
 
-
+});
 
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
