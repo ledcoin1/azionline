@@ -70,13 +70,14 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-function sevenSecondsPassed() {
-  setTimeout(() => {
-    console.log("⌛ 7 секунд өтті");
-
-    io.to(komta.id).emit("sevenSeconds");
-  }, 7000);
+function sevenSecondsPassed(komtaId) {
+  console.log("⏰ 7 секунд өтті: комта", komtaId);
+  io.to(komtaId).emit("sevenSeconds"); // клиентке хабарлау
 }
+
+// Қай жерде шақыру керек:
+const komtaId = komta.id;
+setTimeout(() => sevenSecondsPassed(komtaId), 7000);
 
 
 function kartaTaratu(){
@@ -432,6 +433,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
