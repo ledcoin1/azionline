@@ -294,7 +294,9 @@ if (existingPlayer) {
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
 
-        sevenSecondsPassed();
+       setTimeout(() => {
+  sevenSecondsPassed(komta);
+}, 7000);
       }
 
     } catch (err) {
@@ -351,7 +353,9 @@ if (existingPlayer) {
     player.turn = false;
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
-    sevenSecondsPassed();
+   setTimeout(() => {
+  sevenSecondsPassed(komta);
+}, 7000);
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -433,6 +437,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
