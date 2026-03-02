@@ -70,7 +70,11 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-
+function sevenSecondsPassed() {
+  setTimeout(() => {
+    console.log("⌛ 7 секунд өтті");
+  }, 7000);
+}
 
 
 function kartaTaratu(){
@@ -286,6 +290,8 @@ if (existingPlayer) {
 
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
+
+        sevenSecondsPassed();
       }
 
     } catch (err) {
@@ -342,6 +348,7 @@ if (existingPlayer) {
     player.turn = false;
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
+    sevenSecondsPassed();
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -423,6 +430,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
