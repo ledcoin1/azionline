@@ -70,14 +70,7 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-function sevenSecondsPassed(komtaId) {
-  console.log("⏰ 7 секунд өтті: комта", komtaId);
-  io.to(komtaId).emit("sevenSeconds"); // клиентке хабарлау
-}
 
-// Қай жерде шақыру керек:
-const komtaId = komta.id;
-setTimeout(() => sevenSecondsPassed(komtaId), 7000);
 
 
 function kartaTaratu(){
@@ -294,9 +287,7 @@ if (existingPlayer) {
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
 
-       setTimeout(() => {
-  sevenSecondsPassed(komta);
-}, 7000);
+        sevenSecondsPassed(komta);
       }
 
     } catch (err) {
@@ -353,9 +344,8 @@ if (existingPlayer) {
     player.turn = false;
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
-   setTimeout(() => {
-  sevenSecondsPassed(komta);
-}, 7000);
+
+    sevenSecondsPassed(komta);
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -432,16 +422,20 @@ if (existingPlayer) {
 
 });
 
+function sevenSecondsPassed(komta) {
+  setTimeout(() => {
+
+    console.log("⌛ 7 секунд өтті");
+
+    io.to(komta.id).emit("sevenSeconds");
+
+  }, 7000);
+}
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
-
-
-
 
 
 
