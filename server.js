@@ -70,7 +70,24 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+function startTurnTimer(komta, player) {
+  if (!player) return;
 
+  // Егер бұрын таймер болса – тоқтатамыз
+  if (player.turnTimeout) {
+    clearTimeout(player.turnTimeout);
+    player.turnTimeout = null;
+  }
+
+  // 7 секундтық таймер
+  player.turnTimeout = setTimeout(async () => {
+    console.log("⏰ 7 секунд өтті:", player.telegram);
+
+    // Мұнда кейін жеңілу логикасын жазамыз
+    // Қазір тек тексеріп көрейік
+
+  }, 7000);
+}
 
 
 function kartaTaratu(){
@@ -284,6 +301,8 @@ if (existingPlayer) {
         komta.players[0].turn = true;
         komta.players[1].turn = false;
 
+        startTurnTimer(komta, komta.players[0]);
+
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
       }
@@ -423,6 +442,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
