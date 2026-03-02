@@ -190,6 +190,18 @@ body{
   <button onclick="sendDecision('brosit')">Бросить</button>
 </div>
 
+  <!-- 7 секунд таймер -->
+<div id="turn-timer" style="
+    position:absolute;
+    top:20%;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:32px;
+    color:orange;
+    font-weight:bold;
+    display:none;
+">7</div>
+
 <script>
 const socket = io();
 const tg = window.Telegram.WebApp;
@@ -295,7 +307,28 @@ socket.on("kozir", (kozirCard) => {
   const kozirDiv = document.getElementById("kozir-card");
   kozirDiv.innerHTML = `<img src="/cards/${kozirCard}.png" alt="${kozirCard}" />`;
 });
+
+  // серверден 7 секунд өткенін хабарлағанда
+socket.on("sevenSeconds", () => {
+  const timerDiv = document.getElementById("turn-timer");
+  timerDiv.style.display = "block";
+  
+  let timeLeft = 7;
+  timerDiv.innerText = timeLeft;
+
+  const interval = setInterval(() => {
+    timeLeft--;
+    timerDiv.innerText = timeLeft;
+
+    if (timeLeft <= 0) {
+      clearInterval(interval);
+      timerDiv.style.display = "none";
+      console.log("⏰ 7 секунд өтті");
+    }
+  }, 1000);
+});
 </script>
 
 </body>
 </html>
+
