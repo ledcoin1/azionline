@@ -330,6 +330,11 @@ if (existingPlayer) {
       socket.emit("error", "Қазір сенің жүрісің емес!");
       return;
     }
+    // 🔥 Таймерді тоқтату
+if (player.turnTimeout) {
+  clearTimeout(player.turnTimeout);
+  player.turnTimeout = null;
+}
 
     console.log(`${player.telegram} дұрыс карта жіберді: ${card}`);
 
@@ -360,7 +365,12 @@ if (existingPlayer) {
     // кезекті ауыстыру
     player.turn = false;
     const nextPlayer = komta.players.find(p => p.id !== player.id);
-    if (nextPlayer) nextPlayer.turn = true;
+    if (nextPlayer) {
+  nextPlayer.turn = true;
+
+  // 🔥 Келесі ойыншыға 7 секунд бастау
+  startTurnTimer(komta, nextPlayer);
+}
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -442,6 +452,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
