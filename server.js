@@ -73,22 +73,34 @@ app.post("/api/admin/balance", async(req,res)=>{
 function startTurnTimer(komta, player) {
   if (!player) return;
 
-  // Егер бұрын таймер болса – тоқтатамыз
+  // Егер бұрынғы таймер болса — тазалаймыз
   if (player.turnTimeout) {
     clearTimeout(player.turnTimeout);
     player.turnTimeout = null;
   }
 
-  // 7 секундтық таймер
-  player.turnTimeout = setTimeout(async () => {
-    console.log("⏰ 7 секунд өтті:", player.telegram);
+  console.log(`⏳ ${player.telegram} үшін 7 секунд басталды`);
 
-    // Мұнда кейін жеңілу логикасын жазамыз
-    // Қазір тек тексеріп көрейік
+  io.to(komta.id).emit("turnTimer", {
+    playerId: player.id,
+    time: 7
+  });
+
+  player.turnTimeout = setTimeout(() => {
+    console.log(`⌛ Уақыт бітті: ${player.telegram}`);
+
+    player.turn = false;
+
+    const nextPlayer = komta.players.find(p => p.id !== player.id);
+    if (nextPlayer) {
+      nextPlayer.turn = true;
+      startTurnTimer(komta, nextPlayer);
+    }
+
+    io.to(komta.id).emit("players", komta.players);
 
   }, 7000);
 }
-
 
 function kartaTaratu(){
   const emblmas = ["♥", "♦", "♣", "♠"];
@@ -314,82 +326,99 @@ if (existingPlayer) {
 
   // 🔹 attack логикасын өзгеріссіз қалдырдық
   socket.on("attack", async (card) => {
-    // кімнің комтасында ойнап отырғанын табу
-    let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
-    if (!komta) return;
 
-    const player = komta.players.find(p => p.id === socket.id);
-    if (!player) return;
+  let komta = rooms.find(r => r.players.some(p => p.id === socket.id));
+  if (!komta) return;
 
-    if (!player.cards.includes(card)) {
-      socket.emit("error", "Сенде мұндай карта жоқ!");
+  const player = komta.players.find(p => p.id === socket.id);
+  if (!player) return;
+
+  if (!player.cards.includes(card)) {
+    socket.emit("error", "Сенде мұндай карта жоқ!");
+    return;
+  }
+
+  if (!player.turn) {
+    socket.emit("error", "Қазір сенің жүрісің емес!");
+    return;
+  }
+
+  // 🔥 ТАЙМЕР ТОҚТАТУ
+  if (player.turnTimeout) {
+    clearTimeout(player.turnTimeout);
+    player.turnTimeout = null;
+  }
+
+  console.log(`${player.telegram} карта жүрді: ${card}`);
+
+  // 🔹 Масть тексеру
+  if (komta.table.length > 0) {
+    const tableSuit = komta.table[0].slice(-1);
+    const cardSuit = card.slice(-1);
+    const trumpSuit = komta.kozir.slice(-1);
+
+    const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
+
+    if (hasSuit && cardSuit !== tableSuit) {
+      socket.emit("error", "Сол мастьпен жүру керек!");
       return;
-    }
-
-    if (!player.turn) {
-      socket.emit("error", "Қазір сенің жүрісің емес!");
-      return;
-    }
-    // 🔥 Таймерді тоқтату
-if (player.turnTimeout) {
-  clearTimeout(player.turnTimeout);
-  player.turnTimeout = null;
-}
-
-    console.log(`${player.telegram} дұрыс карта жіберді: ${card}`);
-
-    if (komta.table.length > 0) {
-      const tableSuit = komta.table[0].slice(-1);
-      const cardSuit = card.slice(-1);
-      const trumpSuit = komta.kozir.slice(-1);
-
-      const hasSuit = player.cards.some(c => c.slice(-1) === tableSuit);
-
-      if (hasSuit && cardSuit !== tableSuit) {
-        socket.emit("error", "Сол мастьпен жүру керек!");
+    } else if (!hasSuit) {
+      const hasTrump = player.cards.some(c => c.slice(-1) === trumpSuit);
+      if (hasTrump && cardSuit !== trumpSuit) {
+        socket.emit("error", "Көзірмен жүру керек!");
         return;
-      } else if (!hasSuit) {
-        const hasTrump = player.cards.some(c => c.slice(-1) === trumpSuit);
-        if (hasTrump && cardSuit !== trumpSuit) {
-          socket.emit("error", "Көзірмен жүру керек!");
-          return;
-        }
       }
     }
+  }
 
-    // карта үстелге
-    komta.table.push(card);
-    komta.table2.push(player.id);
-    player.cards = player.cards.filter(c => c !== card);
+  // 🔥 Карта үстелге
+  komta.table.push(card);
+  komta.table2.push(player.id);
+  player.cards = player.cards.filter(c => c !== card);
 
-    // кезекті ауыстыру
-    player.turn = false;
-    const nextPlayer = komta.players.find(p => p.id !== player.id);
-    if (nextPlayer) {
-  nextPlayer.turn = true;
+  player.turn = false;
 
-  // 🔥 Келесі ойыншыға 7 секунд бастау
-  startTurnTimer(komta, nextPlayer);
-}
+  const nextPlayer = komta.players.find(p => p.id !== player.id);
+  if (nextPlayer) {
+    nextPlayer.turn = true;
+    startTurnTimer(komta, nextPlayer); // 🔥 МІНЕ ОСЫ ЖЕР
+  }
 
-    io.emit("table", komta.table);
-    io.to(player.id).emit("cards", player.cards);
+  io.to(komta.id).emit("table", komta.table);
+  io.to(player.id).emit("cards", player.cards);
+  io.to(komta.id).emit("players", komta.players);
 
-    if (komta.table.length === komta.players.length) {
-      const result = resolveTable(komta);
-      const winner = komta.players.find(p => p.id === result.winnerId);
-      if (winner) winner.raund += 1;
+  // 🔥 Егер раунд бітсе
+  if (komta.table.length === komta.players.length) {
 
-      await checkGameWinner(komta);
+    const result = resolveTable(komta);
+    const winner = komta.players.find(p => p.id === result.winnerId);
 
-      komta.players.forEach(p => p.turn = false);
-      if (winner) winner.turn = true;
+    if (winner) winner.raund += 1;
 
-      komta.table = [];
-      komta.table2 = [];
-      io.emit("table", komta.table);
-      io.emit("players", komta.players);
+    await checkGameWinner(komta);
+
+    komta.players.forEach(p => {
+      p.turn = false;
+      if (p.turnTimeout) {
+        clearTimeout(p.turnTimeout);
+        p.turnTimeout = null;
+      }
+    });
+
+    if (winner) {
+      winner.turn = true;
+      startTurnTimer(komta, winner);
     }
+
+    komta.table = [];
+    komta.table2 = [];
+
+    io.to(komta.id).emit("table", komta.table);
+    io.to(komta.id).emit("players", komta.players);
+  }
+
+
   });
 
   // 🔹 disconnect
@@ -452,6 +481,7 @@ if (player.turnTimeout) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
