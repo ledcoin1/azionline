@@ -286,8 +286,6 @@ if (existingPlayer) {
 
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
-
-        startTurnTimer(komta, komta.players[0]);
       }
 
     } catch (err) {
@@ -344,8 +342,6 @@ if (existingPlayer) {
     player.turn = false;
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
-
-    startTurnTimer(komta, komta.players[0]);
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -422,64 +418,11 @@ if (existingPlayer) {
 
 });
 
-async function startTurnTimer(komta, player) {
-  // Алдыңғы таймерді тоқтату
-  komta.players.forEach(p => {
-    if (p.turnTimeout) {
-      clearTimeout(p.turnTimeout);
-      p.turnTimeout = null;
-    }
-  });
-
-  // 7 секундтық таймер бастау
-  player.turnTimeout = setTimeout(async () => {
-    console.log(`⌛ 7 секунд өтті: ${player.telegram}`);
-
-    // Клиентке хабарлау
-    io.to(komta.id).emit("sevenSeconds");
-
-    // Егер 7 секунд ішінде карта жүрмесе, қарсылас жеңімпаз
-    const nextPlayer = komta.players.find(p => p.id !== player.id);
-    if (nextPlayer) {
-      console.log(`🛑 ${player.telegram} карта жүрмеді. ${nextPlayer.telegram} жеңімпаз!`);
-
-      // Қарсыласқа жеңіс қосу
-      const prize = komta.obwiBalans;
-
-      // Базадағы баланс жаңарту
-      const user = await User.findOne({ telegramId: nextPlayer.telegram });
-      if (user) {
-        user.balance += prize;
-        await user.save();
-        nextPlayer.balans = user.balance;
-      }
-
-      // Клиентке көрсету
-      io.emit("gameWinner", {
-        telegram: nextPlayer.telegram,
-        balans: nextPlayer.balans,
-        prize: prize
-      });
-
-      // Комтаны тазалау
-      komta.players = [];
-      komta.table = [];
-      komta.table2 = [];
-      komta.deck = [];
-      komta.kozir = null;
-      komta.obwiBalans = 0;
-
-      io.emit("resetGame");
-    }
-  }, 7000);
-}
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
