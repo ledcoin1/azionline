@@ -443,10 +443,24 @@ function fiveSecondConsoleTimer(komta, initialTableLength) {
     console.log(`⏱ Қалды: ${seconds} сек`);
     seconds--;
 
-    if (seconds < 0) {
-      clearInterval(interval);
-      console.log("❌ Ойыншы жүрмеді (5 секунд бітті)");
-    }
+   if (seconds < 0) {
+  clearInterval(interval);
+  console.log("❌ Ойыншы жүрмеді (5 секунд бітті)");
+
+  const playerWhoDidntMove = komta.players.find(p => p.turn);
+  const winner = komta.players.find(p => p.id !== playerWhoDidntMove.id);
+
+  if (winner) {
+    console.log(`🏆 Жеңімпаз: ${winner.telegram}`);
+    winner.raund += 1;
+
+    // 🔥 БАЗА + клиент
+    checkGameWinner(komta);
+  }
+
+  // 🔹 Кезекті тоқтату
+  komta.players.forEach(p => p.turn = false);
+}
 
   }, 1000);
 }
@@ -455,6 +469,7 @@ function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
