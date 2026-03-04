@@ -70,38 +70,6 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-function startTurnTimer(komta, player) {
-
-  // Егер бұрын таймер болса — өшіреміз
-  if (player.turnTimeout) {
-    clearTimeout(player.turnTimeout);
-    player.turnTimeout = null;
-  }
-
-  console.log(`⏳ ${player.telegram} кезегі басталды`);
-
-  player.turnTimeout = setTimeout(() => {
-
-    console.log(`⌛ Уақыт бітті: ${player.telegram}`);
-    console.log(`❌ ${player.telegram} жеңілді`);
-
-    // Жеңілді деп белгілейміз
-    player.status = "lose";
-
-    // Қалған ойыншыны табамыз
-    const winner = komta.players.find(p => p.id !== player.id);
-    if (winner) {
-      winner.raund += 1;
-      winner.turn = true;
-      console.log(`🏆 Жеңімпаз: ${winner.telegram}`);
-    }
-
-    // Кезекті бәрінен өшіреміз
-    komta.players.forEach(p => p.turn = false);
-    if (winner) winner.turn = true;
-
-  }, 5000);
-}
 
 
 
@@ -319,7 +287,8 @@ if (existingPlayer) {
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
 
-        startTurnTimer(komta, komta.players[0]);
+
+        fiveSecondConsoleTimer();
       }
 
     } catch (err) {
@@ -377,16 +346,7 @@ if (existingPlayer) {
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
 
-    // Жүрген ойыншының таймерін тоқтатамыз
-if (player.turnTimeout) {
-  clearTimeout(player.turnTimeout);
-  player.turnTimeout = null;
-}
-
-// Келесі ойыншыға таймер бастаймыз
-if (nextPlayer) {
-  startTurnTimer(komta, nextPlayer);
-}
+    fiveSecondConsoleTimer();
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -464,12 +424,31 @@ if (nextPlayer) {
 });
 
 
+
+
+function fiveSecondConsoleTimer() {
+  let seconds = 5;
+
+  console.log("⏳ Таймер басталды");
+
+  const interval = setInterval(() => {
+    console.log(`⏱ Қалды: ${seconds} сек`);
+    seconds--;
+
+    if (seconds < 0) {
+      clearInterval(interval);
+      console.log("⌛ 5 секунд бітті");
+    }
+
+  }, 1000);
+}
+
+
+
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
-
-
 
 
 
