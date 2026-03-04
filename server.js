@@ -70,6 +70,27 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
+function fiveSecondTimer(komta) {
+  const currentPlayer = komta.players.find(p => p.turn === true);
+  if (!currentPlayer) return;
+
+  let seconds = 5;
+
+  console.log(`⏳ ${currentPlayer.telegram} кезегі басталды`);
+
+  const interval = setInterval(() => {
+    console.log(`⏱ Қалды: ${seconds} сек`);
+
+    seconds--;
+
+    if (seconds < 0) {
+      clearInterval(interval);
+      console.log(`⌛ Уақыт бітті: ${currentPlayer.telegram}`);
+    }
+
+  }, 1000);
+}
+
 
 
 
@@ -286,6 +307,8 @@ if (existingPlayer) {
 
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
+
+        fiveSecondTimer(komta);
       }
 
     } catch (err) {
@@ -423,6 +446,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
