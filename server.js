@@ -288,7 +288,8 @@ if (existingPlayer) {
         console.log("Ойыншылар:", komta.players);
 
 
-        fiveSecondConsoleTimer();
+        playerMoved = false;
+fiveSecondConsoleTimer(() => playerMoved);
       }
 
     } catch (err) {
@@ -346,7 +347,8 @@ if (existingPlayer) {
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
 
-    fiveSecondConsoleTimer();
+    playerMoved = true;
+
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -426,29 +428,37 @@ if (existingPlayer) {
 
 
 
-function fiveSecondConsoleTimer() {
+function fiveSecondConsoleTimer(checkMove) {
   let seconds = 5;
 
   console.log("⏳ Таймер басталды");
 
   const interval = setInterval(() => {
+
+    // Егер ойыншы жүрсе
+    if (checkMove()) {
+      console.log("✅ Ойыншы жүрді");
+      clearInterval(interval);
+      return;
+    }
+
     console.log(`⏱ Қалды: ${seconds} сек`);
     seconds--;
 
     if (seconds < 0) {
       clearInterval(interval);
-      console.log("⌛ 5 секунд бітті");
+      console.log("❌ Ойыншы жүрмеді (5 секунд бітті)");
     }
 
   }, 1000);
 }
 
 
-
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
