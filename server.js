@@ -485,11 +485,13 @@ function fiveSecondConsoleTimer(komta, initialTableLength) {
     io.emit("resetGame");
   }, 3000);
 }
-
+  }, 1000);
+}
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
