@@ -70,27 +70,38 @@ app.post("/api/admin/balance", async(req,res)=>{
 
 
 
-function fiveSecondTimer(komta) {
-  const currentPlayer = komta.players.find(p => p.turn === true);
-  if (!currentPlayer) return;
+function startTurnTimer(komta, player) {
 
-  let seconds = 5;
+  // Егер бұрын таймер болса — өшіреміз
+  if (player.turnTimeout) {
+    clearTimeout(player.turnTimeout);
+    player.turnTimeout = null;
+  }
 
-  console.log(`⏳ ${currentPlayer.telegram} кезегі басталды`);
+  console.log(`⏳ ${player.telegram} кезегі басталды`);
 
-  const interval = setInterval(() => {
-    console.log(`⏱ Қалды: ${seconds} сек`);
+  player.turnTimeout = setTimeout(() => {
 
-    seconds--;
+    console.log(`⌛ Уақыт бітті: ${player.telegram}`);
+    console.log(`❌ ${player.telegram} жеңілді`);
 
-    if (seconds < 0) {
-      clearInterval(interval);
-      console.log(`⌛ Уақыт бітті: ${currentPlayer.telegram}`);
+    // Жеңілді деп белгілейміз
+    player.status = "lose";
+
+    // Қалған ойыншыны табамыз
+    const winner = komta.players.find(p => p.id !== player.id);
+    if (winner) {
+      winner.raund += 1;
+      winner.turn = true;
+      console.log(`🏆 Жеңімпаз: ${winner.telegram}`);
     }
 
-  }, 1000);
-}
+    // Кезекті бәрінен өшіреміз
+    komta.players.forEach(p => p.turn = false);
+    if (winner) winner.turn = true;
 
+  }, 5000);
+}
 
 
 
@@ -308,7 +319,7 @@ if (existingPlayer) {
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
 
-        fiveSecondTimer(komta);
+        startTurnTimer(komta, komta.players[0]);
       }
 
     } catch (err) {
@@ -365,6 +376,17 @@ if (existingPlayer) {
     player.turn = false;
     const nextPlayer = komta.players.find(p => p.id !== player.id);
     if (nextPlayer) nextPlayer.turn = true;
+
+    // Жүрген ойыншының таймерін тоқтатамыз
+if (player.turnTimeout) {
+  clearTimeout(player.turnTimeout);
+  player.turnTimeout = null;
+}
+
+// Келесі ойыншыға таймер бастаймыз
+if (nextPlayer) {
+  startTurnTimer(komta, nextPlayer);
+}
 
     io.emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
@@ -446,6 +468,7 @@ if (existingPlayer) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
