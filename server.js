@@ -449,35 +449,48 @@ function fiveSecondConsoleTimer(komta, initialTableLength) {
 
   // Кезек алған ойыншы
   const playerWhoDidntMove = komta.players.find(p => p.turn);
-
-  if (playerWhoDidntMove) {
-    // Қарсыласы
-    const winner = komta.players.find(p => p.id !== playerWhoDidntMove.id);
-
-    if (winner) {
-      console.log(`🏆 Жеңімпаз: ${winner.telegram}`);
-      winner.raund += 1;
-
-      // Базаны жаңарту + клиентке жіберу
-      checkGameWinner(komta);
-    }
-  } else {
-    console.log("⚠ Кезек алған ойыншы табылмады, ешкім жеңбеді");
+  if (!playerWhoDidntMove) {
+    console.log("⚠ Кезек алған ойыншы табылмады");
+    return;
   }
 
-  // Кезекті өшіру
-  komta.players.forEach(p => p.turn = false);
-  komta.table = [];
-  komta.table2 = [];
-}
+  // Қарсыласы
+  const winner = komta.players.find(p => p.id !== playerWhoDidntMove.id);
+  if (!winner) {
+    console.log("⚠ Қарсылас табылмады");
+    return;
+  }
 
-  }, 1000);
+  console.log(`🏆 Жеңімпаз: ${winner.telegram}`);
+
+  // 🔹 Балансты қосу
+  winner.balans += komta.obwiBalans;
+
+  // 🔹 Клиентке жіберу
+  io.to(winner.id).emit("gameWinner", {
+    telegram: winner.telegram,
+    balans: winner.balans,
+    prize: komta.obwiBalans
+  });
+
+  // 🔹 3 секундтан кейін комтаны тазалау
+  setTimeout(() => {
+    komta.players = [];
+    komta.table = [];
+    komta.table2 = [];
+    komta.deck = [];
+    komta.kozir = null;
+    komta.obwiBalans = 0;
+
+    io.emit("resetGame");
+  }, 3000);
 }
 
 // Серверді тыңдаймыз
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
