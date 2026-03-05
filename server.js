@@ -228,8 +228,8 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // 🔹 Бос комта іздеу
-      let komta = rooms.find(r => r.players.length < 2);
+      // 🔹 Бос комта іздеу, тек 2 ойыншыға дейін
+      let komta = rooms.find(r => r.players.length < 2 && r.players.length > 0);
 
       // 🔹 Егер бос комта жоқ → жаңа комта жасау
       if (!komta) {
@@ -237,16 +237,7 @@ io.on("connection", (socket) => {
         rooms.push(komta);
       }
 
-      // 🔥 500 АЛАМЫЗ
-      user.balance -= 500;
-      await user.save();
-
-      // 🔥 БАНККЕ ҚОСАМЫЗ
-      komta.obwiBalans += 500;
-
-      console.log("💰 Комта банкі:", komta.obwiBalans);
-
-      // ✅ ОЙЫНҒА ҚОСУ
+      // ✅ ОЙЫНҒА ҚОСУ (алдында балансты азайтуды кейінге шегереміз)
       komta.players.push({
         id: socket.id,
         telegram: telegramId,
@@ -260,36 +251,52 @@ io.on("connection", (socket) => {
       socket.join(komta.id);
 
       console.log("✅ Ойыншы қосылды:", telegramId);
-
       io.to(komta.id).emit("players", komta.players);
 
       // 🔹 Егер комтада 2 адам болса, ойын бастау
       if (komta.players.length === 2) {
+
+        // 🔥 Енді тек 2 ойыншыға ғана 500 алу
+        for (let player of komta.players) {
+          const userDb = await User.findOne({ telegramId: player.telegram });
+          if (!userDb || userDb.balance < 500) {
+            // біреу баланс жеткіліксіз болса комта басталмайды
+            socket.emit("balanceError", "Біреуінің балансы жеткіліксіз");
+            return;
+          }
+          userDb.balance -= 500;
+          await userDb.save();
+          player.balans = userDb.balance;
+          komta.obwiBalans += 500;
+        }
+
+        console.log("💰 Комта банкі:", komta.obwiBalans);
+
+        // 🔹 Колода және карталарды тарату
         komta.deck = kartaTaratu();
         shuffle(komta.deck);
 
         komta.players.forEach(player => {
           for (let i = 0; i < 3; i++) {
-            let card = komta.deck[0];
+            let card = komta.deck.shift(); // бірінші картаны алып тастау
             player.cards.push(card);
-            komta.deck.splice(0, 1);
           }
           io.to(player.id).emit("cards", player.cards);
         });
 
-        komta.kozir = komta.deck[0];
-        komta.deck.splice(0, 1);
+        // 🔹 Көзір картаны орнату
+        komta.kozir = komta.deck.shift();
         io.to(komta.id).emit("kozir", komta.kozir);
 
+        // 🔹 Кезекті белгілеу
         komta.players[0].turn = true;
         komta.players[1].turn = false;
-
         io.to(komta.id).emit("players", komta.players);
 
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
 
-        // Кезек келгенде шақыру
+        // 🔹 Таймерді шақыру
         fiveSecondConsoleTimer(komta, komta.table.length);
       }
 
@@ -528,6 +535,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
