@@ -369,7 +369,7 @@ io.on("connection", (socket) => {
       io.to(komta.id).emit("table", komta.table);
       io.to(komta.id).emit("players", komta.players);
     }
-  });
+  
 });
 
   // 🔹 disconnect
@@ -528,6 +528,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
