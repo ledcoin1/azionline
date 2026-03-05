@@ -447,6 +447,11 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
     }
 
     console.log(`⏱ Қалды: ${seconds} сек`);
+
+     // 🔹 Клиентке жіберу
+  komta.players.forEach(p => {
+    io.to(p.id).emit("turnTimer", seconds);
+  });
     seconds--;
 
     if (seconds < 0) {
@@ -522,6 +527,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
