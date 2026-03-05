@@ -344,8 +344,21 @@ socket.on("sevenSeconds", () => {
   winner.innerText = "";
   document.getElementById("kozir-card").innerHTML = "";
 });
+
+
+  socket.on("turnTimer", (seconds) => {
+  const timerDiv = document.getElementById("turn-timer");
+
+  if (seconds > 0) {
+    timerDiv.style.display = "block";
+    timerDiv.innerText = seconds;
+  } else {
+    timerDiv.style.display = "none";
+  }
+});
 </script>
 
 </body>
 </html>
+
 
