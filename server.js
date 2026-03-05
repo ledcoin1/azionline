@@ -432,7 +432,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
     clearInterval(komta.timer);
   }
 
-  let seconds = 5;
+  let seconds = 10;
 
   console.log("⏳ Таймер басталды");
 
@@ -520,6 +520,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
