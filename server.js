@@ -284,6 +284,8 @@ if (existingPlayer) {
         komta.players[0].turn = true;
         komta.players[1].turn = false;
 
+        io.to(komta.id).emit("players", komta.players);
+
         console.log("Көзір карта:", komta.kozir);
         console.log("Ойыншылар:", komta.players);
 
@@ -520,6 +522,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
