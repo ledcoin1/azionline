@@ -327,7 +327,25 @@ socket.on("sevenSeconds", () => {
     }
   }, 1000);
 });
+
+
+  socket.on("resetGame", () => {
+  // PLAY батырмасын қайта көрсету
+  play.style.display = "block";
+
+  // ойын UI-ін жасыру
+  game.classList.add("hidden");
+
+  // үстел, көзір, карталар, turnInfo, winner тазалау
+  table.innerHTML = "";
+  myCards.innerHTML = "";
+  opponentCards.innerHTML = "";
+  turnInfo.innerText = "";
+  winner.innerText = "";
+  document.getElementById("kozir-card").innerHTML = "";
+});
 </script>
 
 </body>
 </html>
+
