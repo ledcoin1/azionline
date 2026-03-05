@@ -426,14 +426,14 @@ fiveSecondConsoleTimer(komta, komta.table.length);
 
 
 
-function fiveSecondConsoleTimer(komta, initialTableLength) {
+async function fiveSecondConsoleTimer(komta, initialTableLength) {
   let seconds = 5;
 
   console.log("⏳ Таймер басталды");
 
-  const interval = setInterval(() => {
+  const interval = setInterval(async () => {
 
-    // Егер ойыншы жүрсе (үстелге карта қосылса)
+    // Егер ойыншы жүрсе
     if (komta.table.length > initialTableLength) {
       console.log("✅ Ойыншы жүрді");
       clearInterval(interval);
@@ -463,41 +463,49 @@ function fiveSecondConsoleTimer(komta, initialTableLength) {
 
       console.log(`🏆 Жеңімпаз: ${winner.telegram}`);
 
-      // 🔹 Базадан табу және баланс қосу
-      (async () => {
+      try {
+
+        // 🔹 БАЗАДАН табу
         const user = await User.findOne({ telegramId: winner.telegram });
+
         if (user) {
           user.balance += komta.obwiBalans;
           await user.save();
+
           winner.balans = user.balance;
         } else {
           console.log("⚠ Winner User табылмады базада");
-          winner.balans += komta.obwiBalans; // локальға қосамыз
+          winner.balans += komta.obwiBalans;
         }
 
-        // 🔹 Клиентке жіберу
-        io.emit("gameWinner", {
-          telegram: winner.telegram,
-          balans: winner.balans,
-          prize: komta.obwiBalans
-        });
+      } catch (err) {
+        console.log("❌ Баланс сақтау қатесі:", err);
+      }
 
-        // 🔹 Комтаны тазалау 3 секундтан кейін
-        setTimeout(() => {
-          komta.players = [];
-          komta.table = [];
-          komta.table2 = [];
-          komta.deck = [];
-          komta.kozir = null;
-          komta.obwiBalans = 0;
+      // 🔹 Барлығына жібереміз
+      io.emit("gameWinner", {
+        telegram: winner.telegram,
+        balans: winner.balans,
+        prize: komta.obwiBalans
+      });
 
-          io.emit("resetGame");
-          console.log("🧹 Комта тазаланды, ойын қайта бастауға дайын");
-        }, 3000);
+      // 🔹 Кезекті өшіру
+      komta.players.forEach(p => p.turn = false);
 
-        // 🔹 Кезекті өшіру
-        komta.players.forEach(p => p.turn = false);
-      })(); // immediately invoked async function
+      // 🔹 Комтаны тазалау
+      setTimeout(() => {
+
+        komta.players = [];
+        komta.table = [];
+        komta.table2 = [];
+        komta.deck = [];
+        komta.kozir = null;
+        komta.obwiBalans = 0;
+
+        io.emit("resetGame");
+        console.log("🧹 Комта тазаланды");
+
+      }, 3000);
     }
 
   }, 1000);
@@ -508,6 +516,7 @@ function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
