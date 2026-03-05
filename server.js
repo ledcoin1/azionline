@@ -427,16 +427,20 @@ fiveSecondConsoleTimer(komta, komta.table.length);
 
 
 async function fiveSecondConsoleTimer(komta, initialTableLength) {
+
+  if (komta.timer) {
+    clearInterval(komta.timer);
+  }
+
   let seconds = 5;
 
   console.log("⏳ Таймер басталды");
 
-  const interval = setInterval(async () => {
+  komta.timer = setInterval(async () => {
 
-    // Егер ойыншы жүрсе
     if (komta.table.length > initialTableLength) {
       console.log("✅ Ойыншы жүрді");
-      clearInterval(interval);
+      clearInterval(komta.timer);
       return;
     }
 
@@ -444,7 +448,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
     seconds--;
 
     if (seconds < 0) {
-      clearInterval(interval);
+      clearInterval(komta.timer);
       console.log("❌ Ойыншы жүрмеді (5 секунд бітті)");
 
       // Кезегі келген ойыншы
@@ -516,6 +520,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
