@@ -361,21 +361,27 @@ io.on("connection", (socket) => {
     io.to(komta.id).emit("table", komta.table);
     io.to(player.id).emit("cards", player.cards);
 
-    if (komta.table.length === komta.players.length) {
-      const result = resolveTable(komta);
-      const winner = komta.players.find(p => p.id === result.winnerId);
-      if (winner) winner.raund += 1;
+   if (komta.table.length === komta.players.length) {
 
-      await checkGameWinner(komta);
+  const result = resolveTable(komta);
+  const winner = komta.players.find(p => p.id === result.winnerId);
+  if (winner) winner.raund += 1;
 
-      komta.players.forEach(p => p.turn = false);
-      if (winner) winner.turn = true;
+  await checkGameWinner(komta);
 
-      komta.table = [];
-      komta.table2 = [];
-      io.to(komta.id).emit("table", komta.table);
-      io.to(komta.id).emit("players", komta.players);
-    }
+  komta.players.forEach(p => p.turn = false);
+  if (winner) winner.turn = true;
+
+  setTimeout(() => {
+
+    komta.table = [];
+    komta.table2 = [];
+
+    io.to(komta.id).emit("table", komta.table);
+    io.to(komta.id).emit("players", komta.players);
+
+  }, 1500); // 1.5 секунд
+}
   
 });
 
@@ -535,6 +541,7 @@ async function fiveSecondConsoleTimer(komta, initialTableLength) {
 http.listen(PORT, () => {
   console.log(`Server ${PORT} портында жұмыс істеп тұр`);
 });
+
 
 
 
