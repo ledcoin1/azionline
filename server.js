@@ -28,7 +28,7 @@ mongoose.connect(process.env.MONGO_URI)
 // ===== MODEL =====
 const UserSchema = new mongoose.Schema({
   telegramId: { type: String, unique: true },
-  balance: { type: Number, default: 0 }
+  balance: { type: Number, default: 5000 }
 });
 const User = mongoose.model("User", UserSchema);
 
@@ -40,7 +40,7 @@ app.post("/api/login", async(req,res)=>{
 
     let user = await User.findOne({ telegramId });
     if(!user){
-      user = await User.create({ telegramId, balance: 0 });
+      user = await User.create({ telegramId, balance: 5000 });
     }
 
     res.json({ telegramId: user.telegramId, balance: user.balance });
