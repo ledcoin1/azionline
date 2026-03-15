@@ -47,7 +47,6 @@ body{
   height:85vh;
 }
 
-/* Үстел */
 .table{
   position:absolute;
   top:40%;
@@ -57,7 +56,6 @@ body{
   gap:15px;
 }
 
-/* Карта */
 .card{
   width:70px;
   height:100px;
@@ -84,7 +82,6 @@ body{
   to{ transform:translateY(0); opacity:1; }
 }
 
-/* Қарсылас */
 .opponent{
   position:absolute;
   top:40px;
@@ -94,7 +91,6 @@ body{
   gap:10px;
 }
 
-/* Жабық карта */
 .back{
   width:70px;
   height:100px;
@@ -103,7 +99,6 @@ body{
   box-shadow:0 5px 10px rgba(0,0,0,0.5);
 }
 
-/* Менің карталарым */
 .myCards{
   position:absolute;
   bottom:30px;
@@ -121,6 +116,7 @@ body{
   color:chartreuse;
   font-weight:bold;
 }
+
 .winner{
   position:absolute;
   top:45%;
@@ -130,7 +126,6 @@ body{
   color:gold;
 }
 
-/* 🔥 Көзірді үстел ортасына шығару */
 #table-center {
   position: absolute;
   top:35%;
@@ -156,6 +151,7 @@ body{
 }
 </style>
 </head>
+
 <body>
 
 <div class="top">
@@ -173,7 +169,6 @@ body{
 
   <div class="table" id="table"></div>
 
-  <!-- 🔥 Көзір div енді осы жерде -->
   <div id="table-center">
     <div id="kozir-card"></div>
   </div>
@@ -190,48 +185,80 @@ body{
   <button onclick="sendDecision('brosit')">Бросить</button>
 </div>
 
-  <!-- 7 секунд таймер -->
 <div id="turn-timer" style="
-    position:absolute;
-    top:20%;
-    left:50%;
-    transform:translateX(-50%);
-    font-size:32px;
-    color:orange;
-    font-weight:bold;
-    display:none;
+position:absolute;
+top:20%;
+left:50%;
+transform:translateX(-50%);
+font-size:32px;
+color:orange;
+font-weight:bold;
+display:none;
 ">7</div>
 
+<button id="inviteBtn">Пригласить друга</button>
+
 <script>
+
 const socket = io();
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-let telegramId=null;
+let telegramId = null;
 
-const user=tg.initDataUnsafe?.user;
+/* ===== REF PARAM ===== */
+
+const params = new URLSearchParams(window.location.search);
+const ref = params.get("ref");
+
+/* ===== TELEGRAM USER ===== */
+
+const user = tg.initDataUnsafe?.user;
+
 if(user){
-  telegramId=user.id;
-  tgId.innerText=telegramId;
+
+  telegramId = user.id;
+  tgId.innerText = telegramId;
 
   fetch("/api/login",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ telegramId })
+    body:JSON.stringify({
+      telegramId,
+      ref
+    })
   })
   .then(res=>res.json())
   .then(data=>{
-    balance.innerText=data.balance;
+    balance.innerText = data.balance;
   });
+
 }
+
+/* ===== INVITE BUTTON ===== */
+
+document.getElementById("inviteBtn").onclick = ()=>{
+
+  const link = window.location.origin + "?ref=" + telegramId;
+
+  navigator.clipboard.writeText(link);
+
+  alert("Ссылка скопирована!");
+
+};
+
+/* PLAY */
 
 play.onclick=()=>{
   socket.emit("play",{ telegramId });
 };
 
 /* PLAYERS */
+
 socket.on("players",(players)=>{
+
   const me=players.find(p=>p.telegram==telegramId);
+
   if(players.length===2){
     game.classList.remove("hidden");
     play.style.display="none";
@@ -241,9 +268,10 @@ socket.on("players",(players)=>{
     turnInfo.innerText=me.turn?"🔥 Сенің кезегің":"⏳ Қарсылас жүріп жатыр";
   }
 
-  /* қарсылас жабық 3 карта */
   const opponent=players.find(p=>p.telegram!=telegramId);
+
   opponentCards.innerHTML="";
+
   if(opponent){
     for(let i=0;i<opponent.cards.length;i++){
       const div=document.createElement("div");
@@ -251,9 +279,11 @@ socket.on("players",(players)=>{
       opponentCards.appendChild(div);
     }
   }
+
 });
 
-/* МЕНІҢ КАРТАЛАР */
+/* CARDS */
+
 socket.on("cards",(cards)=>{
   myCards.innerHTML="";
   cards.forEach(card=>{
@@ -265,7 +295,8 @@ socket.on("cards",(cards)=>{
   });
 });
 
-/* ҮСТЕЛ */
+/* TABLE */
+
 socket.on("table",(cards)=>{
   table.innerHTML="";
   cards.forEach(card=>{
@@ -276,23 +307,27 @@ socket.on("table",(cards)=>{
   });
 });
 
-/* ЖЕҢІМПАЗ */
+/* WINNER */
+
 socket.on("gameWinner",(data)=>{
   winner.innerText="🏆 "+data.telegram+" жеңді!";
 });
 
-/* БАНК */
+/* BANK */
+
 socket.on("players",(players)=>{
   let bank=players.length*500;
   document.getElementById("bank").innerText=bank;
 });
 
-/* ҚАТЕ */
+/* ERRORS */
+
 socket.on("error",(msg)=>alert(msg));
 socket.on("balanceError",(msg)=>alert(msg));
 
 /* DECISION */
-socket.on("makeDecision", (data) => {
+
+socket.on("makeDecision", ()=>{
   document.getElementById("decisionBox").style.display = "block";
 });
 
@@ -301,52 +336,56 @@ function sendDecision(choice){
   document.getElementById("decisionBox").style.display = "none";
 }
 
-/* 🔥 Көзірді клиентте көрсету */
+/* KOZIR */
+
 socket.on("kozir", (kozirCard) => {
-  console.log("Көзір келді:", kozirCard);
   const kozirDiv = document.getElementById("kozir-card");
-  kozirDiv.innerHTML = `<img src="/cards/${kozirCard}.png" alt="${kozirCard}" />`;
+  kozirDiv.innerHTML = `<img src="/cards/${kozirCard}.png" />`;
 });
 
-  // серверден 7 секунд өткенін хабарлағанда
+/* TIMER */
+
 socket.on("sevenSeconds", () => {
+
   const timerDiv = document.getElementById("turn-timer");
   timerDiv.style.display = "block";
-  
+
   let timeLeft = 7;
+
   timerDiv.innerText = timeLeft;
 
   const interval = setInterval(() => {
+
     timeLeft--;
     timerDiv.innerText = timeLeft;
 
     if (timeLeft <= 0) {
       clearInterval(interval);
       timerDiv.style.display = "none";
-      console.log("⏰ 7 секунд өтті");
     }
+
   }, 1000);
+
 });
 
+/* RESET */
 
-  socket.on("resetGame", () => {
-  // PLAY батырмасын қайта көрсету
+socket.on("resetGame", () => {
+
   play.style.display = "block";
-
-  // ойын UI-ін жасыру
   game.classList.add("hidden");
 
-  // үстел, көзір, карталар, turnInfo, winner тазалау
   table.innerHTML = "";
   myCards.innerHTML = "";
   opponentCards.innerHTML = "";
   turnInfo.innerText = "";
   winner.innerText = "";
   document.getElementById("kozir-card").innerHTML = "";
+
 });
 
+socket.on("turnTimer", (seconds) => {
 
-  socket.on("turnTimer", (seconds) => {
   const timerDiv = document.getElementById("turn-timer");
 
   if (seconds > 0) {
@@ -355,10 +394,10 @@ socket.on("sevenSeconds", () => {
   } else {
     timerDiv.style.display = "none";
   }
+
 });
+
 </script>
 
 </body>
 </html>
-
-
