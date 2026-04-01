@@ -9,101 +9,46 @@ const io = require("socket.io")(http, {
 });
 
 // iframe рұқсат
-
-
 app.use(cors());
-app.use(express.json());
-app.use(express.static("public"));
+app.use((req, res, next) => {
+  res.setHeader("X-Frame-Options", "ALLOWALL");
+  res.setHeader("Content-Security-Policy", "frame-ancestors *");
+  next();
+});
 
 const PORT = process.env.PORT || 3000;
 
-mongoose.connect(process.env.MONGO_URI)
-.then(()=>console.log("✅ MongoDB connected!"))
-.catch(e=>console.log("❌ Mongo error", e));
+app.use(express.json());
+app.use(express.static("public"));
 
+mongoose.connect(process.env.MONGO_URI)
+  .then(()=>console.log("✅ MongoDB connected!"))
+  .catch(e=>console.log("❌ Mongo error", e));
 
 // ===== MODEL =====
-
 const UserSchema = new mongoose.Schema({
-
   telegramId: { type: String, unique: true },
-
-  balance: { type: Number, default: 5000 },
-
-  refBy: { type: String, default: null },
-
-  invited: { type: Number, default: 0 }
-
+  balance: { type: Number, default: 0 }
 });
-
 const User = mongoose.model("User", UserSchema);
 
-
 // ===== LOGIN =====
-
 app.post("/api/login", async(req,res)=>{
-
   try{
-
-    const { telegramId, ref } = req.body;
-
-    if(!telegramId){
-      return res.json({ error: "No telegram id" });
-    }
+    const { telegramId } = req.body;
+    if(!telegramId) return res.json({ error: "No telegram id" });
 
     let user = await User.findOne({ telegramId });
-
-    // ===== НОВЫЙ USER =====
-
     if(!user){
-
-      user = await User.create({
-        telegramId,
-        balance: 5000,
-        refBy: ref || null
-      });
-
-      // ===== REF BONUS =====
-
-      if(ref && ref !== telegramId){
-
-        const refUser = await User.findOne({ telegramId: ref });
-
-        if(refUser){
-
-          await User.updateOne(
-            { telegramId: ref },
-            { 
-              $inc: { 
-                balance: 5000,
-                invited: 1
-              }
-            }
-          );
-
-        }
-
-      }
-
+      user = await User.create({ telegramId, balance: 0 });
     }
 
-    res.json({
-      telegramId: user.telegramId,
-      balance: user.balance,
-      invited: user.invited
-    });
-
+    res.json({ telegramId: user.telegramId, balance: user.balance });
   }catch(err){
-
     console.log(err);
     res.status(500).json({ error: "Server error" });
-
   }
-
 });
-
-
-
 
 // ===== ADMIN =====
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "admin123";
